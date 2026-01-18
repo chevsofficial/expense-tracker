@@ -1,0 +1,16 @@
+{
+  "categoryGroup": {
+    "home": "Home",
+    "utilities": "Utilities",
+    "kids": "Kids",
+    "insurance": "Insurance",
+    "car": "Car",
+    "foodDining": "Food (Restaurants/Takeout)",
+    "hobbiesEntertainment": "Hobbies & Entertainment",
+    "subscriptions": "Subscriptions",
+    "healthMedical": "Health / Medical",
+    "travelVacation": "Travel / Vacation",
+    "debt": "Debt",
+    "misc": "Extra (Miscellaneous)"
+  }
+}
