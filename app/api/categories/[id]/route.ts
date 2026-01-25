@@ -17,11 +17,16 @@ const updateSchema = z
     message: "At least one field is required",
   });
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const objectId = parseObjectId(params.id);
+  const { id } = await context.params;
+
+  const objectId = parseObjectId(id);
   if (!objectId) {
     return errorResponse("Invalid category id", 400);
   }
@@ -71,11 +76,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   return NextResponse.json({ data: category });
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const objectId = parseObjectId(params.id);
+  const { id } = await context.params;
+
+  const objectId = parseObjectId(id);
   if (!objectId) {
     return errorResponse("Invalid category id", 400);
   }
