@@ -10,3 +10,5 @@ Web-first expense tracking app (Next.js App Router + Tailwind + DaisyUI).
 1) Install deps
 ```bash
 npm install
+
+Local sanity check: node scripts/test-mongo.mjs
