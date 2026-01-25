@@ -1,16 +1,18 @@
-import { type NextAuthOptions } from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { Resend } from "resend";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import { clientPromise } from "@/src/db/mongodbClient";
 import { dbConnect } from "@/src/db/mongoose";
 import { UserModel } from "@/src/models/User";
 import { ensureWorkspaceSeeded } from "@/src/server/seed";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
     EmailProvider({
-      server: "",
       from: process.env.EMAIL_FROM,
       async sendVerificationRequest({ identifier, url }) {
         const from = process.env.EMAIL_FROM;
@@ -41,7 +43,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     verifyRequest: "/login/check-email",
   },
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt" as const },
   callbacks: {
     async signIn({ user }) {
       if (!user?.email) return false;
@@ -65,4 +67,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
   },
-};
+} satisfies NextAuthOptions;
+
+// Optional helper if you ever want it:
+export const nextAuthHandler = NextAuth(authOptions);
