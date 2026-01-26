@@ -1,8 +1,9 @@
-import mongoose from "mongoose";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { CategoryModel } from "@/src/models/Category";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
+import { BudgetMonthModel } from "@/src/models/BudgetMonth";
+import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
 const updateSchema = z
@@ -17,14 +18,11 @@ const updateSchema = z
     message: "At least one field is required",
   });
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = await context.params;
+  const { id } = context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
@@ -37,13 +35,7 @@ export async function PUT(
     return errorResponse(parsed.error.message, 400);
   }
 
-  const updateData = { ...parsed.data } as {
-    nameCustom?: string;
-    groupId?: mongoose.Types.ObjectId;
-    kind?: "income" | "expense" | "both";
-    sortOrder?: number;
-    isArchived?: boolean;
-  };
+  const updateData: Record<string, unknown> = { ...parsed.data };
 
   if (parsed.data.groupId) {
     const newGroupId = parseObjectId(parsed.data.groupId);
@@ -76,14 +68,11 @@ export async function PUT(
   return NextResponse.json({ data: category });
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = await context.params;
+  const { id } = context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
@@ -97,6 +86,32 @@ export async function DELETE(
 
   if (!category) {
     return errorResponse("Category not found", 404);
+  }
+
+  const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+
+  if (hardDelete) {
+    const [transactionCount, budgetCount] = await Promise.all([
+      TransactionModel.countDocuments({
+        workspaceId: auth.workspace.id,
+        categoryId: objectId,
+      }),
+      BudgetMonthModel.countDocuments({
+        workspaceId: auth.workspace.id,
+        "plannedLines.categoryId": objectId,
+      }),
+    ]);
+
+    if (transactionCount > 0 || budgetCount > 0) {
+      return errorResponse(
+        "Cannot permanently delete: category is referenced by historical data. Archive instead.",
+        400
+      );
+    }
+
+    await CategoryModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
+
+    return NextResponse.json({ data: { deleted: true } });
   }
 
   category.isArchived = true;
