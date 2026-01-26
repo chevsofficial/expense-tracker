@@ -53,7 +53,7 @@ export async function PUT(
 
     const group = await CategoryGroupModel.findOne({
       _id: newGroupId,
-      workspaceId: auth.workspace._id,
+      workspaceId: auth.workspace.id,
     });
 
     if (!group) {
@@ -64,7 +64,7 @@ export async function PUT(
   }
 
   const category = await CategoryModel.findOneAndUpdate(
-    { _id: objectId, workspaceId: auth.workspace._id },
+    { _id: objectId, workspaceId: auth.workspace.id },
     { $set: updateData },
     { new: true }
   );
@@ -92,7 +92,7 @@ export async function DELETE(
 
   const category = await CategoryModel.findOne({
     _id: objectId,
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
   });
 
   if (!category) {

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
 
   const groups = await CategoryGroupModel.find({
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
     ...(includeArchived ? {} : { isArchived: false }),
   })
     .sort({ sortOrder: 1, createdAt: 1 })
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   const group = await CategoryGroupModel.create({
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
     nameCustom: parsed.data.nameCustom,
     sortOrder: parsed.data.sortOrder ?? 0,
     isDefault: false,

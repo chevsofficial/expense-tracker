@@ -35,7 +35,7 @@ export async function PUT(
   }
 
   const group = await CategoryGroupModel.findOneAndUpdate(
-    { _id: objectId, workspaceId: auth.workspace._id },
+    { _id: objectId, workspaceId: auth.workspace.id },
     { $set: parsed.data },
     { new: true }
   );
@@ -61,13 +61,13 @@ export async function DELETE(
     return errorResponse("Invalid group id", 400);
   }
 
-  const group = await CategoryGroupModel.findOne({ _id: objectId, workspaceId: auth.workspace._id });
+  const group = await CategoryGroupModel.findOne({ _id: objectId, workspaceId: auth.workspace.id });
   if (!group) {
     return errorResponse("Group not found", 404);
   }
 
   const categoryCount = await CategoryModel.countDocuments({
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
     groupId: objectId,
     isArchived: false,
   });
