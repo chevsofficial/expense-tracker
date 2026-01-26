@@ -14,11 +14,14 @@ const updateSchema = z
     message: "At least one field is required",
   });
 
-export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = context.params;
+  const { id } = await context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
@@ -44,11 +47,14 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
   return NextResponse.json({ data: group });
 }
 
-export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = context.params;
+  const { id } = await context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
