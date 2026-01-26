@@ -14,14 +14,11 @@ const updateSchema = z
     message: "At least one field is required",
   });
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = await context.params;
+  const { id } = context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
@@ -47,14 +44,11 @@ export async function PUT(
   return NextResponse.json({ data: group });
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const { id } = await context.params;
+  const { id } = context.params;
 
   const objectId = parseObjectId(id);
   if (!objectId) {
@@ -66,18 +60,33 @@ export async function DELETE(
     return errorResponse("Group not found", 404);
   }
 
-  const categoryCount = await CategoryModel.countDocuments({
-    workspaceId: auth.workspace.id,
-    groupId: objectId,
-    isArchived: false,
-  });
+  const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
 
-  if (categoryCount > 0) {
-    return errorResponse("Group has categories and cannot be deleted", 400);
+  if (hardDelete) {
+    const categoryCount = await CategoryModel.countDocuments({
+      workspaceId: auth.workspace.id,
+      groupId: objectId,
+    });
+
+    if (categoryCount > 0) {
+      return errorResponse(
+        "Cannot permanently delete: group still has categories. Archive instead.",
+        400
+      );
+    }
+
+    await CategoryGroupModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
+
+    return NextResponse.json({ data: { deleted: true } });
   }
 
   group.isArchived = true;
   await group.save();
+
+  await CategoryModel.updateMany(
+    { workspaceId: auth.workspace.id, groupId: objectId },
+    { $set: { isArchived: true } }
+  );
 
   return NextResponse.json({ data: group });
 }
