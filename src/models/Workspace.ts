@@ -1,4 +1,4 @@
-import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
+import { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 import { getModel } from "./_shared";
 
 export type CurrencyCode = string; // ISO 4217 like "MXN", "USD"
