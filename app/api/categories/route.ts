@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   const categories = await CategoryModel.find({
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
     ...(groupId ? { groupId } : {}),
     ...(includeArchived ? {} : { isArchived: false }),
   })
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const group = await CategoryGroupModel.findOne({
     _id: groupId,
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
   });
 
   if (!group) {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const category = await CategoryModel.create({
-    workspaceId: auth.workspace._id,
+    workspaceId: auth.workspace.id,
     groupId,
     nameCustom: parsed.data.nameCustom,
     kind: parsed.data.kind ?? "expense",
