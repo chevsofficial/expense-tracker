@@ -31,7 +31,6 @@ export async function requireAuthContext(): Promise<AuthContext | { response: Ne
   }
 
   const workspace = await WorkspaceModel.findOne({ userId: user._id }).sort({ createdAt: 1 });
-  // TS guard: workspace is either a hydrated doc or null
   if (!workspace) {
     return { response: errorResponse("Workspace not found", 404) };
   }
