@@ -5,6 +5,8 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
+import { t } from "@/src/i18n/t";
+import type { Locale } from "@/src/i18n/messages";
 
 type CategoryGroup = {
   _id: string;
@@ -31,20 +33,10 @@ type ApiItemResponse<T> = { data: T };
 
 type DeleteResponse = { data: { deleted: boolean } };
 
-const kindOptions: { value: CategoryKind; label: string }[] = [
-  { value: "expense", label: "Expense" },
-  { value: "income", label: "Income" },
-];
-
 const normalizeKind = (kind?: CategoryStoredKind): CategoryKind =>
   kind === "income" ? "income" : "expense";
 
-const kindLabels: Record<CategoryKind, string> = {
-  income: "Income",
-  expense: "Expense",
-};
-
-export function CategoriesClient() {
+export function CategoriesClient({ locale }: { locale: Locale }) {
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -85,6 +77,16 @@ export function CategoriesClient() {
   const [deleteCategoryOpen, setDeleteCategoryOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
+  const kindOptions = [
+    { value: "expense" as const, label: t(locale, "category_kind_expense") },
+    { value: "income" as const, label: t(locale, "category_kind_income") },
+  ];
+
+  const kindLabels: Record<CategoryKind, string> = {
+    income: t(locale, "category_kind_income"),
+    expense: t(locale, "category_kind_expense"),
+  };
+
   const selectedGroup = useMemo(
     () => groups.find((group) => group._id === selectedGroupId) ?? null,
     [groups, selectedGroupId]
@@ -109,7 +111,7 @@ export function CategoriesClient() {
   );
 
   const getDisplayName = (item: { nameCustom?: string; nameKey?: string }) =>
-    item.nameCustom?.trim() || item.nameKey || "Untitled";
+    item.nameCustom?.trim() || item.nameKey || t(locale, "category_fallback_name");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -133,13 +135,14 @@ export function CategoriesClient() {
         return nextActiveGroups[0]?._id ?? fetchedGroups[0]?._id ?? null;
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load categories.";
+      const message =
+        err instanceof Error ? err.message : t(locale, "categories_load_error");
       setError(message);
       setToast(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     void loadData();
@@ -155,7 +158,8 @@ export function CategoriesClient() {
   }, [activeGroups, groups, selectedGroupId, showArchived]);
 
   const handleError = (err: unknown) => {
-    const message = err instanceof Error ? err.message : "Something went wrong.";
+    const message =
+      err instanceof Error ? err.message : t(locale, "categories_generic_error");
     setToast(message);
   };
 
@@ -390,8 +394,8 @@ export function CategoriesClient() {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="mt-2 opacity-70">Organize categories into clear groups.</p>
+          <h1 className="text-3xl font-bold">{t(locale, "categories_title_page")}</h1>
+          <p className="mt-2 opacity-70">{t(locale, "categories_subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
@@ -401,18 +405,8 @@ export function CategoriesClient() {
               checked={showArchived}
               onChange={(event) => setShowArchived(event.target.checked)}
             />
-            Show archived
+            {t(locale, "show_archived")}
           </label>
-          <button className="btn btn-outline btn-sm" onClick={() => setAddGroupOpen(true)}>
-            Add group
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={openAddCategoryModal}
-            disabled={!selectedGroupId || selectedGroup?.isArchived}
-          >
-            Add category
-          </button>
         </div>
       </div>
 
@@ -420,7 +414,7 @@ export function CategoriesClient() {
         <div className="alert alert-error flex items-center justify-between">
           <span>{toast}</span>
           <button className="btn btn-ghost btn-xs" onClick={() => setToast(null)}>
-            Dismiss
+            {t(locale, "categories_dismiss")}
           </button>
         </div>
       ) : null}
@@ -429,21 +423,23 @@ export function CategoriesClient() {
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Groups</h2>
-              <button className="btn btn-ghost btn-xs" onClick={() => setAddGroupOpen(true)}>
-                Add group
+              <h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2>
+              <button className="btn btn-primary btn-sm" onClick={() => setAddGroupOpen(true)}>
+                {t(locale, "add_group")}
               </button>
             </div>
-            {loading ? <p className="text-sm opacity-70">Loading groups...</p> : null}
+            {loading ? (
+              <p className="text-sm opacity-70">{t(locale, "categories_loading_groups")}</p>
+            ) : null}
             {error ? <p className="text-sm text-error">{error}</p> : null}
             <div className="flex flex-col gap-2">
               {activeGroups.length === 0 && !loading ? (
-                <p className="text-sm opacity-70">No groups yet.</p>
+                <p className="text-sm opacity-70">{t(locale, "categories_no_groups")}</p>
               ) : null}
               {showArchived ? (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
-                    Active Groups
+                    {t(locale, "categories_active_groups")}
                   </p>
                   {activeGroups.map((group) => (
                     <div
@@ -468,7 +464,7 @@ export function CategoriesClient() {
                             openRenameModal(group);
                           }}
                         >
-                          Rename
+                          {t(locale, "categories_rename")}
                         </button>
                         <button
                           className="btn btn-ghost btn-xs"
@@ -477,7 +473,7 @@ export function CategoriesClient() {
                             openArchiveGroupModal(group);
                           }}
                         >
-                          Archive
+                          {t(locale, "categories_archive")}
                         </button>
                         <button
                           className="btn btn-ghost btn-xs text-error"
@@ -486,16 +482,18 @@ export function CategoriesClient() {
                             openDeleteGroupModal(group);
                           }}
                         >
-                          Delete
+                          {t(locale, "categories_delete")}
                         </button>
                       </div>
                     </div>
                   ))}
                   <p className="pt-2 text-xs font-semibold uppercase tracking-wide opacity-60">
-                    Archived Groups
+                    {t(locale, "categories_archived_groups")}
                   </p>
                   {archivedGroups.length === 0 ? (
-                    <p className="text-sm opacity-70">No archived groups.</p>
+                    <p className="text-sm opacity-70">
+                      {t(locale, "categories_no_archived_groups")}
+                    </p>
                   ) : null}
                   {archivedGroups.map((group) => (
                     <div
@@ -520,7 +518,7 @@ export function CategoriesClient() {
                             void handleRestoreGroup(group);
                           }}
                         >
-                          Restore
+                          {t(locale, "categories_restore")}
                         </button>
                         <button
                           className="btn btn-ghost btn-xs text-error"
@@ -529,7 +527,7 @@ export function CategoriesClient() {
                             openDeleteGroupModal(group);
                           }}
                         >
-                          Delete
+                          {t(locale, "categories_delete")}
                         </button>
                       </div>
                     </div>
@@ -559,7 +557,7 @@ export function CategoriesClient() {
                           openRenameModal(group);
                         }}
                       >
-                        Rename
+                        {t(locale, "categories_rename")}
                       </button>
                       <button
                         className="btn btn-ghost btn-xs"
@@ -568,7 +566,7 @@ export function CategoriesClient() {
                           openArchiveGroupModal(group);
                         }}
                       >
-                        Archive
+                        {t(locale, "categories_archive")}
                       </button>
                       <button
                         className="btn btn-ghost btn-xs text-error"
@@ -577,7 +575,7 @@ export function CategoriesClient() {
                           openDeleteGroupModal(group);
                         }}
                       >
-                        Delete
+                        {t(locale, "categories_delete")}
                       </button>
                     </div>
                   </div>
@@ -590,38 +588,34 @@ export function CategoriesClient() {
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {selectedGroup ? getDisplayName(selectedGroup) : "Categories"}
-                </h2>
-                <p className="text-sm opacity-70">
-                  {selectedGroup ? "Manage the categories in this group." : ""}
-                </p>
-              </div>
+              <h2 className="text-lg font-semibold">{t(locale, "categories_title")}</h2>
               <button
                 className="btn btn-primary btn-sm"
                 onClick={openAddCategoryModal}
                 disabled={!selectedGroupId || selectedGroup?.isArchived}
               >
-                Add category
+                {t(locale, "add_category")}
               </button>
             </div>
+            {selectedGroup ? (
+              <p className="text-sm opacity-70">{t(locale, "categories_group_helper")}</p>
+            ) : null}
 
             {!selectedGroupId ? (
               <div className="rounded-md border border-dashed border-base-300 p-6 text-sm opacity-70">
-                Create a group to add categories.
+                {t(locale, "categories_empty_group")}
               </div>
             ) : null}
 
             {showArchived && selectedGroupId ? (
               <p className="text-sm font-semibold uppercase tracking-wide opacity-60">
-                Active Categories
+                {t(locale, "categories_active_categories")}
               </p>
             ) : null}
 
             {selectedGroupId && activeCategoriesForGroup.length === 0 && !loading ? (
               <div className="rounded-md border border-dashed border-base-300 p-6 text-sm opacity-70">
-                No categories yet. Add one.
+                {t(locale, "categories_no_categories")}
               </div>
             ) : null}
 
@@ -630,9 +624,9 @@ export function CategoriesClient() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Kind</th>
-                      <th className="text-right">Actions</th>
+                      <th>{t(locale, "categories_name")}</th>
+                      <th>{t(locale, "categories_kind")}</th>
+                      <th className="text-right">{t(locale, "categories_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -650,19 +644,19 @@ export function CategoriesClient() {
                               className="btn btn-ghost btn-xs"
                               onClick={() => openEditCategoryModal(category)}
                             >
-                              Edit
+                              {t(locale, "categories_edit")}
                             </button>
                             <button
                               className="btn btn-ghost btn-xs"
                               onClick={() => openArchiveCategoryModal(category)}
                             >
-                              Archive
+                              {t(locale, "categories_archive")}
                             </button>
                             <button
                               className="btn btn-ghost btn-xs text-error"
                               onClick={() => openDeleteCategoryModal(category)}
                             >
-                              Delete
+                              {t(locale, "categories_delete")}
                             </button>
                           </div>
                         </td>
@@ -676,20 +670,20 @@ export function CategoriesClient() {
             {showArchived && selectedGroupId ? (
               <div className="space-y-4">
                 <p className="text-sm font-semibold uppercase tracking-wide opacity-60">
-                  Archived Categories
+                  {t(locale, "categories_archived_categories")}
                 </p>
                 {archivedCategoriesForGroup.length === 0 ? (
                   <div className="rounded-md border border-dashed border-base-300 p-6 text-sm opacity-70">
-                    No archived categories.
+                    {t(locale, "categories_no_archived_categories")}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="table">
                       <thead>
                         <tr>
-                          <th>Name</th>
-                          <th>Kind</th>
-                          <th className="text-right">Actions</th>
+                          <th>{t(locale, "categories_name")}</th>
+                          <th>{t(locale, "categories_kind")}</th>
+                          <th className="text-right">{t(locale, "categories_actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -707,13 +701,13 @@ export function CategoriesClient() {
                                   className="btn btn-ghost btn-xs"
                                   onClick={() => void handleRestoreCategory(category)}
                                 >
-                                  Restore
+                                  {t(locale, "categories_restore")}
                                 </button>
                                 <button
                                   className="btn btn-ghost btn-xs text-error"
                                   onClick={() => openDeleteCategoryModal(category)}
                                 >
-                                  Delete
+                                  {t(locale, "categories_delete")}
                                 </button>
                               </div>
                             </td>
@@ -729,33 +723,39 @@ export function CategoriesClient() {
         </div>
       </div>
 
-      <Modal open={addGroupOpen} title="Add group" onClose={() => setAddGroupOpen(false)}>
+      <Modal
+        open={addGroupOpen}
+        title={t(locale, "categories_add_group_title")}
+        onClose={() => setAddGroupOpen(false)}
+      >
         <form className="space-y-4" onSubmit={handleCreateGroup}>
           <TextField
             id="new-group-name"
-            label="Group name"
+            label={t(locale, "categories_group_name")}
             value={newGroupName}
             onChange={(event) => setNewGroupName(event.target.value)}
-            placeholder="e.g. Home"
+            placeholder={t(locale, "categories_group_placeholder")}
           />
           <div className="flex justify-end gap-2">
             <button type="button" className="btn btn-ghost" onClick={() => setAddGroupOpen(false)}>
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
-            <SubmitButton isLoading={isSubmitting}>Create group</SubmitButton>
+            <SubmitButton isLoading={isSubmitting}>
+              {t(locale, "categories_create_group")}
+            </SubmitButton>
           </div>
         </form>
       </Modal>
 
       <Modal
         open={renameGroupOpen}
-        title="Rename group"
+        title={t(locale, "categories_rename_group_title")}
         onClose={() => setRenameGroupOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleRenameGroup}>
           <TextField
             id="rename-group-name"
-            label="Group name"
+            label={t(locale, "categories_group_name")}
             value={renameGroupName}
             onChange={(event) => setRenameGroupName(event.target.value)}
           />
@@ -765,32 +765,30 @@ export function CategoriesClient() {
               className="btn btn-ghost"
               onClick={() => setRenameGroupOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
-            <SubmitButton isLoading={isSubmitting}>Save</SubmitButton>
+            <SubmitButton isLoading={isSubmitting}>{t(locale, "categories_save")}</SubmitButton>
           </div>
         </form>
       </Modal>
 
       <Modal
         open={archiveGroupOpen}
-        title="Archive group?"
+        title={t(locale, "categories_archive_group_title")}
         onClose={() => setArchiveGroupOpen(false)}
       >
         <div className="space-y-4">
-          <p className="text-sm opacity-70">
-            This will archive all categories in this group.
-          </p>
+          <p className="text-sm opacity-70">{t(locale, "categories_archive_group_body")}</p>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               className="btn btn-ghost"
               onClick={() => setArchiveGroupOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting} onClick={handleArchiveGroup}>
-              Archive group
+              {t(locale, "categories_archive_group_confirm")}
             </SubmitButton>
           </div>
         </div>
@@ -798,14 +796,11 @@ export function CategoriesClient() {
 
       <Modal
         open={deleteGroupOpen}
-        title="Delete group permanently?"
+        title={t(locale, "categories_delete_group_title")}
         onClose={() => setDeleteGroupOpen(false)}
       >
         <div className="space-y-4">
-          <p className="text-sm opacity-70">
-            This cannot be undone. Deletion is blocked if the group still has categories
-            (including archived), unless you choose to delete them too.
-          </p>
+          <p className="text-sm opacity-70">{t(locale, "categories_delete_group_body")}</p>
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
@@ -813,10 +808,7 @@ export function CategoriesClient() {
               checked={cascadeDeleteGroup}
               onChange={(event) => setCascadeDeleteGroup(event.target.checked)}
             />
-            <span>
-              Also permanently delete all categories in this group. This will fail if any category
-              is referenced by historical data.
-            </span>
+            <span>{t(locale, "categories_delete_group_cascade")}</span>
           </label>
           <div className="flex justify-end gap-2">
             <button
@@ -824,10 +816,10 @@ export function CategoriesClient() {
               className="btn btn-ghost"
               onClick={() => setDeleteGroupOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting} onClick={handleDeleteGroup}>
-              Delete permanently
+              {t(locale, "categories_delete_permanently")}
             </SubmitButton>
           </div>
         </div>
@@ -835,19 +827,21 @@ export function CategoriesClient() {
 
       <Modal
         open={addCategoryOpen}
-        title="Add category"
+        title={t(locale, "categories_add_category_title")}
         onClose={() => setAddCategoryOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleCreateCategory}>
           <TextField
             id="new-category-name"
-            label="Category name"
+            label={t(locale, "categories_category_name")}
             value={newCategoryName}
             onChange={(event) => setNewCategoryName(event.target.value)}
-            placeholder="e.g. Groceries"
+            placeholder={t(locale, "categories_category_placeholder")}
           />
           <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">Group</span>
+            <span className="label-text mb-1 text-sm font-medium">
+              {t(locale, "categories_group_label")}
+            </span>
             <select
               className="select select-bordered w-full"
               value={newCategoryGroupId}
@@ -861,7 +855,9 @@ export function CategoriesClient() {
             </select>
           </label>
           <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">Kind</span>
+            <span className="label-text mb-1 text-sm font-medium">
+              {t(locale, "categories_kind_label")}
+            </span>
             <select
               className="select select-bordered w-full"
               value={newCategoryKind}
@@ -880,27 +876,31 @@ export function CategoriesClient() {
               className="btn btn-ghost"
               onClick={() => setAddCategoryOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
-            <SubmitButton isLoading={isSubmitting}>Create category</SubmitButton>
+            <SubmitButton isLoading={isSubmitting}>
+              {t(locale, "categories_create_category")}
+            </SubmitButton>
           </div>
         </form>
       </Modal>
 
       <Modal
         open={editCategoryOpen}
-        title="Edit category"
+        title={t(locale, "categories_edit_category_title")}
         onClose={() => setEditCategoryOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleEditCategory}>
           <TextField
             id="edit-category-name"
-            label="Category name"
+            label={t(locale, "categories_category_name")}
             value={editCategoryName}
             onChange={(event) => setEditCategoryName(event.target.value)}
           />
           <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">Group</span>
+            <span className="label-text mb-1 text-sm font-medium">
+              {t(locale, "categories_group_label")}
+            </span>
             <select
               className="select select-bordered w-full"
               value={editCategoryGroupId}
@@ -914,7 +914,9 @@ export function CategoriesClient() {
             </select>
           </label>
           <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">Kind</span>
+            <span className="label-text mb-1 text-sm font-medium">
+              {t(locale, "categories_kind_label")}
+            </span>
             <select
               className="select select-bordered w-full"
               value={editCategoryKind}
@@ -933,30 +935,32 @@ export function CategoriesClient() {
               className="btn btn-ghost"
               onClick={() => setEditCategoryOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
-            <SubmitButton isLoading={isSubmitting}>Save</SubmitButton>
+            <SubmitButton isLoading={isSubmitting}>{t(locale, "categories_save")}</SubmitButton>
           </div>
         </form>
       </Modal>
 
       <Modal
         open={archiveCategoryOpen}
-        title="Archive category?"
+        title={t(locale, "categories_archive_category_title")}
         onClose={() => setArchiveCategoryOpen(false)}
       >
         <div className="space-y-4">
-          <p className="text-sm opacity-70">This will archive the category.</p>
+          <p className="text-sm opacity-70">
+            {t(locale, "categories_archive_category_body")}
+          </p>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               className="btn btn-ghost"
               onClick={() => setArchiveCategoryOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting} onClick={handleArchiveCategory}>
-              Archive category
+              {t(locale, "categories_archive_category_confirm")}
             </SubmitButton>
           </div>
         </div>
@@ -964,13 +968,12 @@ export function CategoriesClient() {
 
       <Modal
         open={deleteCategoryOpen}
-        title="Delete category permanently?"
+        title={t(locale, "categories_delete_category_title")}
         onClose={() => setDeleteCategoryOpen(false)}
       >
         <div className="space-y-4">
           <p className="text-sm opacity-70">
-            This cannot be undone. We will prevent deletion if the category is referenced by
-            historical data.
+            {t(locale, "categories_delete_category_body")}
           </p>
           <div className="flex justify-end gap-2">
             <button
@@ -978,10 +981,10 @@ export function CategoriesClient() {
               className="btn btn-ghost"
               onClick={() => setDeleteCategoryOpen(false)}
             >
-              Cancel
+              {t(locale, "categories_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting} onClick={handleDeleteCategory}>
-              Delete permanently
+              {t(locale, "categories_delete_permanently")}
             </SubmitButton>
           </div>
         </div>
