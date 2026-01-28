@@ -7,7 +7,7 @@ import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/a
 const createSchema = z.object({
   groupId: z.string().min(1),
   nameCustom: z.string().trim().min(1),
-  kind: z.enum(["income", "expense", "both"]).optional(),
+  kind: z.enum(["income", "expense"]).optional(),
   sortOrder: z.number().int().optional(),
 });
 

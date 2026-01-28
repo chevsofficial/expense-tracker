@@ -3,7 +3,7 @@ import { getModel } from "./_shared";
 
 export type CategoryGroupDoc = {
   workspaceId: mongoose.Types.ObjectId;
-  nameKey?: string; // e.g. "categoryGroup.home"
+  nameKey: string; // e.g. "home"
   nameCustom?: string; // user-entered name
   sortOrder: number;
   isDefault: boolean;
@@ -20,7 +20,7 @@ const CategoryGroupSchema = new mongoose.Schema<CategoryGroupDoc>(
       required: true,
       index: true,
     },
-    nameKey: { type: String },
+    nameKey: { type: String, required: true, trim: true, lowercase: true },
     nameCustom: { type: String },
     sortOrder: { type: Number, default: 0 },
     isDefault: { type: Boolean, default: false },
@@ -30,14 +30,29 @@ const CategoryGroupSchema = new mongoose.Schema<CategoryGroupDoc>(
 );
 
 // Must have either nameKey or nameCustom
+const normalizeNameKey = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "-");
+
 CategoryGroupSchema.pre("validate", function () {
   const doc = this as unknown as CategoryGroupDoc;
-  if (!doc.nameKey && !doc.nameCustom) {
+  const baseName = doc.nameCustom?.trim() ? doc.nameCustom : doc.nameKey;
+  if (!baseName) {
     throw new Error("CategoryGroup must have nameKey or nameCustom");
   }
+
+  const normalized = normalizeNameKey(baseName);
+  if (!normalized) {
+    throw new Error("CategoryGroup must have a valid nameKey");
+  }
+  doc.nameKey = normalized;
 });
 
-CategoryGroupSchema.index({ workspaceId: 1, nameKey: 1 }, { unique: true, sparse: true });
+CategoryGroupSchema.index({ workspaceId: 1, nameKey: 1 }, { unique: true });
 CategoryGroupSchema.index({ workspaceId: 1, nameCustom: 1 }, { unique: true, sparse: true });
 
 export const CategoryGroupModel = getModel<CategoryGroupDoc>("CategoryGroup", CategoryGroupSchema);

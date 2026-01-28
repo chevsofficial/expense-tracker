@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:namekey": "node scripts/migrate-namekey.mjs"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",

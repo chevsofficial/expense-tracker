@@ -1,14 +1,15 @@
 import mongoose from "mongoose";
 import { getModel } from "./_shared";
 
-export type CategoryKind = "income" | "expense" | "both";
+export type CategoryKind = "income" | "expense";
+export type CategoryStoredKind = CategoryKind | "both";
 
 export type CategoryDoc = {
   workspaceId: mongoose.Types.ObjectId;
   groupId: mongoose.Types.ObjectId;
-  nameKey?: string;
+  nameKey: string;
   nameCustom?: string;
-  kind: CategoryKind;
+  kind: CategoryStoredKind;
   sortOrder: number;
   isDefault: boolean;
   isArchived: boolean;
@@ -30,7 +31,7 @@ const CategorySchema = new mongoose.Schema<CategoryDoc>(
       required: true,
       index: true,
     },
-    nameKey: { type: String },
+    nameKey: { type: String, required: true, trim: true, lowercase: true },
     nameCustom: { type: String },
     kind: { type: String, enum: ["income", "expense", "both"], default: "expense", required: true },
     sortOrder: { type: Number, default: 0 },
@@ -41,14 +42,29 @@ const CategorySchema = new mongoose.Schema<CategoryDoc>(
 );
 
 // Must have either nameKey or nameCustom
+const normalizeNameKey = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "-");
+
 CategorySchema.pre("validate", function () {
   const doc = this as unknown as CategoryDoc;
-  if (!doc.nameKey && !doc.nameCustom) {
+  const baseName = doc.nameCustom?.trim() ? doc.nameCustom : doc.nameKey;
+  if (!baseName) {
     throw new Error("Category must have nameKey or nameCustom");
   }
+
+  const normalized = normalizeNameKey(baseName);
+  if (!normalized) {
+    throw new Error("Category must have a valid nameKey");
+  }
+  doc.nameKey = normalized;
 });
 
-CategorySchema.index({ workspaceId: 1, groupId: 1, nameKey: 1 }, { unique: true, sparse: true });
+CategorySchema.index({ workspaceId: 1, groupId: 1, nameKey: 1 }, { unique: true });
 CategorySchema.index({ workspaceId: 1, groupId: 1, nameCustom: 1 }, { unique: true, sparse: true });
 
 export const CategoryModel = getModel<CategoryDoc>("Category", CategorySchema);

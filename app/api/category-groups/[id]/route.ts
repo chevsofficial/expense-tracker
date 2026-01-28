@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
 import { CategoryModel } from "@/src/models/Category";
+import { BudgetMonthModel } from "@/src/models/BudgetMonth";
+import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
+
+const logError = (message: string, details: Record<string, unknown>) => {
+  console.error("Category groups API error:", { message, ...details });
+};
 
 const updateSchema = z
   .object({
@@ -25,12 +31,14 @@ export async function PUT(
 
   const objectId = parseObjectId(id);
   if (!objectId) {
+    logError("Invalid group id", { workspaceId: auth.workspace.id, groupId: id });
     return errorResponse("Invalid group id", 400);
   }
 
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
+    logError(parsed.error.message, { workspaceId: auth.workspace.id, groupId: id });
     return errorResponse(parsed.error.message, 400);
   }
 
@@ -41,6 +49,7 @@ export async function PUT(
   );
 
   if (!group) {
+    logError("Group not found", { workspaceId: auth.workspace.id, groupId: id });
     return errorResponse("Group not found", 404);
   }
 
@@ -55,30 +64,81 @@ export async function DELETE(
   if ("response" in auth) return auth.response;
 
   const { id } = await context.params;
+  const query = Object.fromEntries(request.nextUrl.searchParams.entries());
 
   const objectId = parseObjectId(id);
   if (!objectId) {
+    logError("Invalid group id", { workspaceId: auth.workspace.id, groupId: id, query });
     return errorResponse("Invalid group id", 400);
   }
 
   const group = await CategoryGroupModel.findOne({ _id: objectId, workspaceId: auth.workspace.id });
   if (!group) {
+    logError("Group not found", { workspaceId: auth.workspace.id, groupId: id, query });
     return errorResponse("Group not found", 404);
   }
 
   const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+  const cascadeDelete = request.nextUrl.searchParams.get("cascade") === "1";
 
   if (hardDelete) {
+    if (cascadeDelete) {
+      const categories = await CategoryModel.find(
+        { workspaceId: auth.workspace.id, groupId: objectId },
+        { _id: 1 }
+      ).lean();
+      const categoryIds = categories.map((category) => category._id);
+
+      if (categoryIds.length > 0) {
+        const [transactionCount, budgetCount] = await Promise.all([
+          TransactionModel.countDocuments({
+            workspaceId: auth.workspace.id,
+            categoryId: { $in: categoryIds },
+          }),
+          BudgetMonthModel.countDocuments({
+            workspaceId: auth.workspace.id,
+            "plannedLines.categoryId": { $in: categoryIds },
+          }),
+        ]);
+
+        if (transactionCount > 0 || budgetCount > 0) {
+          const message =
+            "Cannot permanently delete group: some categories are referenced by historical data. Archive instead.";
+          logError(message, {
+            workspaceId: auth.workspace.id,
+            groupId: id,
+            query,
+            transactionCount,
+            budgetCount,
+          });
+          return errorResponse(message, 400);
+        }
+
+        await CategoryModel.deleteMany({
+          workspaceId: auth.workspace.id,
+          groupId: objectId,
+        });
+      }
+
+      await CategoryGroupModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
+      return NextResponse.json({ data: { deleted: true } });
+    }
+
     const categoryCount = await CategoryModel.countDocuments({
       workspaceId: auth.workspace.id,
       groupId: objectId,
     });
 
     if (categoryCount > 0) {
-      return errorResponse(
-        "Cannot permanently delete: group still has categories. Archive instead.",
-        400
-      );
+      const message =
+        "Cannot permanently delete group: it still has categories (including archived). Archive instead, or permanently delete/move categories first.";
+      logError(message, {
+        workspaceId: auth.workspace.id,
+        groupId: id,
+        query,
+        categoryCount,
+      });
+      return errorResponse(message, 400);
     }
 
     await CategoryGroupModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });

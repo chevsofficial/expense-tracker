@@ -6,11 +6,15 @@ import { BudgetMonthModel } from "@/src/models/BudgetMonth";
 import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
+const logError = (message: string, details: Record<string, unknown>) => {
+  console.error("Categories API error:", { message, ...details });
+};
+
 const updateSchema = z
   .object({
     nameCustom: z.string().trim().min(1).optional(),
     groupId: z.string().min(1).optional(),
-    kind: z.enum(["income", "expense", "both"]).optional(),
+    kind: z.enum(["income", "expense"]).optional(),
     sortOrder: z.number().int().optional(),
     isArchived: z.boolean().optional(),
   })
@@ -29,12 +33,14 @@ export async function PUT(
 
   const objectId = parseObjectId(id);
   if (!objectId) {
+    logError("Invalid category id", { workspaceId: auth.workspace.id, categoryId: id });
     return errorResponse("Invalid category id", 400);
   }
 
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
+    logError(parsed.error.message, { workspaceId: auth.workspace.id, categoryId: id });
     return errorResponse(parsed.error.message, 400);
   }
 
@@ -43,6 +49,11 @@ export async function PUT(
   if (parsed.data.groupId) {
     const newGroupId = parseObjectId(parsed.data.groupId);
     if (!newGroupId) {
+      logError("Invalid group id", {
+        workspaceId: auth.workspace.id,
+        categoryId: id,
+        groupId: parsed.data.groupId,
+      });
       return errorResponse("Invalid group id", 400);
     }
 
@@ -52,6 +63,7 @@ export async function PUT(
     });
 
     if (!group) {
+      logError("Group not found", { workspaceId: auth.workspace.id, categoryId: id });
       return errorResponse("Group not found", 404);
     }
 
@@ -65,6 +77,7 @@ export async function PUT(
   );
 
   if (!category) {
+    logError("Category not found", { workspaceId: auth.workspace.id, categoryId: id });
     return errorResponse("Category not found", 404);
   }
 
@@ -79,9 +92,11 @@ export async function DELETE(
   if ("response" in auth) return auth.response;
 
   const { id } = await context.params;
+  const query = Object.fromEntries(request.nextUrl.searchParams.entries());
 
   const objectId = parseObjectId(id);
   if (!objectId) {
+    logError("Invalid category id", { workspaceId: auth.workspace.id, categoryId: id, query });
     return errorResponse("Invalid category id", 400);
   }
 
@@ -91,6 +106,7 @@ export async function DELETE(
   });
 
   if (!category) {
+    logError("Category not found", { workspaceId: auth.workspace.id, categoryId: id, query });
     return errorResponse("Category not found", 404);
   }
 
@@ -109,10 +125,16 @@ export async function DELETE(
     ]);
 
     if (transactionCount > 0 || budgetCount > 0) {
-      return errorResponse(
-        "Cannot permanently delete: category is referenced by historical data. Archive instead.",
-        400
-      );
+      const message =
+        "Cannot permanently delete: category is referenced by historical data. Archive instead.";
+      logError(message, {
+        workspaceId: auth.workspace.id,
+        categoryId: id,
+        query,
+        transactionCount,
+        budgetCount,
+      });
+      return errorResponse(message, 400);
     }
 
     await CategoryModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
