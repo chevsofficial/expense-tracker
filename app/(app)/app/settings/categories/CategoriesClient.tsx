@@ -13,14 +13,15 @@ type CategoryGroup = {
   isArchived?: boolean;
 };
 
-type CategoryKind = "income" | "expense" | "both";
+type CategoryKind = "income" | "expense";
+type CategoryStoredKind = CategoryKind | "both";
 
 type Category = {
   _id: string;
   nameKey?: string;
   nameCustom?: string;
   groupId: string;
-  kind?: CategoryKind;
+  kind?: CategoryStoredKind;
   isArchived?: boolean;
 };
 
@@ -33,8 +34,15 @@ type DeleteResponse = { data: { deleted: boolean } };
 const kindOptions: { value: CategoryKind; label: string }[] = [
   { value: "expense", label: "Expense" },
   { value: "income", label: "Income" },
-  { value: "both", label: "Both" },
 ];
+
+const normalizeKind = (kind?: CategoryStoredKind): CategoryKind =>
+  kind === "income" ? "income" : "expense";
+
+const kindLabels: Record<CategoryKind, string> = {
+  income: "Income",
+  expense: "Expense",
+};
 
 export function CategoriesClient() {
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
@@ -44,6 +52,7 @@ export function CategoriesClient() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -57,6 +66,7 @@ export function CategoriesClient() {
 
   const [deleteGroupOpen, setDeleteGroupOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<CategoryGroup | null>(null);
+  const [cascadeDeleteGroup, setCascadeDeleteGroup] = useState(false);
 
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -80,10 +90,23 @@ export function CategoriesClient() {
     [groups, selectedGroupId]
   );
 
+  const activeGroups = useMemo(() => groups.filter((group) => !group.isArchived), [groups]);
+  const archivedGroups = useMemo(() => groups.filter((group) => group.isArchived), [groups]);
+
   const categoriesForGroup = useMemo(() => {
     if (!selectedGroupId) return [];
     return categories.filter((category) => category.groupId === selectedGroupId);
   }, [categories, selectedGroupId]);
+
+  const activeCategoriesForGroup = useMemo(
+    () => categoriesForGroup.filter((category) => !category.isArchived),
+    [categoriesForGroup]
+  );
+
+  const archivedCategoriesForGroup = useMemo(
+    () => categoriesForGroup.filter((category) => category.isArchived),
+    [categoriesForGroup]
+  );
 
   const getDisplayName = (item: { nameCustom?: string; nameKey?: string }) =>
     item.nameCustom?.trim() || item.nameKey || "Untitled";
@@ -93,22 +116,21 @@ export function CategoriesClient() {
     setError(null);
     try {
       const [groupResponse, categoryResponse] = await Promise.all([
-        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups"),
-        getJSON<ApiListResponse<Category>>("/api/categories"),
+        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=true"),
+        getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=true"),
       ]);
 
-      const activeGroups = groupResponse.data.filter((group) => !group.isArchived);
-      const activeCategories = categoryResponse.data.filter(
-        (category) => !category.isArchived
-      );
+      const fetchedGroups = groupResponse.data;
+      const fetchedCategories = categoryResponse.data;
+      const nextActiveGroups = fetchedGroups.filter((group) => !group.isArchived);
 
-      setGroups(activeGroups);
-      setCategories(activeCategories);
+      setGroups(fetchedGroups);
+      setCategories(fetchedCategories);
       setSelectedGroupId((current) => {
-        if (current && activeGroups.some((group) => group._id === current)) {
+        if (current && fetchedGroups.some((group) => group._id === current)) {
           return current;
         }
-        return activeGroups[0]?._id ?? null;
+        return nextActiveGroups[0]?._id ?? fetchedGroups[0]?._id ?? null;
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load categories.";
@@ -122,6 +144,15 @@ export function CategoriesClient() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!showArchived && selectedGroupId) {
+      const selected = groups.find((group) => group._id === selectedGroupId);
+      if (selected?.isArchived) {
+        setSelectedGroupId(activeGroups[0]?._id ?? null);
+      }
+    }
+  }, [activeGroups, groups, selectedGroupId, showArchived]);
 
   const handleError = (err: unknown) => {
     const message = err instanceof Error ? err.message : "Something went wrong.";
@@ -193,9 +224,13 @@ export function CategoriesClient() {
 
     setIsSubmitting(true);
     try {
-      await delJSON<DeleteResponse>(`/api/category-groups/${groupToDelete._id}?hard=1`);
+      const cascadeParam = cascadeDeleteGroup ? "&cascade=1" : "";
+      await delJSON<DeleteResponse>(
+        `/api/category-groups/${groupToDelete._id}?hard=1${cascadeParam}`
+      );
       setDeleteGroupOpen(false);
       setGroupToDelete(null);
+      setCascadeDeleteGroup(false);
       await loadData();
     } catch (err) {
       handleError(err);
@@ -293,13 +328,14 @@ export function CategoriesClient() {
 
   const openDeleteGroupModal = (group: CategoryGroup) => {
     setGroupToDelete(group);
+    setCascadeDeleteGroup(false);
     setDeleteGroupOpen(true);
   };
 
   const openEditCategoryModal = (category: Category) => {
     setCategoryToEdit(category);
     setEditCategoryName(getDisplayName(category));
-    setEditCategoryKind(category.kind ?? "expense");
+    setEditCategoryKind(normalizeKind(category.kind));
     setEditCategoryGroupId(category.groupId);
     setEditCategoryOpen(true);
   };
@@ -314,9 +350,39 @@ export function CategoriesClient() {
     setDeleteCategoryOpen(true);
   };
 
+  const handleRestoreGroup = async (group: CategoryGroup) => {
+    setIsSubmitting(true);
+    try {
+      await putJSON<ApiItemResponse<CategoryGroup>>(`/api/category-groups/${group._id}`, {
+        isArchived: false,
+      });
+      await loadData();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRestoreCategory = async (category: Category) => {
+    setIsSubmitting(true);
+    try {
+      await putJSON<ApiItemResponse<Category>>(`/api/categories/${category._id}`, {
+        isArchived: false,
+      });
+      await loadData();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openAddCategoryModal = () => {
-    if (!selectedGroupId) return;
-    setNewCategoryGroupId(selectedGroupId);
+    const selectedActiveGroup =
+      selectedGroupId && !selectedGroup?.isArchived ? selectedGroupId : activeGroups[0]?._id;
+    if (!selectedActiveGroup) return;
+    setNewCategoryGroupId(selectedActiveGroup);
     setAddCategoryOpen(true);
   };
 
@@ -327,14 +393,23 @@ export function CategoriesClient() {
           <h1 className="text-3xl font-bold">Categories</h1>
           <p className="mt-2 opacity-70">Organize categories into clear groups.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="toggle toggle-sm"
+              checked={showArchived}
+              onChange={(event) => setShowArchived(event.target.checked)}
+            />
+            Show archived
+          </label>
           <button className="btn btn-outline btn-sm" onClick={() => setAddGroupOpen(true)}>
             Add group
           </button>
           <button
             className="btn btn-primary btn-sm"
             onClick={openAddCategoryModal}
-            disabled={!selectedGroupId}
+            disabled={!selectedGroupId || selectedGroup?.isArchived}
           >
             Add category
           </button>
@@ -362,55 +437,152 @@ export function CategoriesClient() {
             {loading ? <p className="text-sm opacity-70">Loading groups...</p> : null}
             {error ? <p className="text-sm text-error">{error}</p> : null}
             <div className="flex flex-col gap-2">
-              {groups.length === 0 && !loading ? (
+              {activeGroups.length === 0 && !loading ? (
                 <p className="text-sm opacity-70">No groups yet.</p>
               ) : null}
-              {groups.map((group) => (
-                <div
-                  key={group._id}
-                  className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
-                    selectedGroupId === group._id
-                      ? "bg-base-200 font-medium"
-                      : "hover:bg-base-200"
-                  }`}
-                >
-                  <button
-                    className="flex-1 text-left"
-                    onClick={() => setSelectedGroupId(group._id)}
+              {showArchived ? (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
+                    Active Groups
+                  </p>
+                  {activeGroups.map((group) => (
+                    <div
+                      key={group._id}
+                      className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
+                        selectedGroupId === group._id
+                          ? "bg-base-200 font-medium"
+                          : "hover:bg-base-200"
+                      }`}
+                    >
+                      <button
+                        className="flex-1 text-left"
+                        onClick={() => setSelectedGroupId(group._id)}
+                      >
+                        {getDisplayName(group)}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openRenameModal(group);
+                          }}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openArchiveGroupModal(group);
+                          }}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs text-error"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openDeleteGroupModal(group);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="pt-2 text-xs font-semibold uppercase tracking-wide opacity-60">
+                    Archived Groups
+                  </p>
+                  {archivedGroups.length === 0 ? (
+                    <p className="text-sm opacity-70">No archived groups.</p>
+                  ) : null}
+                  {archivedGroups.map((group) => (
+                    <div
+                      key={group._id}
+                      className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
+                        selectedGroupId === group._id
+                          ? "bg-base-200 font-medium"
+                          : "hover:bg-base-200"
+                      }`}
+                    >
+                      <button
+                        className="flex-1 text-left"
+                        onClick={() => setSelectedGroupId(group._id)}
+                      >
+                        {getDisplayName(group)}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleRestoreGroup(group);
+                          }}
+                        >
+                          Restore
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs text-error"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openDeleteGroupModal(group);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                activeGroups.map((group) => (
+                  <div
+                    key={group._id}
+                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
+                      selectedGroupId === group._id
+                        ? "bg-base-200 font-medium"
+                        : "hover:bg-base-200"
+                    }`}
                   >
-                    {getDisplayName(group)}
-                  </button>
-                  <div className="flex items-center gap-1">
                     <button
-                      className="btn btn-ghost btn-xs"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openRenameModal(group);
-                      }}
+                      className="flex-1 text-left"
+                      onClick={() => setSelectedGroupId(group._id)}
                     >
-                      Rename
+                      {getDisplayName(group)}
                     </button>
-                    <button
-                      className="btn btn-ghost btn-xs"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openArchiveGroupModal(group);
-                      }}
-                    >
-                      Archive
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-xs text-error"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openDeleteGroupModal(group);
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openRenameModal(group);
+                        }}
+                      >
+                        Rename
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openArchiveGroupModal(group);
+                        }}
+                      >
+                        Archive
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-xs text-error"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openDeleteGroupModal(group);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -429,7 +601,7 @@ export function CategoriesClient() {
               <button
                 className="btn btn-primary btn-sm"
                 onClick={openAddCategoryModal}
-                disabled={!selectedGroupId}
+                disabled={!selectedGroupId || selectedGroup?.isArchived}
               >
                 Add category
               </button>
@@ -441,13 +613,19 @@ export function CategoriesClient() {
               </div>
             ) : null}
 
-            {selectedGroupId && categoriesForGroup.length === 0 && !loading ? (
+            {showArchived && selectedGroupId ? (
+              <p className="text-sm font-semibold uppercase tracking-wide opacity-60">
+                Active Categories
+              </p>
+            ) : null}
+
+            {selectedGroupId && activeCategoriesForGroup.length === 0 && !loading ? (
               <div className="rounded-md border border-dashed border-base-300 p-6 text-sm opacity-70">
                 No categories yet. Add one.
               </div>
             ) : null}
 
-            {selectedGroupId && categoriesForGroup.length > 0 ? (
+            {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="table">
                   <thead>
@@ -458,12 +636,12 @@ export function CategoriesClient() {
                     </tr>
                   </thead>
                   <tbody>
-                    {categoriesForGroup.map((category) => (
+                    {activeCategoriesForGroup.map((category) => (
                       <tr key={category._id}>
                         <td className="font-medium">{getDisplayName(category)}</td>
                         <td>
                           <span className="badge badge-outline">
-                            {category.kind ?? "expense"}
+                            {kindLabels[normalizeKind(category.kind)]}
                           </span>
                         </td>
                         <td className="text-right">
@@ -492,6 +670,59 @@ export function CategoriesClient() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            ) : null}
+
+            {showArchived && selectedGroupId ? (
+              <div className="space-y-4">
+                <p className="text-sm font-semibold uppercase tracking-wide opacity-60">
+                  Archived Categories
+                </p>
+                {archivedCategoriesForGroup.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-base-300 p-6 text-sm opacity-70">
+                    No archived categories.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Kind</th>
+                          <th className="text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {archivedCategoriesForGroup.map((category) => (
+                          <tr key={category._id}>
+                            <td className="font-medium">{getDisplayName(category)}</td>
+                            <td>
+                              <span className="badge badge-outline">
+                                {kindLabels[normalizeKind(category.kind)]}
+                              </span>
+                            </td>
+                            <td className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={() => void handleRestoreCategory(category)}
+                                >
+                                  Restore
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-xs text-error"
+                                  onClick={() => openDeleteCategoryModal(category)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
@@ -572,8 +803,21 @@ export function CategoriesClient() {
       >
         <div className="space-y-4">
           <p className="text-sm opacity-70">
-            This cannot be undone. We will prevent deletion if the group still has categories.
+            This cannot be undone. Deletion is blocked if the group still has categories
+            (including archived), unless you choose to delete them too.
           </p>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-error checkbox-sm"
+              checked={cascadeDeleteGroup}
+              onChange={(event) => setCascadeDeleteGroup(event.target.checked)}
+            />
+            <span>
+              Also permanently delete all categories in this group. This will fail if any category
+              is referenced by historical data.
+            </span>
+          </label>
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -609,7 +853,7 @@ export function CategoriesClient() {
               value={newCategoryGroupId}
               onChange={(event) => setNewCategoryGroupId(event.target.value)}
             >
-              {groups.map((group) => (
+              {activeGroups.map((group) => (
                 <option key={group._id} value={group._id}>
                   {getDisplayName(group)}
                 </option>
@@ -662,7 +906,7 @@ export function CategoriesClient() {
               value={editCategoryGroupId}
               onChange={(event) => setEditCategoryGroupId(event.target.value)}
             >
-              {groups.map((group) => (
+              {activeGroups.map((group) => (
                 <option key={group._id} value={group._id}>
                   {getDisplayName(group)}
                 </option>

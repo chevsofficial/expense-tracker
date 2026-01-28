@@ -3,6 +3,14 @@ import { WorkspaceModel } from "@/src/models/Workspace";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
 import { CategoryModel } from "@/src/models/Category";
 
+const normalizeNameKey = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "-");
+
 const DEFAULT_GROUP_KEYS = [
   "categoryGroup.home",
   "categoryGroup.utilities",
@@ -17,6 +25,7 @@ const DEFAULT_GROUP_KEYS = [
   "categoryGroup.debt",
   "categoryGroup.misc",
 ];
+const DEFAULT_GROUP_NAME_KEYS = DEFAULT_GROUP_KEYS.map(normalizeNameKey);
 
 export async function ensureWorkspaceSeeded(userId: string) {
   const userObjectId = new mongoose.Types.ObjectId(userId);
@@ -37,7 +46,7 @@ export async function ensureWorkspaceSeeded(userId: string) {
 
   if (existingGroups.length === 0) {
     await CategoryGroupModel.insertMany(
-      DEFAULT_GROUP_KEYS.map((key, idx) => ({
+      DEFAULT_GROUP_NAME_KEYS.map((key, idx) => ({
         workspaceId: workspace._id,
         nameKey: key,
         sortOrder: idx,
@@ -49,7 +58,7 @@ export async function ensureWorkspaceSeeded(userId: string) {
 
   const miscGroup = await CategoryGroupModel.findOne({
     workspaceId: workspace._id,
-    nameKey: "categoryGroup.misc",
+    nameKey: normalizeNameKey("categoryGroup.misc"),
   });
 
   if (miscGroup) {
