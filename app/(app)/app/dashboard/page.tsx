@@ -52,6 +52,18 @@ export default async function DashboardPage() {
           </ul>
         </div>
       </div>
+
+      <div className="card bg-base-100 shadow">
+        <div className="card-body">
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-3 rounded-full bg-primary" />
+            <p className="font-medium">Theme check: primary + base colors</p>
+            <button className="btn btn-primary btn-sm" type="button">
+              Primary
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
