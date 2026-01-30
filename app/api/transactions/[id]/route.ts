@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
+import { CategoryModel } from "@/src/models/Category";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const amountSchema = z
@@ -13,6 +14,8 @@ const dateSchema = z.string().refine((value) => !Number.isNaN(new Date(value).ge
 const updateSchema = z.object({
   date: dateSchema.optional(),
   amount: amountSchema.optional(),
+  currency: z.string().trim().min(1).optional(),
+  kind: z.enum(["income", "expense"]).optional(),
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchant: z.string().trim().min(1).optional(),
@@ -53,6 +56,14 @@ export async function PUT(
     update.amountMinor = toMinorUnits(parsed.data.amount);
   }
 
+  if (parsed.data.currency !== undefined) {
+    update.currency = parsed.data.currency;
+  }
+
+  if (parsed.data.kind !== undefined) {
+    update.kind = parsed.data.kind;
+  }
+
   if (parsed.data.categoryId !== undefined) {
     if (parsed.data.categoryId === null) {
       update.categoryId = null;
@@ -60,6 +71,13 @@ export async function PUT(
       const categoryObjectId = parseObjectId(parsed.data.categoryId);
       if (!categoryObjectId) {
         return errorResponse("Invalid category id", 400);
+      }
+      const category = await CategoryModel.findOne({
+        _id: categoryObjectId,
+        workspaceId: auth.workspace.id,
+      });
+      if (!category) {
+        return errorResponse("Category not found", 404);
       }
       update.categoryId = categoryObjectId;
     }

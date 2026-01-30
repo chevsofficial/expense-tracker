@@ -4,11 +4,13 @@ export function AppTopNav({
   appName,
   dashboardLabel,
   categoriesLabel,
+  transactionsLabel,
   rightSlot,
 }: {
   appName: string;
   dashboardLabel: string;
   categoriesLabel: string;
+  transactionsLabel: string;
   rightSlot?: React.ReactNode;
 }) {
   return (
@@ -25,6 +27,9 @@ export function AppTopNav({
           </li>
           <li>
             <Link href="/app/settings/categories">{categoriesLabel}</Link>
+          </li>
+          <li>
+            <Link href="/app/transactions">{transactionsLabel}</Link>
           </li>
         </ul>
       </div>
