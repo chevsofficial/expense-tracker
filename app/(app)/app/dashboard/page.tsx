@@ -1,23 +1,66 @@
 import { getLocale } from "@/src/i18n/getLocale";
 import { t } from "@/src/i18n/t";
+import { requireAuthContext } from "@/src/server/api";
+import { TransactionModel } from "@/src/models/Transaction";
 
 export default async function DashboardPage() {
   const locale = await getLocale();
+  const auth = await requireAuthContext();
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const monthLabel = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(start);
+
+  let totalSpendMinor = 0;
+  let totalIncomeMinor = 0;
+  let currency = "MXN";
+
+  if (!("response" in auth)) {
+    currency = auth.workspace.defaultCurrency;
+    const transactions = await TransactionModel.find({
+      workspaceId: auth.workspace.id,
+      date: { $gte: start, $lt: end },
+      isArchived: false,
+    }).lean();
+
+    for (const transaction of transactions) {
+      if (transaction.kind === "expense") {
+        totalSpendMinor += transaction.amountMinor;
+      } else {
+        totalIncomeMinor += transaction.amountMinor;
+      }
+    }
+  }
+
+  const formatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  });
+  const netMinor = totalIncomeMinor - totalSpendMinor;
+
   const stats = [
     {
-      label: t(locale, "dashboard_total_spend"),
-      value: "$1,240",
-      detail: t(locale, "dashboard_last_30_days"),
+      label: t(locale, "dashboard_spend"),
+      value: formatter.format(totalSpendMinor / 100),
+      detail: monthLabel,
+    },
+    {
+      label: t(locale, "dashboard_income"),
+      value: formatter.format(totalIncomeMinor / 100),
+      detail: monthLabel,
+    },
+    {
+      label: t(locale, "dashboard_net"),
+      value: formatter.format(netMinor / 100),
+      detail: monthLabel,
     },
     {
       label: t(locale, "dashboard_remaining_budget"),
-      value: "$860",
+      value: "—",
       detail: t(locale, "dashboard_across_categories"),
-    },
-    {
-      label: t(locale, "dashboard_upcoming_bills"),
-      value: "$320",
-      detail: t(locale, "dashboard_due_this_week"),
     },
   ];
 
@@ -28,7 +71,7 @@ export default async function DashboardPage() {
         <p className="mt-2 opacity-70">{t(locale, "dashboard_subtitle")}</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="card bg-base-100 shadow">
             <div className="card-body">

@@ -25,6 +25,7 @@ export default async function AppLayout({
         appName={t(locale, "app_name")}
         dashboardLabel={t(locale, "nav_dashboard")}
         categoriesLabel={t(locale, "nav_categories")}
+        transactionsLabel={t(locale, "nav_transactions")}
         rightSlot={<LanguageToggle locale={locale} />}
       />
       <div className="mx-auto w-full max-w-5xl">{children}</div>

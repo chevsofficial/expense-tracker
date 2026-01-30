@@ -8,6 +8,7 @@ type TextFieldProps = {
   placeholder?: string;
   error?: string;
   type?: string;
+  step?: string | number;
 };
 
 export function TextField({
@@ -18,6 +19,7 @@ export function TextField({
   placeholder,
   error,
   type = "text",
+  step,
 }: TextFieldProps) {
   return (
     <label className="form-control w-full">
@@ -28,6 +30,7 @@ export function TextField({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        step={step}
         className={`input input-bordered w-full ${error ? "input-error" : ""}`}
       />
       {error ? <span className="mt-1 text-xs text-error">{error}</span> : null}

@@ -1,12 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
+import { CategoryModel } from "@/src/models/Category";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
 
-const currencySchema = z
-  .string()
-  .trim()
-  .regex(/^[A-Z]{3}$/, "Invalid currency");
+const currencySchema = z.string().trim().min(1, "Invalid currency");
 
 const amountSchema = z
   .number()
@@ -74,7 +72,7 @@ export async function GET(request: NextRequest) {
     date: { $gte: range.start, $lt: range.end },
     ...(includeArchived ? {} : { isArchived: false }),
   })
-    .sort({ date: -1 })
+    .sort({ date: -1, createdAt: -1 })
     .lean();
 
   return NextResponse.json({ data: transactions });
@@ -94,6 +92,15 @@ export async function POST(request: NextRequest) {
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
   if (categoryId && !categoryObjectId) {
     return errorResponse("Invalid category id", 400);
+  }
+  if (categoryObjectId) {
+    const category = await CategoryModel.findOne({
+      _id: categoryObjectId,
+      workspaceId: auth.workspace.id,
+    });
+    if (!category) {
+      return errorResponse("Category not found", 404);
+    }
   }
 
   const transaction = await TransactionModel.create({
