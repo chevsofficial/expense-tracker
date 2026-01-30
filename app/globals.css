@@ -1,15 +1,32 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
-:root[data-theme="spendary"] {
-  --p: 118 56% 51%;
-  --pc: 120 41% 7%;
-  --s: 120 41% 31%;
-  --a: 45 90% 57%;
-  --n: 0 0% 9%;
-  --b1: 45 9% 95%;
-  --b2: 45 9% 92%;
-  --b3: 45 9% 88%;
-  --bc: 0 0% 9%;
+/* Spendary theme (daisyUI v5) */
+@plugin "daisyui/theme" {
+  name: "spendary";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+
+  --color-primary: #6DBE45;
+  --color-primary-content: #0b1a0b;
+
+  --color-secondary: #2F6F2E;
+  --color-accent: #F4C430;
+
+  --color-neutral: #171717;
+
+  --color-base-100: #F7F6F2;
+  --color-base-200: #EFEDE6;
+  --color-base-300: #E7E4DA;
+  --color-base-content: #171717;
+
+  /* Optional polish (feel free to tweak later) */
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
 }
 
 html,
