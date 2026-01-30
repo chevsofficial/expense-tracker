@@ -3,6 +3,8 @@ export type Locale = "en" | "es";
 export const messages: Record<Locale, Record<string, string>> = {
   en: {
     app_name: "Spendary",
+    nav_dashboard: "Dashboard",
+    nav_categories: "Categories",
     dashboard_title: "Dashboard",
     dashboard_subtitle: "Track your spending at a glance and keep budgets on target.",
     dashboard_total_spend: "Total spend",
@@ -81,6 +83,8 @@ export const messages: Record<Locale, Record<string, string>> = {
   },
   es: {
     app_name: "Spendary",
+    nav_dashboard: "Tablero",
+    nav_categories: "Categorías",
     dashboard_title: "Tablero",
     dashboard_subtitle:
       "Sigue tus gastos de un vistazo y mantén tus presupuestos en orden.",
