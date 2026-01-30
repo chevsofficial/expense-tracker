@@ -11,8 +11,6 @@ const config = {
     extend: {},
   },
   plugins: [daisyui],
-  // DaisyUI plugin options aren't in Tailwind's TS types (Tailwind v4),
-  // so keep them but avoid strict type rejection.
   daisyui: {
     themes: [
       {
@@ -32,6 +30,6 @@ const config = {
       "dark",
     ],
   },
-} as unknown as Config;
+} satisfies Config;
 
 export default config;
