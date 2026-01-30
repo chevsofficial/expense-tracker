@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import type { Locale } from "./messages";
 
-export function getLocale(): Locale {
-  const c = cookies().get("locale")?.value;
+export async function getLocale(): Promise<Locale> {
+  const cookieStore = await cookies();
+  const c = cookieStore.get("locale")?.value;
   return c === "es" ? "es" : "en";
 }

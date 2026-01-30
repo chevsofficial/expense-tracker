@@ -4,8 +4,8 @@ import { getLocale } from "@/src/i18n/getLocale";
 import { t } from "@/src/i18n/t";
 import { CategoriesClient } from "./CategoriesClient";
 
-export default function CategoriesPage() {
-  const locale = getLocale();
+export default async function CategoriesPage() {
+  const locale = await getLocale();
 
   return (
     <>
