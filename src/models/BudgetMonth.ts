@@ -3,14 +3,14 @@ import { getModel } from "./_shared";
 
 export type PlannedLine = {
   categoryId: mongoose.Types.ObjectId;
-  amount: number;
-  currency: string; // allow planning in USD or MXN; convert via FxRateMonth for totals
+  plannedAmountMinor: number;
+  kind?: "expense" | "income";
 };
 
 export type BudgetMonthDoc = {
   workspaceId: mongoose.Types.ObjectId;
-  year: number;
-  month: number; // 1-12
+  month: string; // YYYY-MM
+  currency: string;
   plannedLines: PlannedLine[];
   createdAt: Date;
   updatedAt: Date;
@@ -19,8 +19,8 @@ export type BudgetMonthDoc = {
 const PlannedLineSchema = new mongoose.Schema<PlannedLine>(
   {
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
-    amount: { type: Number, required: true },
-    currency: { type: String, required: true }
+    plannedAmountMinor: { type: Number, required: true },
+    kind: { type: String, enum: ["expense", "income"], default: "expense" },
   },
   { _id: false }
 );
@@ -28,13 +28,14 @@ const PlannedLineSchema = new mongoose.Schema<PlannedLine>(
 const BudgetMonthSchema = new mongoose.Schema<BudgetMonthDoc>(
   {
     workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
-    year: { type: Number, required: true },
-    month: { type: Number, required: true },
-    plannedLines: { type: [PlannedLineSchema], default: [] }
+    month: { type: String, required: true },
+    currency: { type: String, required: true },
+    plannedLines: { type: [PlannedLineSchema], default: [] },
   },
   { timestamps: true }
 );
 
-BudgetMonthSchema.index({ workspaceId: 1, year: 1, month: 1 }, { unique: true });
+BudgetMonthSchema.index({ workspaceId: 1, month: 1 }, { unique: true });
+BudgetMonthSchema.index({ workspaceId: 1, month: 1 });
 
 export const BudgetMonthModel = getModel<BudgetMonthDoc>("BudgetMonth", BudgetMonthSchema);
