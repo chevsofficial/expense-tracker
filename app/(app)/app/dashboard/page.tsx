@@ -3,8 +3,8 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { getLocale } from "@/src/i18n/getLocale";
 import { t } from "@/src/i18n/t";
 
-export default function DashboardPage() {
-  const locale = getLocale();
+export default async function DashboardPage() {
+  const locale = await getLocale();
   const stats = [
     {
       label: t(locale, "dashboard_total_spend"),
