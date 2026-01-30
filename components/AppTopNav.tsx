@@ -5,12 +5,16 @@ export function AppTopNav({
   dashboardLabel,
   categoriesLabel,
   transactionsLabel,
+  budgetLabel,
+  recurringLabel,
   rightSlot,
 }: {
   appName: string;
   dashboardLabel: string;
   categoriesLabel: string;
   transactionsLabel: string;
+  budgetLabel: string;
+  recurringLabel: string;
   rightSlot?: React.ReactNode;
 }) {
   return (
@@ -30,6 +34,12 @@ export function AppTopNav({
           </li>
           <li>
             <Link href="/app/transactions">{transactionsLabel}</Link>
+          </li>
+          <li>
+            <Link href="/app/budget">{budgetLabel}</Link>
+          </li>
+          <li>
+            <Link href="/app/recurring">{recurringLabel}</Link>
           </li>
         </ul>
       </div>

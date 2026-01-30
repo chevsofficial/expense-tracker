@@ -19,7 +19,15 @@ const updateSchema = z.object({
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchant: z.string().trim().min(1).optional(),
-  receipts: z.array(z.string().min(1)).optional(),
+  receipts: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        name: z.string().trim().min(1).optional(),
+        uploadedAt: z.string().trim().min(1).optional(),
+      })
+    )
+    .optional(),
   isArchived: z.boolean().optional(),
 });
 
@@ -92,7 +100,11 @@ export async function PUT(
   }
 
   if (parsed.data.receipts !== undefined) {
-    update.receipts = parsed.data.receipts;
+    update.receipts = parsed.data.receipts.map((receipt) => ({
+      url: receipt.url,
+      name: receipt.name,
+      uploadedAt: receipt.uploadedAt ?? new Date().toISOString(),
+    }));
   }
 
   if (parsed.data.isArchived !== undefined) {

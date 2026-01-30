@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -19,8 +19,14 @@ type Transaction = {
   categoryId: string | null;
   note?: string;
   merchant?: string;
-  receipts?: string[];
+  receipts?: Receipt[];
   isArchived?: boolean;
+};
+
+type Receipt = {
+  url: string;
+  name?: string;
+  uploadedAt: string;
 };
 
 type Category = {
@@ -44,7 +50,7 @@ type TransactionForm = {
   categoryId: string;
   merchant: string;
   note: string;
-  receipts: string[];
+  receipts: Receipt[];
 };
 
 const getTodayInput = () => {
@@ -89,6 +95,7 @@ export function TransactionsClient({
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   const [formState, setFormState] = useState<TransactionForm>(() => ({
     date: getTodayInput(),
@@ -100,7 +107,6 @@ export function TransactionsClient({
     note: "",
     receipts: [],
   }));
-  const [receiptInput, setReceiptInput] = useState("");
 
   const categoryName = useCallback(
     (category?: Category | null) =>
@@ -172,7 +178,6 @@ export function TransactionsClient({
       note: "",
       receipts: [],
     });
-    setReceiptInput("");
     setModalOpen(true);
   };
 
@@ -188,18 +193,41 @@ export function TransactionsClient({
       note: transaction.note ?? "",
       receipts: transaction.receipts ?? [],
     });
-    setReceiptInput("");
     setModalOpen(true);
   };
 
-  const handleAddReceipt = () => {
-    const trimmed = receiptInput.trim();
-    if (!trimmed) return;
-    setFormState((current) => ({
-      ...current,
-      receipts: [...current.receipts, trimmed],
-    }));
-    setReceiptInput("");
+  const handleReceiptUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingReceipt(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/uploads/receipt", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { data?: { url: string } }
+        | { error?: { message?: string } }
+        | null;
+      if (!response.ok || !payload?.data?.url) {
+        throw new Error(payload?.error?.message ?? "Upload failed");
+      }
+      setFormState((current) => ({
+        ...current,
+        receipts: [
+          ...current.receipts,
+          { url: payload.data.url, name: file.name, uploadedAt: new Date().toISOString() },
+        ],
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    } finally {
+      setUploadingReceipt(false);
+      event.target.value = "";
+    }
   };
 
   const handleRemoveReceipt = (index: number) => {
@@ -495,22 +523,32 @@ export function TransactionsClient({
 
           <div className="space-y-2">
             <p className="text-sm font-medium">{t(locale, "transactions_receipts")}</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
-                className="input input-bordered flex-1"
-                value={receiptInput}
-                onChange={(event) => setReceiptInput(event.target.value)}
-                placeholder={t(locale, "transactions_receipt_placeholder")}
+                className="file-input file-input-bordered w-full"
+                type="file"
+                onChange={handleReceiptUpload}
+                disabled={uploadingReceipt}
               />
-              <button type="button" className="btn btn-outline" onClick={handleAddReceipt}>
-                {t(locale, "transactions_add_receipt")}
-              </button>
+              {uploadingReceipt ? (
+                <span className="text-xs opacity-60">{t(locale, "transactions_uploading")}</span>
+              ) : null}
             </div>
             {formState.receipts.length ? (
               <ul className="space-y-2">
                 {formState.receipts.map((receipt, index) => (
-                  <li key={`${receipt}-${index}`} className="flex items-center justify-between gap-2">
-                    <span className="text-sm break-all">{receipt}</span>
+                  <li
+                    key={`${receipt.url}-${index}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <a
+                      className="text-sm break-all link link-hover"
+                      href={receipt.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {receipt.name ?? receipt.url}
+                    </a>
                     <button
                       type="button"
                       className="btn btn-ghost btn-xs"
