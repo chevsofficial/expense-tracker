@@ -4,6 +4,7 @@ export function AppTopNav({
   appName,
   dashboardLabel,
   categoriesLabel,
+  merchantsLabel,
   transactionsLabel,
   budgetLabel,
   recurringLabel,
@@ -12,6 +13,7 @@ export function AppTopNav({
   appName: string;
   dashboardLabel: string;
   categoriesLabel: string;
+  merchantsLabel: string;
   transactionsLabel: string;
   budgetLabel: string;
   recurringLabel: string;
@@ -31,6 +33,9 @@ export function AppTopNav({
           </li>
           <li>
             <Link href="/app/settings/categories">{categoriesLabel}</Link>
+          </li>
+          <li>
+            <Link href="/app/settings/merchants">{merchantsLabel}</Link>
           </li>
           <li>
             <Link href="/app/transactions">{transactionsLabel}</Link>
