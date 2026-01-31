@@ -107,6 +107,8 @@ export function TransactionsClient({
   const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryQuery, setCategoryQuery] = useState("");
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [merchantQuery, setMerchantQuery] = useState("");
@@ -156,6 +158,37 @@ export function TransactionsClient({
     });
     return map;
   }, [categories, categoryName]);
+
+  const selectedCategoryLabel = useMemo(() => {
+    if (!formState.categoryId || formState.categoryId === "uncategorized") {
+      return t(locale, "transactions_category_uncategorized");
+    }
+    return categoryMap.get(formState.categoryId) ?? "";
+  }, [categoryMap, formState.categoryId, locale]);
+
+  const categoryMatches = useMemo(() => {
+    const query = categoryQuery.trim().toLowerCase();
+    const visibleCategories = categories.filter((category) => !category.isArchived);
+    if (!query) return visibleCategories;
+    return visibleCategories.filter((category) =>
+      categoryName(category).toLowerCase().trim().includes(query)
+    );
+  }, [categories, categoryName, categoryQuery]);
+
+  const incomeCategoryMatches = useMemo(
+    () =>
+      categoryMatches.filter(
+        (category) => category.kind === "income" && !category.isArchived
+      ),
+    [categoryMatches]
+  );
+  const expenseCategoryMatches = useMemo(
+    () =>
+      categoryMatches.filter(
+        (category) => category.kind === "expense" && !category.isArchived
+      ),
+    [categoryMatches]
+  );
 
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -243,6 +276,8 @@ export function TransactionsClient({
     if (!modalOpen) {
       setMerchantDropdownOpen(false);
       setMerchantQuery("");
+      setCategoryDropdownOpen(false);
+      setCategoryQuery("");
     }
   }, [modalOpen]);
 
@@ -336,6 +371,15 @@ export function TransactionsClient({
     }));
     setMerchantDropdownOpen(false);
     setMerchantQuery("");
+  };
+
+  const handleSelectCategory = (categoryId: string | null) => {
+    setFormState((current) => ({
+      ...current,
+      categoryId: categoryId ?? "uncategorized",
+    }));
+    setCategoryDropdownOpen(false);
+    setCategoryQuery("");
   };
 
   const handleCreateMerchant = async () => {
@@ -448,26 +492,6 @@ export function TransactionsClient({
     if (Number.isNaN(date.getTime())) return month;
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
   }, [locale, month]);
-
-  const resolveCategoryKind = useCallback(
-    (category: Category): TransactionKind => (category.kind === "income" ? "income" : "expense"),
-    []
-  );
-
-  const incomeCategories = useMemo(
-    () =>
-      categories.filter(
-        (category) => resolveCategoryKind(category) === "income" && !category.isArchived
-      ),
-    [categories, resolveCategoryKind]
-  );
-  const expenseCategories = useMemo(
-    () =>
-      categories.filter(
-        (category) => resolveCategoryKind(category) === "expense" && !category.isArchived
-      ),
-    [categories, resolveCategoryKind]
-  );
 
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
@@ -728,29 +752,100 @@ export function TransactionsClient({
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_category")}
               </span>
-              <select
-                className="select select-bordered"
-                value={formState.categoryId}
-                onChange={(event) =>
-                  setFormState({ ...formState, categoryId: event.target.value })
-                }
+              <div
+                className={`dropdown dropdown-bottom w-full ${
+                  categoryDropdownOpen ? "dropdown-open" : ""
+                }`}
+                tabIndex={0}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    setCategoryDropdownOpen(false);
+                    setCategoryQuery("");
+                  }
+                }}
               >
-                <option value="uncategorized">{t(locale, "transactions_uncategorized")}</option>
-                <optgroup label={t(locale, "category_kind_income")}>
-                  {incomeCategories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {categoryName(category)}
-                    </option>
+                <button
+                  type="button"
+                  className="input input-bordered flex w-full items-center justify-between text-left"
+                  onClick={() => {
+                    setCategoryDropdownOpen(true);
+                    setCategoryQuery("");
+                  }}
+                >
+                  <span className={selectedCategoryLabel ? "" : "opacity-60"}>
+                    {selectedCategoryLabel || t(locale, "transactions_category_search_placeholder")}
+                  </span>
+                  <span className="text-xs opacity-60">▾</span>
+                </button>
+                <ul className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow z-[50]">
+                  <li>
+                    <input
+                      className="input input-sm input-bordered w-full"
+                      placeholder={t(locale, "transactions_category_search_placeholder")}
+                      value={categoryQuery}
+                      onChange={(event) => setCategoryQuery(event.target.value)}
+                    />
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm justify-start w-full"
+                      onClick={() => handleSelectCategory(null)}
+                    >
+                      {t(locale, "transactions_category_uncategorized")}
+                    </button>
+                  </li>
+                  {incomeCategoryMatches.length ? (
+                    <li className="mt-1">
+                      <div className="px-2 py-1 font-bold opacity-80">
+                        {t(locale, "transactions_category_income_header")}
+                      </div>
+                    </li>
+                  ) : null}
+                  {incomeCategoryMatches.map((category) => (
+                    <li key={category._id}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm justify-start w-full"
+                        onClick={() => handleSelectCategory(category._id)}
+                      >
+                        {categoryName(category)}
+                      </button>
+                    </li>
                   ))}
-                </optgroup>
-                <optgroup label={t(locale, "category_kind_expense")}>
-                  {expenseCategories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {categoryName(category)}
-                    </option>
+                  {expenseCategoryMatches.length ? (
+                    <li className="mt-1">
+                      <div className="px-2 py-1 font-bold opacity-80">
+                        {t(locale, "transactions_category_expense_header")}
+                      </div>
+                    </li>
+                  ) : null}
+                  {expenseCategoryMatches.map((category) => (
+                    <li key={category._id}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm justify-start w-full"
+                        onClick={() => handleSelectCategory(category._id)}
+                      >
+                        {categoryName(category)}
+                      </button>
+                    </li>
                   ))}
-                </optgroup>
-              </select>
+                  <li className="mt-2 border-t border-base-200 pt-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs w-full justify-start"
+                      onClick={() => {
+                        setCategoryDropdownOpen(false);
+                        setCategoryQuery("");
+                        router.push("/app/settings/categories");
+                      }}
+                    >
+                      {t(locale, "transactions_category_manage")}
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
