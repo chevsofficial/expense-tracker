@@ -75,12 +75,6 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
     [locale]
   );
 
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, Category>();
-    categories.forEach((category) => map.set(category._id, category));
-    return map;
-  }, [categories]);
-
   const summaryMap = useMemo(() => {
     const map = new Map<string, SummaryLine>();
     summary?.byCategory.forEach((line) => map.set(line.categoryId, line));
