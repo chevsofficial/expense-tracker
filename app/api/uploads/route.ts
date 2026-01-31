@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { put } from "@vercel/blob";
 import { requireAuthContext } from "@/src/server/api";
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 

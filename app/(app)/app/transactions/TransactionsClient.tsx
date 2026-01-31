@@ -6,6 +6,7 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import type { Locale } from "@/src/i18n/messages";
 
 type TransactionKind = "income" | "expense";
@@ -18,21 +19,23 @@ type Transaction = {
   kind: TransactionKind;
   categoryId: string | null;
   note?: string;
-  merchant?: string;
-  receipts?: Receipt[];
+  merchantId?: string | null;
+  merchantNameSnapshot?: string | null;
+  receiptUrls?: string[];
   isArchived?: boolean;
-};
-
-type Receipt = {
-  url: string;
-  name?: string;
-  uploadedAt: string;
 };
 
 type Category = {
   _id: string;
   nameKey?: string;
   nameCustom?: string;
+  kind?: TransactionKind | "both";
+  isArchived?: boolean;
+};
+
+type Merchant = {
+  _id: string;
+  name: string;
   isArchived?: boolean;
 };
 
@@ -48,9 +51,10 @@ type TransactionForm = {
   currency: string;
   kind: TransactionKind;
   categoryId: string;
-  merchant: string;
+  merchantId: string | null;
+  merchantQuery: string;
   note: string;
-  receipts: Receipt[];
+  receiptUrls: string[];
 };
 
 type UploadOk = { data: { url: string } };
@@ -101,6 +105,9 @@ export function TransactionsClient({
 }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [merchantMatches, setMerchantMatches] = useState<Merchant[]>([]);
+  const [merchantSearchLoading, setMerchantSearchLoading] = useState(false);
   const [month, setMonth] = useState(getCurrentMonth());
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -113,15 +120,23 @@ export function TransactionsClient({
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
+  const resolvedDefaultCurrency = useMemo(() => {
+    if (SUPPORTED_CURRENCIES.includes(defaultCurrency as (typeof SUPPORTED_CURRENCIES)[number])) {
+      return defaultCurrency;
+    }
+    return "MXN";
+  }, [defaultCurrency]);
+
   const [formState, setFormState] = useState<TransactionForm>(() => ({
     date: getTodayInput(),
     amount: "",
-    currency: defaultCurrency,
+    currency: resolvedDefaultCurrency,
     kind: "expense",
     categoryId: "uncategorized",
-    merchant: "",
+    merchantId: null,
+    merchantQuery: "",
     note: "",
-    receipts: [],
+    receiptUrls: [],
   }));
 
   const categoryName = useCallback(
@@ -138,13 +153,21 @@ export function TransactionsClient({
     return map;
   }, [categories, categoryName]);
 
+  const merchantMap = useMemo(() => {
+    const map = new Map<string, string>();
+    merchants.forEach((merchant) => {
+      map.set(merchant._id, merchant.name);
+    });
+    return map;
+  }, [merchants]);
+
   const formatCurrency = useCallback(
     (amountMinor: number, currency: string) =>
       new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: currency || defaultCurrency,
+        currency: currency || resolvedDefaultCurrency,
       }).format(amountMinor / 100),
-    [defaultCurrency, locale]
+    [locale, resolvedDefaultCurrency]
   );
 
   const loadCategories = useCallback(async () => {
@@ -153,6 +176,18 @@ export function TransactionsClient({
         "/api/categories?includeArchived=false"
       );
       setCategories(response.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    }
+  }, [locale]);
+
+  const loadMerchants = useCallback(async () => {
+    try {
+      const response = await getJSON<ApiListResponse<Merchant>>(
+        "/api/merchants?includeArchived=true"
+      );
+      setMerchants(response.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
       setToast(message);
@@ -179,20 +214,50 @@ export function TransactionsClient({
   }, [loadCategories]);
 
   useEffect(() => {
+    void loadMerchants();
+  }, [loadMerchants]);
+
+  useEffect(() => {
     void loadTransactions();
   }, [loadTransactions]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const query = formState.merchantQuery.trim();
+    if (!query || formState.merchantId) {
+      setMerchantMatches([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setMerchantSearchLoading(true);
+      try {
+        const response = await getJSON<ApiListResponse<Merchant>>(
+          `/api/merchants?includeArchived=false&query=${encodeURIComponent(query)}`
+        );
+        setMerchantMatches(response.data);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+        setToast(message);
+      } finally {
+        setMerchantSearchLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [formState.merchantQuery, locale, modalOpen]);
 
   const openAddModal = () => {
     setEditingTransaction(null);
     setFormState({
       date: getTodayInput(),
       amount: "",
-      currency: defaultCurrency,
+      currency: resolvedDefaultCurrency,
       kind: "expense",
       categoryId: "uncategorized",
-      merchant: "",
+      merchantId: null,
+      merchantQuery: "",
       note: "",
-      receipts: [],
+      receiptUrls: [],
     });
     setModalOpen(true);
   };
@@ -205,9 +270,13 @@ export function TransactionsClient({
       currency: transaction.currency,
       kind: transaction.kind,
       categoryId: transaction.categoryId ?? "uncategorized",
-      merchant: transaction.merchant ?? "",
+      merchantId: transaction.merchantId ?? null,
+      merchantQuery:
+        (transaction.merchantId ? merchantMap.get(transaction.merchantId) : null) ??
+        transaction.merchantNameSnapshot ??
+        "",
       note: transaction.note ?? "",
-      receipts: transaction.receipts ?? [],
+      receiptUrls: transaction.receiptUrls ?? [],
     });
     setModalOpen(true);
   };
@@ -219,8 +288,8 @@ export function TransactionsClient({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await fetch("/api/uploads/receipt", {
-        method: "POST",
+      const response = await fetch("/api/uploads", {
+        method: "PUT",
         body: formData,
       });
       const payload = (await response.json().catch(() => null)) as unknown;
@@ -236,10 +305,7 @@ export function TransactionsClient({
       const url = payload.data.url;
       setFormState((current) => ({
         ...current,
-        receipts: [
-          ...current.receipts,
-          { url, name: file.name, uploadedAt: new Date().toISOString() },
-        ],
+        receiptUrls: [...current.receiptUrls, url],
       }));
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
@@ -253,8 +319,40 @@ export function TransactionsClient({
   const handleRemoveReceipt = (index: number) => {
     setFormState((current) => ({
       ...current,
-      receipts: current.receipts.filter((_, idx) => idx !== index),
+      receiptUrls: current.receiptUrls.filter((_, idx) => idx !== index),
     }));
+  };
+
+  const handleSelectMerchant = (merchant: Merchant) => {
+    setFormState((current) => ({
+      ...current,
+      merchantId: merchant._id,
+      merchantQuery: merchant.name,
+    }));
+    setMerchantMatches([]);
+  };
+
+  const handleCreateMerchant = async () => {
+    const query = formState.merchantQuery.trim();
+    if (query.length < 2) return;
+    setIsSubmitting(true);
+    try {
+      const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
+        name: query,
+      });
+      setFormState((current) => ({
+        ...current,
+        merchantId: response.data._id,
+        merchantQuery: response.data.name,
+      }));
+      setMerchantMatches([response.data]);
+      await loadMerchants();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -265,17 +363,24 @@ export function TransactionsClient({
       return;
     }
 
+    const trimmedMerchant = formState.merchantQuery.trim();
+    if (trimmedMerchant && !formState.merchantId) {
+      setToast(t(locale, "transactions_merchant_required"));
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       date: formState.date,
       amount: amountValue,
-      currency: formState.currency.trim(),
+      currency: formState.currency,
       kind: formState.kind,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
+      merchantId: formState.merchantId,
+      merchantNameSnapshot: formState.merchantId ? trimmedMerchant : null,
     };
 
-    if (formState.merchant.trim()) payload.merchant = formState.merchant.trim();
     if (formState.note.trim()) payload.note = formState.note.trim();
-    if (formState.receipts.length) payload.receipts = formState.receipts;
+    payload.receiptUrls = formState.receiptUrls;
 
     setIsSubmitting(true);
     try {
@@ -336,6 +441,142 @@ export function TransactionsClient({
     return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
   }, [locale, month]);
 
+  const resolveCategoryKind = useCallback(
+    (category: Category): TransactionKind => (category.kind === "income" ? "income" : "expense"),
+    []
+  );
+
+  const incomeCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => resolveCategoryKind(category) === "income" && !category.isArchived
+      ),
+    [categories, resolveCategoryKind]
+  );
+  const expenseCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => resolveCategoryKind(category) === "expense" && !category.isArchived
+      ),
+    [categories, resolveCategoryKind]
+  );
+
+  const activeTransactions = useMemo(
+    () => transactions.filter((transaction) => !transaction.isArchived),
+    [transactions]
+  );
+  const archivedTransactions = useMemo(
+    () => transactions.filter((transaction) => transaction.isArchived),
+    [transactions]
+  );
+
+  const handleRestore = async (transaction: Transaction) => {
+    try {
+      await putJSON<ApiItemResponse<Transaction>>(`/api/transactions/${transaction._id}`, {
+        isArchived: false,
+      });
+      await loadTransactions();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    }
+  };
+
+  const renderTransactionsTable = (rows: Transaction[], variant: "active" | "archived") => (
+    <div className="overflow-x-auto">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>{t(locale, "transactions_date")}</th>
+            <th>{t(locale, "transactions_merchant")}</th>
+            <th>{t(locale, "transactions_note")}</th>
+            <th>{t(locale, "transactions_category")}</th>
+            <th>{t(locale, "transactions_kind")}</th>
+            <th>{t(locale, "transactions_amount")}</th>
+            <th>{t(locale, "transactions_actions")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="py-6 text-center text-sm opacity-70">
+                {variant === "archived"
+                  ? t(locale, "transactions_archived_empty")
+                  : t(locale, "transactions_empty")}
+              </td>
+            </tr>
+          ) : null}
+          {rows.map((transaction) => {
+            const date = new Date(transaction.date);
+            const dateLabel = Number.isNaN(date.getTime())
+              ? transaction.date
+              : new Intl.DateTimeFormat(locale).format(date);
+            const categoryLabel = transaction.categoryId
+              ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
+              : t(locale, "transactions_uncategorized");
+            const kindLabel =
+              transaction.kind === "income"
+                ? t(locale, "category_kind_income")
+                : t(locale, "category_kind_expense");
+            const merchantLabel =
+              (transaction.merchantId
+                ? merchantMap.get(transaction.merchantId)
+                : null) ??
+              transaction.merchantNameSnapshot ??
+              "-";
+
+            return (
+              <tr key={transaction._id}>
+                <td>{dateLabel}</td>
+                <td>{merchantLabel}</td>
+                <td>{transaction.note ?? "-"}</td>
+                <td>{categoryLabel}</td>
+                <td>
+                  <span className="badge badge-ghost">{kindLabel}</span>
+                </td>
+                <td>{formatCurrency(transaction.amountMinor, transaction.currency)}</td>
+                <td>
+                  <div className="flex flex-wrap gap-2">
+                    {variant === "active" ? (
+                      <>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => openEditModal(transaction)}
+                        >
+                          {t(locale, "transactions_edit")}
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => handleArchive(transaction)}
+                          disabled={transaction.isArchived}
+                        >
+                          {t(locale, "transactions_archive")}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => handleRestore(transaction)}
+                      >
+                        {t(locale, "transactions_restore")}
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-ghost btn-xs text-error"
+                      onClick={() => handleOpenDelete(transaction)}
+                    >
+                      {t(locale, "transactions_delete")}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -380,79 +621,24 @@ export function TransactionsClient({
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">{t(locale, "transactions_loading")}</p> : null}
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t(locale, "transactions_date")}</th>
-                  <th>{t(locale, "transactions_merchant")}</th>
-                  <th>{t(locale, "transactions_note")}</th>
-                  <th>{t(locale, "transactions_category")}</th>
-                  <th>{t(locale, "transactions_kind")}</th>
-                  <th>{t(locale, "transactions_amount")}</th>
-                  <th>{t(locale, "transactions_actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-6 text-center text-sm opacity-70">
-                      {t(locale, "transactions_empty")}
-                    </td>
-                  </tr>
-                ) : null}
-                {transactions.map((transaction) => {
-                  const date = new Date(transaction.date);
-                  const dateLabel = Number.isNaN(date.getTime())
-                    ? transaction.date
-                    : new Intl.DateTimeFormat(locale).format(date);
-                  const categoryLabel = transaction.categoryId
-                    ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
-                    : t(locale, "transactions_uncategorized");
-                  const kindLabel =
-                    transaction.kind === "income"
-                      ? t(locale, "category_kind_income")
-                      : t(locale, "category_kind_expense");
-
-                  return (
-                    <tr key={transaction._id}>
-                      <td>{dateLabel}</td>
-                      <td>{transaction.merchant ?? "-"}</td>
-                      <td>{transaction.note ?? "-"}</td>
-                      <td>{categoryLabel}</td>
-                      <td>
-                        <span className="badge badge-ghost">{kindLabel}</span>
-                      </td>
-                      <td>{formatCurrency(transaction.amountMinor, transaction.currency)}</td>
-                      <td>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            className="btn btn-ghost btn-xs"
-                            onClick={() => openEditModal(transaction)}
-                          >
-                            {t(locale, "transactions_edit")}
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-xs"
-                            onClick={() => handleArchive(transaction)}
-                            disabled={transaction.isArchived}
-                          >
-                            {t(locale, "transactions_archive")}
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-xs text-error"
-                            onClick={() => handleOpenDelete(transaction)}
-                          >
-                            {t(locale, "transactions_delete")}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {showArchived ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-sm font-semibold uppercase opacity-60">
+                  {t(locale, "transactions_active_table")}
+                </h2>
+                {renderTransactionsTable(activeTransactions, "active")}
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold uppercase opacity-60">
+                  {t(locale, "transactions_archived_table")}
+                </h2>
+                {renderTransactionsTable(archivedTransactions, "archived")}
+              </div>
+            </div>
+          ) : (
+            renderTransactionsTable(activeTransactions, "active")
+          )}
         </div>
       </div>
 
@@ -478,12 +664,24 @@ export function TransactionsClient({
               step="0.01"
               onChange={(event) => setFormState({ ...formState, amount: event.target.value })}
             />
-            <TextField
-              id="transaction-currency"
-              label={t(locale, "transactions_currency")}
-              value={formState.currency}
-              onChange={(event) => setFormState({ ...formState, currency: event.target.value })}
-            />
+            <label className="form-control w-full">
+              <span className="label-text mb-1 text-sm font-medium">
+                {t(locale, "transactions_currency")}
+              </span>
+              <select
+                className="select select-bordered"
+                value={formState.currency}
+                onChange={(event) =>
+                  setFormState({ ...formState, currency: event.target.value })
+                }
+              >
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_kind")}
@@ -514,21 +712,75 @@ export function TransactionsClient({
                 }
               >
                 <option value="uncategorized">{t(locale, "transactions_uncategorized")}</option>
-                {categories
-                  .filter((category) => !category.isArchived)
-                  .map((category) => (
+                <optgroup label={t(locale, "category_kind_income")}>
+                  {incomeCategories.map((category) => (
                     <option key={category._id} value={category._id}>
                       {categoryName(category)}
                     </option>
                   ))}
+                </optgroup>
+                <optgroup label={t(locale, "category_kind_expense")}>
+                  {expenseCategories.map((category) => (
+                    <option key={category._id} value={category._id}>
+                      {categoryName(category)}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </label>
-            <TextField
-              id="transaction-merchant"
-              label={t(locale, "transactions_merchant")}
-              value={formState.merchant}
-              onChange={(event) => setFormState({ ...formState, merchant: event.target.value })}
-            />
+            <div className="relative">
+              <TextField
+                id="transaction-merchant"
+                label={t(locale, "transactions_merchant")}
+                value={formState.merchantQuery}
+                placeholder={t(locale, "transactions_merchant_placeholder")}
+                onChange={(event) =>
+                  setFormState({
+                    ...formState,
+                    merchantQuery: event.target.value,
+                    merchantId: null,
+                  })
+                }
+              />
+              {formState.merchantQuery.trim() && !formState.merchantId ? (
+                <div className="absolute z-10 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow">
+                  {merchantSearchLoading ? (
+                    <div className="px-3 py-2 text-sm opacity-60">
+                      {t(locale, "merchants_loading")}
+                    </div>
+                  ) : merchantMatches.length ? (
+                    <ul className="max-h-48 overflow-y-auto py-1">
+                      {merchantMatches.map((merchant) => (
+                        <li key={merchant._id}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-base-200"
+                            onClick={() => handleSelectMerchant(merchant)}
+                          >
+                            {merchant.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="space-y-2 px-3 py-2 text-sm">
+                      <p className="opacity-60">{t(locale, "transactions_no_merchants")}</p>
+                      {formState.merchantQuery.trim().length >= 2 ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={handleCreateMerchant}
+                          disabled={isSubmitting}
+                        >
+                          {t(locale, "transactions_create_merchant")} “
+                          {formState.merchantQuery.trim()}”
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_note")}
@@ -554,20 +806,17 @@ export function TransactionsClient({
                 <span className="text-xs opacity-60">{t(locale, "transactions_uploading")}</span>
               ) : null}
             </div>
-            {formState.receipts.length ? (
+            {formState.receiptUrls.length ? (
               <ul className="space-y-2">
-                {formState.receipts.map((receipt, index) => (
-                  <li
-                    key={`${receipt.url}-${index}`}
-                    className="flex items-center justify-between gap-2"
-                  >
+                {formState.receiptUrls.map((url, index) => (
+                  <li key={`${url}-${index}`} className="flex items-center justify-between gap-2">
                     <a
                       className="text-sm break-all link link-hover"
-                      href={receipt.url}
+                      href={url}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {receipt.name ?? receipt.url}
+                      {url}
                     </a>
                     <button
                       type="button"

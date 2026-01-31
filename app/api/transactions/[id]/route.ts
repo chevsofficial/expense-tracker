@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
+import { MerchantModel } from "@/src/models/Merchant";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const amountSchema = z
@@ -14,20 +16,13 @@ const dateSchema = z.string().refine((value) => !Number.isNaN(new Date(value).ge
 const updateSchema = z.object({
   date: dateSchema.optional(),
   amount: amountSchema.optional(),
-  currency: z.string().trim().min(1).optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   kind: z.enum(["income", "expense"]).optional(),
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
-  merchant: z.string().trim().min(1).optional(),
-  receipts: z
-    .array(
-      z.object({
-        url: z.string().url(),
-        name: z.string().trim().min(1).optional(),
-        uploadedAt: z.string().trim().min(1).optional(),
-      })
-    )
-    .optional(),
+  merchantId: z.string().nullable().optional(),
+  merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
+  receiptUrls: z.array(z.string().url()).optional(),
   isArchived: z.boolean().optional(),
 });
 
@@ -95,16 +90,32 @@ export async function PUT(
     update.note = parsed.data.note;
   }
 
-  if (parsed.data.merchant !== undefined) {
-    update.merchant = parsed.data.merchant;
+  if (parsed.data.merchantId !== undefined) {
+    if (parsed.data.merchantId === null) {
+      update.merchantId = null;
+      update.merchantNameSnapshot = null;
+    } else {
+      const merchantObjectId = parseObjectId(parsed.data.merchantId);
+      if (!merchantObjectId) {
+        return errorResponse("Invalid merchant id", 400);
+      }
+      const merchant = await MerchantModel.findOne({
+        _id: merchantObjectId,
+        workspaceId: auth.workspace.id,
+      });
+      if (!merchant) {
+        return errorResponse("Merchant not found", 404);
+      }
+      update.merchantId = merchantObjectId;
+    }
   }
 
-  if (parsed.data.receipts !== undefined) {
-    update.receipts = parsed.data.receipts.map((receipt) => ({
-      url: receipt.url,
-      name: receipt.name,
-      uploadedAt: receipt.uploadedAt ?? new Date().toISOString(),
-    }));
+  if (parsed.data.merchantNameSnapshot !== undefined) {
+    update.merchantNameSnapshot = parsed.data.merchantNameSnapshot ?? null;
+  }
+
+  if (parsed.data.receiptUrls !== undefined) {
+    update.receiptUrls = parsed.data.receiptUrls;
   }
 
   if (parsed.data.isArchived !== undefined) {
