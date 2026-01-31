@@ -96,24 +96,29 @@ export async function PUT(request: NextRequest) {
     budget.plannedLines.map((line) => [line.categoryId.toString(), line])
   );
 
-  parsedBody.data.plannedLines.forEach((line) => {
+  for (const line of parsedBody.data.plannedLines) {
     const plannedAmountMinor = toMinorUnits(line.plannedAmount);
-    const existing = plannedMap.get(line.categoryId);
+    const existing = plannedMap.get(String(line.categoryId));
     if (plannedAmountMinor <= 0) {
-      plannedMap.delete(line.categoryId);
-      return;
+      plannedMap.delete(String(line.categoryId));
+      continue;
     }
     if (existing) {
       existing.plannedAmountMinor = plannedAmountMinor;
       existing.kind = "expense";
     } else {
-      plannedMap.set(line.categoryId, {
-        categoryId: parseObjectId(line.categoryId),
+      const categoryObjectId = parseObjectId(line.categoryId);
+      if (!categoryObjectId) {
+        return errorResponse("Invalid categoryId in plannedLines", 400);
+      }
+
+      plannedMap.set(String(line.categoryId), {
+        categoryId: categoryObjectId,
         plannedAmountMinor,
         kind: "expense",
       });
     }
-  });
+  }
 
   budget.currency = parsedBody.data.currency ?? budget.currency;
   budget.plannedLines = Array.from(plannedMap.values());
