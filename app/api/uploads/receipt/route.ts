@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { errorResponse, requireAuthContext } from "@/src/server/api";
+import { requireAuthContext } from "@/src/server/api";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuthContext();
@@ -9,12 +9,12 @@ export async function POST(request: NextRequest) {
 
   const formData = await request.formData().catch(() => null);
   if (!formData) {
-    return errorResponse("Invalid upload", 400);
+    return NextResponse.json({ error: { message: "Invalid upload" } }, { status: 400 });
   }
 
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return errorResponse("File is required", 400);
+    return NextResponse.json({ error: { message: "File is required" } }, { status: 400 });
   }
 
   const filename = `${Date.now()}-${file.name || "receipt"}`;

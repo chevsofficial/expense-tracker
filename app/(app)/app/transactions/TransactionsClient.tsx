@@ -53,6 +53,18 @@ type TransactionForm = {
   receipts: Receipt[];
 };
 
+type UploadOk = { data: { url: string } };
+type UploadErr = { error: { message?: string } };
+
+function isUploadOk(payload: unknown): payload is UploadOk {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    typeof (payload as any).data?.url === "string"
+  );
+}
+
 const getTodayInput = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -207,18 +219,22 @@ export function TransactionsClient({
         method: "POST",
         body: formData,
       });
-      const payload = (await response.json().catch(() => null)) as
-        | { data?: { url: string } }
-        | { error?: { message?: string } }
-        | null;
-      if (!response.ok || !payload?.data?.url) {
-        throw new Error(payload?.error?.message ?? "Upload failed");
+      const payload = (await response.json().catch(() => null)) as unknown;
+
+      if (!response.ok || !isUploadOk(payload)) {
+        const message =
+          payload && typeof payload === "object" && "error" in payload
+            ? ((payload as UploadErr).error?.message as string | undefined)
+            : undefined;
+
+        throw new Error(message ?? "Upload failed");
       }
+      const url = payload.data.url;
       setFormState((current) => ({
         ...current,
         receipts: [
           ...current.receipts,
-          { url: payload.data.url, name: file.name, uploadedAt: new Date().toISOString() },
+          { url, name: file.name, uploadedAt: new Date().toISOString() },
         ],
       }));
     } catch (err) {
