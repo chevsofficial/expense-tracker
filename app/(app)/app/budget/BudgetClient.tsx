@@ -39,6 +39,10 @@ type BudgetSummary = {
   totalSpentMinor: number;
   remainingMinor: number;
   byCategory: SummaryLine[];
+  totalsByCurrency: {
+    currency: string;
+    totalSpentMinor: number;
+  }[];
 };
 
 type ApiItemResponse<T> = { data: T };
@@ -191,6 +195,18 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
                 )}`
               : t(locale, "budget_loading")}
           </p>
+          {summary?.totalsByCurrency?.length ? (
+            <div className="mt-1 flex flex-wrap gap-2 text-xs opacity-70">
+              {summary.totalsByCurrency
+                .filter((row) => row.currency !== summary.currency)
+                .map((row) => (
+                  <span key={row.currency}>
+                    {t(locale, "budget_spent")} {row.currency}:{" "}
+                    {formatCurrency(row.totalSpentMinor, row.currency)}
+                  </span>
+                ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="form-control">
@@ -231,12 +247,17 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
                 <th>{t(locale, "budget_planned")}</th>
                 <th>{t(locale, "budget_spent")}</th>
                 <th>{t(locale, "budget_remaining")}</th>
+                <th>{t(locale, "budget_progress")}</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {categories.map((category) => {
                 const summaryLine = summaryMap.get(category._id);
+                const plannedMinor = summaryLine?.plannedMinor ?? 0;
+                const spentMinor = summaryLine?.spentMinor ?? 0;
+                const progressValue =
+                  plannedMinor > 0 ? Math.min(100, Math.round((spentMinor / plannedMinor) * 100)) : 0;
                 return (
                   <tr key={category._id}>
                     <td>{categoryName(category)}</td>
@@ -262,6 +283,12 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
                       {summaryLine
                         ? formatCurrency(summaryLine.remainingMinor, summary?.currency)
                         : formatCurrency(0, summary?.currency)}
+                    </td>
+                    <td>
+                      <div className="flex min-w-[120px] items-center gap-2">
+                        <progress className="progress progress-primary" value={progressValue} max={100} />
+                        <span className="text-xs">{progressValue}%</span>
+                      </div>
                     </td>
                     <td>
                       <button
