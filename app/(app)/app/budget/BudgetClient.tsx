@@ -9,6 +9,7 @@ type Category = {
   _id: string;
   nameKey?: string;
   nameCustom?: string;
+  kind?: "income" | "expense" | "both";
   isArchived?: boolean;
 };
 
@@ -98,15 +99,20 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
         getJSON<ApiItemResponse<BudgetMonth>>(`/api/budget?month=${month}`),
         getJSON<ApiItemResponse<BudgetSummary>>(`/api/budget/summary?month=${month}`),
       ]);
-      setCategories(categoriesResponse.data);
+      const expenseCategories = categoriesResponse.data.filter(
+        (category) => category.kind !== "income"
+      );
+      setCategories(expenseCategories);
       setBudget(budgetResponse.data);
       setSummary(summaryResponse.data);
 
       const inputs: Record<string, string> = {};
       budgetResponse.data.plannedLines.forEach((line) => {
-        inputs[line.categoryId] = (line.plannedAmountMinor / 100).toFixed(2);
+        if (expenseCategories.some((category) => category._id === line.categoryId)) {
+          inputs[line.categoryId] = (line.plannedAmountMinor / 100).toFixed(2);
+        }
       });
-      categoriesResponse.data.forEach((category) => {
+      expenseCategories.forEach((category) => {
         if (!(category._id in inputs)) inputs[category._id] = "";
       });
       setPlannedInputs(inputs);

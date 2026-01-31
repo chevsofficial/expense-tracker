@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       kind: rule.kind,
       date: runDate,
       note: `Recurring: ${rule.name}`,
-      receipts: [],
+      receiptUrls: [],
       isArchived: false,
     });
     created.push(transaction._id.toString());

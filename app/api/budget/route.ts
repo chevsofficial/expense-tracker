@@ -80,10 +80,11 @@ export async function PUT(request: NextRequest) {
   const categories = await CategoryModel.find({
     _id: { $in: objectIds },
     workspaceId: auth.workspace.id,
+    kind: "expense",
   }).select("_id");
 
   if (categories.length !== objectIds.length) {
-    return errorResponse("Category not found", 404);
+    return errorResponse("Category not found or not expense", 404);
   }
 
   const budget = await getOrCreateBudget(

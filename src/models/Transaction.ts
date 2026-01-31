@@ -12,8 +12,9 @@ export type TransactionDoc = {
   kind: TransactionKind;
   date: Date;
   note?: string;
-  merchant?: string;
-  receipts: { url: string; name?: string; uploadedAt: string }[];
+  merchantId?: mongoose.Types.ObjectId | null;
+  merchantNameSnapshot?: string | null;
+  receiptUrls: string[];
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,17 +30,9 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     kind: { type: String, enum: ["income", "expense"], required: true },
     date: { type: Date, required: true, index: true },
     note: { type: String },
-    merchant: { type: String },
-    receipts: {
-      type: [
-        {
-          url: { type: String, required: true },
-          name: { type: String },
-          uploadedAt: { type: String, required: true },
-        },
-      ],
-      default: [],
-    },
+    merchantId: { type: mongoose.Schema.Types.ObjectId, ref: "Merchant", default: null },
+    merchantNameSnapshot: { type: String },
+    receiptUrls: { type: [String], default: [] },
     isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }

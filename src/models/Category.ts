@@ -2,14 +2,13 @@ import mongoose from "mongoose";
 import { getModel } from "./_shared";
 
 export type CategoryKind = "income" | "expense";
-export type CategoryStoredKind = CategoryKind | "both";
 
 export type CategoryDoc = {
   workspaceId: mongoose.Types.ObjectId;
   groupId: mongoose.Types.ObjectId;
   nameKey: string;
   nameCustom?: string;
-  kind: CategoryStoredKind;
+  kind: CategoryKind;
   sortOrder: number;
   isDefault: boolean;
   isArchived: boolean;
@@ -33,7 +32,7 @@ const CategorySchema = new mongoose.Schema<CategoryDoc>(
     },
     nameKey: { type: String, required: true, trim: true, lowercase: true },
     nameCustom: { type: String },
-    kind: { type: String, enum: ["income", "expense", "both"], default: "expense", required: true },
+    kind: { type: String, enum: ["income", "expense"], default: "expense", required: true },
     sortOrder: { type: Number, default: 0 },
     isDefault: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },

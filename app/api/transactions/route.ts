@@ -2,9 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
+import { MerchantModel } from "@/src/models/Merchant";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
 
-const currencySchema = z.string().trim().min(1, "Invalid currency");
+const currencySchema = z.enum(SUPPORTED_CURRENCIES);
 
 const amountSchema = z
   .number()
@@ -20,16 +22,9 @@ const createSchema = z.object({
   kind: z.enum(["income", "expense"]),
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
-  merchant: z.string().trim().min(1).optional(),
-  receipts: z
-    .array(
-      z.object({
-        url: z.string().url(),
-        name: z.string().trim().min(1).optional(),
-        uploadedAt: z.string().trim().min(1).optional(),
-      })
-    )
-    .optional(),
+  merchantId: z.string().nullable().optional(),
+  merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
+  receiptUrls: z.array(z.string().url()).optional(),
 });
 
 function toMinorUnits(amount: number) {
@@ -96,7 +91,8 @@ export async function POST(request: NextRequest) {
     return errorResponse(parsed.error.message, 400);
   }
 
-  const { categoryId, amount, date, receipts, ...rest } = parsed.data;
+  const { categoryId, amount, date, receiptUrls, merchantId, merchantNameSnapshot, ...rest } =
+    parsed.data;
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
   if (categoryId && !categoryObjectId) {
     return errorResponse("Invalid category id", 400);
@@ -111,16 +107,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  let merchantObjectId = null;
+  if (merchantId !== undefined) {
+    if (merchantId === null) {
+      merchantObjectId = null;
+    } else {
+      merchantObjectId = parseObjectId(merchantId);
+      if (!merchantObjectId) {
+        return errorResponse("Invalid merchant id", 400);
+      }
+      const merchant = await MerchantModel.findOne({
+        _id: merchantObjectId,
+        workspaceId: auth.workspace.id,
+      });
+      if (!merchant) {
+        return errorResponse("Merchant not found", 404);
+      }
+    }
+  }
+
   const transaction = await TransactionModel.create({
     workspaceId: auth.workspace.id,
     categoryId: categoryObjectId ?? null,
     amountMinor: toMinorUnits(amount),
     date: new Date(date),
-    receipts: (receipts ?? []).map((receipt) => ({
-      url: receipt.url,
-      name: receipt.name,
-      uploadedAt: receipt.uploadedAt ?? new Date().toISOString(),
-    })),
+    merchantId: merchantObjectId,
+    merchantNameSnapshot: merchantNameSnapshot ?? null,
+    receiptUrls: receiptUrls ?? [],
     isArchived: false,
     ...rest,
   });

@@ -16,14 +16,13 @@ type CategoryGroup = {
 };
 
 type CategoryKind = "income" | "expense";
-type CategoryStoredKind = CategoryKind | "both";
 
 type Category = {
   _id: string;
   nameKey?: string;
   nameCustom?: string;
   groupId: string;
-  kind?: CategoryStoredKind;
+  kind?: CategoryKind | "both";
   isArchived?: boolean;
 };
 
@@ -33,7 +32,7 @@ type ApiItemResponse<T> = { data: T };
 
 type DeleteResponse = { data: { deleted: boolean } };
 
-const normalizeKind = (kind?: CategoryStoredKind): CategoryKind =>
+const normalizeKind = (kind?: CategoryKind | "both"): CategoryKind =>
   kind === "income" ? "income" : "expense";
 
 export function CategoriesClient({ locale }: { locale: Locale }) {
