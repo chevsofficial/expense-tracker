@@ -3,10 +3,15 @@ import { z } from "zod";
 import { MerchantModel } from "@/src/models/Merchant";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
-const updateSchema = z.object({
-  name: z.string().trim().min(1).optional(),
-  isArchived: z.boolean().optional(),
-});
+const updateSchema = z
+  .object({
+    nameCustom: z.string().trim().min(1).optional(),
+    name: z.string().trim().min(1).optional(),
+    isArchived: z.boolean().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one update is required",
+  });
 
 export async function PUT(
   request: NextRequest,
@@ -27,14 +32,22 @@ export async function PUT(
     return errorResponse(parsed.error.message, 400);
   }
 
-  if (Object.keys(parsed.data).length === 0) {
+  const updatePayload: Record<string, unknown> = {};
+  if (parsed.data.nameCustom ?? parsed.data.name) {
+    updatePayload.name = parsed.data.nameCustom ?? parsed.data.name;
+  }
+  if (typeof parsed.data.isArchived === "boolean") {
+    updatePayload.isArchived = parsed.data.isArchived;
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
     return errorResponse("No updates provided", 400);
   }
 
   try {
     const merchant = await MerchantModel.findOneAndUpdate(
       { _id: objectId, workspaceId: auth.workspace.id },
-      parsed.data,
+      { $set: updatePayload },
       { new: true, runValidators: true }
     );
 
@@ -45,7 +58,7 @@ export async function PUT(
     return NextResponse.json({ data: merchant });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === 11000) {
-      return errorResponse("Merchant already exists.", 409);
+      return errorResponse("Merchant already exists.", 400);
     }
     const message = error instanceof Error ? error.message : "Unable to update merchant";
     return errorResponse(message, 500);
@@ -63,6 +76,20 @@ export async function DELETE(
   const objectId = parseObjectId(id);
   if (!objectId) {
     return errorResponse("Invalid merchant id", 400);
+  }
+
+  const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+
+  if (hardDelete) {
+    const merchant = await MerchantModel.findOne({
+      _id: objectId,
+      workspaceId: auth.workspace.id,
+    });
+    if (!merchant) {
+      return errorResponse("Merchant not found", 404);
+    }
+    await MerchantModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
+    return NextResponse.json({ data: { deleted: true } });
   }
 
   const merchant = await MerchantModel.findOneAndUpdate(

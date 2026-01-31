@@ -68,7 +68,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     setIsSubmitting(true);
     try {
       await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
-        name: newName.trim(),
+        nameCustom: newName.trim(),
       });
       setAddOpen(false);
       setNewName("");
@@ -87,7 +87,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     setIsSubmitting(true);
     try {
       await putJSON<ApiItemResponse<Merchant>>(`/api/merchants/${merchantToRename._id}`, {
-        name: renameName.trim(),
+        nameCustom: renameName.trim(),
       });
       setRenameOpen(false);
       setMerchantToRename(null);

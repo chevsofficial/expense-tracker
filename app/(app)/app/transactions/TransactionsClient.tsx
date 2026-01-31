@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
@@ -52,7 +53,7 @@ type TransactionForm = {
   kind: TransactionKind;
   categoryId: string;
   merchantId: string | null;
-  merchantQuery: string;
+  merchantNameSnapshot: string;
   note: string;
   receiptUrls: string[];
 };
@@ -103,11 +104,14 @@ export function TransactionsClient({
   locale: Locale;
   defaultCurrency: string;
 }) {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [merchantMatches, setMerchantMatches] = useState<Merchant[]>([]);
-  const [merchantSearchLoading, setMerchantSearchLoading] = useState(false);
+  const [merchantsLoading, setMerchantsLoading] = useState(false);
+  const [merchantQuery, setMerchantQuery] = useState("");
+  const [merchantDropdownOpen, setMerchantDropdownOpen] = useState(false);
+  const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [month, setMonth] = useState(getCurrentMonth());
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -134,7 +138,7 @@ export function TransactionsClient({
     kind: "expense",
     categoryId: "uncategorized",
     merchantId: null,
-    merchantQuery: "",
+    merchantNameSnapshot: "",
     note: "",
     receiptUrls: [],
   }));
@@ -161,6 +165,17 @@ export function TransactionsClient({
     return map;
   }, [merchants]);
 
+  const merchantMatches = useMemo(() => {
+    const query = merchantQuery.trim().toLowerCase();
+    if (!query) return merchants;
+    return merchants.filter((merchant) => merchant.name.toLowerCase().includes(query));
+  }, [merchantQuery, merchants]);
+
+  const selectedMerchantLabel = useMemo(() => {
+    if (!formState.merchantId) return "";
+    return formState.merchantNameSnapshot || merchantMap.get(formState.merchantId) || "";
+  }, [formState.merchantId, formState.merchantNameSnapshot, merchantMap]);
+
   const formatCurrency = useCallback(
     (amountMinor: number, currency: string) =>
       new Intl.NumberFormat(locale, {
@@ -183,14 +198,17 @@ export function TransactionsClient({
   }, [locale]);
 
   const loadMerchants = useCallback(async () => {
+    setMerchantsLoading(true);
     try {
       const response = await getJSON<ApiListResponse<Merchant>>(
-        "/api/merchants?includeArchived=true"
+        "/api/merchants?includeArchived=false"
       );
       setMerchants(response.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
       setToast(message);
+    } finally {
+      setMerchantsLoading(false);
     }
   }, [locale]);
 
@@ -222,29 +240,11 @@ export function TransactionsClient({
   }, [loadTransactions]);
 
   useEffect(() => {
-    if (!modalOpen) return;
-    const query = formState.merchantQuery.trim();
-    if (!query || formState.merchantId) {
-      setMerchantMatches([]);
-      return;
+    if (!modalOpen) {
+      setMerchantDropdownOpen(false);
+      setMerchantQuery("");
     }
-    const timeout = setTimeout(async () => {
-      setMerchantSearchLoading(true);
-      try {
-        const response = await getJSON<ApiListResponse<Merchant>>(
-          `/api/merchants?includeArchived=false&query=${encodeURIComponent(query)}`
-        );
-        setMerchantMatches(response.data);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : t(locale, "transactions_generic_error");
-        setToast(message);
-      } finally {
-        setMerchantSearchLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(timeout);
-  }, [formState.merchantId, formState.merchantQuery, locale, modalOpen]);
+  }, [modalOpen]);
 
   const openAddModal = () => {
     setEditingTransaction(null);
@@ -255,14 +255,20 @@ export function TransactionsClient({
       kind: "expense",
       categoryId: "uncategorized",
       merchantId: null,
-      merchantQuery: "",
+      merchantNameSnapshot: "",
       note: "",
       receiptUrls: [],
     });
+    setMerchantQuery("");
+    setMerchantDropdownOpen(false);
     setModalOpen(true);
   };
 
   const openEditModal = (transaction: Transaction) => {
+    const merchantName =
+      (transaction.merchantId ? merchantMap.get(transaction.merchantId) : null) ??
+      transaction.merchantNameSnapshot ??
+      "";
     setEditingTransaction(transaction);
     setFormState({
       date: formatDateInput(transaction.date),
@@ -271,13 +277,12 @@ export function TransactionsClient({
       kind: transaction.kind,
       categoryId: transaction.categoryId ?? "uncategorized",
       merchantId: transaction.merchantId ?? null,
-      merchantQuery:
-        (transaction.merchantId ? merchantMap.get(transaction.merchantId) : null) ??
-        transaction.merchantNameSnapshot ??
-        "",
+      merchantNameSnapshot: merchantName,
       note: transaction.note ?? "",
       receiptUrls: transaction.receiptUrls ?? [],
     });
+    setMerchantQuery("");
+    setMerchantDropdownOpen(false);
     setModalOpen(true);
   };
 
@@ -327,31 +332,33 @@ export function TransactionsClient({
     setFormState((current) => ({
       ...current,
       merchantId: merchant._id,
-      merchantQuery: merchant.name,
+      merchantNameSnapshot: merchant.name,
     }));
-    setMerchantMatches([]);
+    setMerchantDropdownOpen(false);
+    setMerchantQuery("");
   };
 
   const handleCreateMerchant = async () => {
-    const query = formState.merchantQuery.trim();
+    const query = merchantQuery.trim();
     if (query.length < 2) return;
-    setIsSubmitting(true);
+    setCreatingMerchant(true);
     try {
       const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
-        name: query,
+        nameCustom: query,
       });
+      setMerchants((current) => [response.data, ...current]);
       setFormState((current) => ({
         ...current,
         merchantId: response.data._id,
-        merchantQuery: response.data.name,
+        merchantNameSnapshot: response.data.name,
       }));
-      setMerchantMatches([response.data]);
-      await loadMerchants();
+      setMerchantQuery("");
+      setMerchantDropdownOpen(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
-      setIsSubmitting(false);
+      setCreatingMerchant(false);
     }
   };
 
@@ -363,11 +370,12 @@ export function TransactionsClient({
       return;
     }
 
-    const trimmedMerchant = formState.merchantQuery.trim();
-    if (trimmedMerchant && !formState.merchantId) {
+    const trimmedMerchantQuery = merchantQuery.trim();
+    if (trimmedMerchantQuery && !formState.merchantId) {
       setToast(t(locale, "transactions_merchant_required"));
       return;
     }
+    const trimmedMerchantName = formState.merchantNameSnapshot.trim();
 
     const payload: Record<string, unknown> = {
       date: formState.date,
@@ -376,7 +384,7 @@ export function TransactionsClient({
       kind: formState.kind,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
       merchantId: formState.merchantId,
-      merchantNameSnapshot: formState.merchantId ? trimmedMerchant : null,
+      merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
     };
 
     if (formState.note.trim()) payload.note = formState.note.trim();
@@ -493,13 +501,14 @@ export function TransactionsClient({
             <th>{t(locale, "transactions_category")}</th>
             <th>{t(locale, "transactions_kind")}</th>
             <th>{t(locale, "transactions_amount")}</th>
+            <th>{t(locale, "transactions_receipt")}</th>
             <th>{t(locale, "transactions_actions")}</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={7} className="py-6 text-center text-sm opacity-70">
+              <td colSpan={8} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")
                   : t(locale, "transactions_empty")}
@@ -524,6 +533,7 @@ export function TransactionsClient({
                 : null) ??
               transaction.merchantNameSnapshot ??
               "-";
+            const receiptUrl = transaction.receiptUrls?.[0];
 
             return (
               <tr key={transaction._id}>
@@ -535,6 +545,20 @@ export function TransactionsClient({
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
                 <td>{formatCurrency(transaction.amountMinor, transaction.currency)}</td>
+                <td>
+                  {receiptUrl ? (
+                    <a
+                      className="btn btn-ghost btn-xs"
+                      href={receiptUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t(locale, "transactions_receipt_view")}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td>
                   <div className="flex flex-wrap gap-2">
                     {variant === "active" ? (
@@ -728,59 +752,102 @@ export function TransactionsClient({
                 </optgroup>
               </select>
             </label>
-            <div className="relative">
-              <TextField
-                id="transaction-merchant"
-                label={t(locale, "transactions_merchant")}
-                value={formState.merchantQuery}
-                placeholder={t(locale, "transactions_merchant_placeholder")}
-                onChange={(event) =>
-                  setFormState({
-                    ...formState,
-                    merchantQuery: event.target.value,
-                    merchantId: null,
-                  })
-                }
-              />
-              {formState.merchantQuery.trim() && !formState.merchantId ? (
-                <div className="absolute z-10 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow">
-                  {merchantSearchLoading ? (
-                    <div className="px-3 py-2 text-sm opacity-60">
-                      {t(locale, "merchants_loading")}
-                    </div>
-                  ) : merchantMatches.length ? (
-                    <ul className="max-h-48 overflow-y-auto py-1">
-                      {merchantMatches.map((merchant) => (
-                        <li key={merchant._id}>
+            <label className="form-control w-full">
+              <span className="label-text mb-1 text-sm font-medium">
+                {t(locale, "transactions_merchant")}
+              </span>
+              <div
+                className={`dropdown w-full ${merchantDropdownOpen ? "dropdown-open" : ""}`}
+                tabIndex={0}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    setMerchantDropdownOpen(false);
+                    setMerchantQuery("");
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  className="input input-bordered flex w-full items-center justify-between text-left"
+                  onClick={() => {
+                    setMerchantDropdownOpen(true);
+                    setMerchantQuery("");
+                    if (!merchants.length && !merchantsLoading) {
+                      void loadMerchants();
+                    }
+                  }}
+                >
+                  <span className={selectedMerchantLabel ? "" : "opacity-60"}>
+                    {selectedMerchantLabel || t(locale, "transactions_merchant_placeholder")}
+                  </span>
+                  <span className="text-xs opacity-60">▾</span>
+                </button>
+                <div className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow">
+                  <input
+                    className="input input-sm input-bordered w-full"
+                    placeholder={t(locale, "transactions_merchant_placeholder")}
+                    value={merchantQuery}
+                    onChange={(event) => {
+                      setMerchantQuery(event.target.value);
+                      setFormState((current) => ({
+                        ...current,
+                        merchantId: null,
+                        merchantNameSnapshot: "",
+                      }));
+                    }}
+                  />
+                  <div className="mt-2 max-h-56 overflow-y-auto">
+                    {merchantsLoading ? (
+                      <div className="px-2 py-2 text-sm opacity-60">
+                        {t(locale, "merchants_loading")}
+                      </div>
+                    ) : merchantMatches.length ? (
+                      <ul className="space-y-1">
+                        {merchantMatches.map((merchant) => (
+                          <li key={merchant._id}>
+                            <button
+                              type="button"
+                              className="w-full rounded px-2 py-1 text-left text-sm hover:bg-base-200"
+                              onClick={() => handleSelectMerchant(merchant)}
+                            >
+                              {merchant.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="space-y-2 px-2 py-2 text-sm">
+                        <p className="opacity-60">{t(locale, "transactions_no_merchants")}</p>
+                        {merchantQuery.trim() ? (
                           <button
                             type="button"
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-base-200"
-                            onClick={() => handleSelectMerchant(merchant)}
+                            className="btn btn-outline btn-xs"
+                            onClick={handleCreateMerchant}
+                            disabled={creatingMerchant || merchantQuery.trim().length < 2}
                           >
-                            {merchant.name}
+                            {t(locale, "transactions_create_merchant")} “
+                            {merchantQuery.trim()}”
                           </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="space-y-2 px-3 py-2 text-sm">
-                      <p className="opacity-60">{t(locale, "transactions_no_merchants")}</p>
-                      {formState.merchantQuery.trim().length >= 2 ? (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-xs"
-                          onClick={handleCreateMerchant}
-                          disabled={isSubmitting}
-                        >
-                          {t(locale, "transactions_create_merchant")} “
-                          {formState.merchantQuery.trim()}”
-                        </button>
-                      ) : null}
-                    </div>
-                  )}
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 border-t border-base-200 pt-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs w-full justify-start"
+                      onClick={() => {
+                        setMerchantDropdownOpen(false);
+                        setMerchantQuery("");
+                        router.push("/app/settings/merchants");
+                      }}
+                    >
+                      {t(locale, "transactions_manage_merchants")}
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            </label>
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_note")}

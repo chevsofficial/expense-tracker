@@ -3,9 +3,14 @@ import { z } from "zod";
 import { MerchantModel, normalizeMerchantNameKey } from "@/src/models/Merchant";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 
-const createSchema = z.object({
-  name: z.string().trim().min(1),
-});
+const createSchema = z
+  .object({
+    nameCustom: z.string().trim().min(1).optional(),
+    name: z.string().trim().min(1).optional(),
+  })
+  .refine((data) => Boolean(data.nameCustom || data.name), {
+    message: "Merchant name is required",
+  });
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
@@ -43,13 +48,13 @@ export async function POST(request: NextRequest) {
   try {
     const merchant = await MerchantModel.create({
       workspaceId: auth.workspace.id,
-      name: parsed.data.name,
+      name: parsed.data.nameCustom ?? parsed.data.name ?? "",
       isArchived: false,
     });
     return NextResponse.json({ data: merchant });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === 11000) {
-      return errorResponse("Merchant already exists.", 409);
+      return errorResponse("Merchant already exists.", 400);
     }
     const message = error instanceof Error ? error.message : "Unable to create merchant";
     return errorResponse(message, 500);
