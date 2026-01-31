@@ -57,12 +57,16 @@ type UploadOk = { data: { url: string } };
 type UploadErr = { error: { message?: string } };
 
 function isUploadOk(payload: unknown): payload is UploadOk {
-  return (
-    !!payload &&
-    typeof payload === "object" &&
-    "data" in payload &&
-    typeof (payload as any).data?.url === "string"
-  );
+  if (!payload || typeof payload !== "object") return false;
+
+  const obj = payload as Record<string, unknown>;
+  if (!("data" in obj)) return false;
+
+  const data = obj.data;
+  if (!data || typeof data !== "object") return false;
+
+  const dataObj = data as Record<string, unknown>;
+  return typeof dataObj.url === "string";
 }
 
 const getTodayInput = () => {
