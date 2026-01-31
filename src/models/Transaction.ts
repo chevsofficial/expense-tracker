@@ -15,6 +15,7 @@ export type TransactionDoc = {
   merchantId?: mongoose.Types.ObjectId | null;
   merchantNameSnapshot?: string | null;
   receiptUrls: string[];
+  isPending?: boolean;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -33,6 +34,7 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     merchantId: { type: mongoose.Schema.Types.ObjectId, ref: "Merchant", default: null },
     merchantNameSnapshot: { type: String },
     receiptUrls: { type: [String], default: [] },
+    isPending: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }

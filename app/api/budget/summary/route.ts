@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     month: parsedMonth.data,
   });
 
+  const budgetCurrency = budget?.currency ?? auth.workspace.defaultCurrency;
   const plannedLines = budget?.plannedLines ?? [];
   const plannedByCategory = new Map(
     plannedLines.map((line) => [line.categoryId.toString(), line.plannedAmountMinor])
@@ -38,11 +39,26 @@ export async function GET(request: NextRequest) {
         workspaceId: auth.workspace._id,
         date: { $gte: month.start, $lt: month.end },
         kind: "expense",
+        currency: budgetCurrency,
         isArchived: false,
+        isPending: false,
         categoryId: { $ne: null },
       },
     },
     { $group: { _id: "$categoryId", total: { $sum: "$amountMinor" } } },
+  ]);
+
+  const spentByCurrency = await TransactionModel.aggregate<{ _id: string; total: number }>([
+    {
+      $match: {
+        workspaceId: auth.workspace._id,
+        date: { $gte: month.start, $lt: month.end },
+        kind: "expense",
+        isArchived: false,
+        isPending: false,
+      },
+    },
+    { $group: { _id: "$currency", total: { $sum: "$amountMinor" } } },
   ]);
 
   const spentMap = new Map(spentByCategory.map((row) => [row._id.toString(), row.total]));
@@ -69,11 +85,15 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     data: {
       month: parsedMonth.data,
-      currency: budget?.currency ?? auth.workspace.defaultCurrency,
+      currency: budgetCurrency,
       totalPlannedMinor,
       totalSpentMinor,
       remainingMinor: totalPlannedMinor - totalSpentMinor,
       byCategory,
+      totalsByCurrency: spentByCurrency.map((row) => ({
+        currency: row._id,
+        totalSpentMinor: row.total,
+      })),
     },
   });
 }

@@ -1,70 +1,92 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
 import { RecurringModel } from "@/src/models/Recurring";
 import { TransactionModel } from "@/src/models/Transaction";
-import { errorResponse, requireAuthContext } from "@/src/server/api";
-import { parseMonth } from "@/src/server/month";
+import { errorResponse } from "@/src/server/api";
+import { dbConnect } from "@/src/db/mongoose";
 
-const monthSchema = z.string().regex(/^\d{4}-\d{2}$/, "Invalid month");
+const normalizeUtcDate = (value: Date) => {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+};
 
-const getRunDateForMonth = (year: number, monthIndex: number, dayOfMonth: number) => {
-  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+const addWeeks = (value: Date, interval: number) => {
+  const next = new Date(value);
+  next.setUTCDate(next.getUTCDate() + interval * 7);
+  return normalizeUtcDate(next);
+};
+
+const addMonths = (value: Date, interval: number, dayOfMonth: number) => {
+  const year = value.getUTCFullYear();
+  const monthIndex = value.getUTCMonth() + interval;
+  const target = new Date(Date.UTC(year, monthIndex, 1));
+  const daysInMonth = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
   const day = Math.min(dayOfMonth, daysInMonth);
-  return new Date(Date.UTC(year, monthIndex, day));
+  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), day));
+};
+
+const getNextRun = (
+  current: Date,
+  schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number }
+) => {
+  if (schedule.frequency === "weekly") {
+    return addWeeks(current, schedule.interval);
+  }
+  return addMonths(current, schedule.interval, schedule.dayOfMonth ?? current.getUTCDate());
 };
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuthContext();
-  if ("response" in auth) return auth.response;
-
-  const monthParam = request.nextUrl.searchParams.get("month");
-  const parsedMonth = monthParam ? monthSchema.safeParse(monthParam) : null;
-  if (!parsedMonth?.success) {
-    return errorResponse("Invalid month", 400);
+  await dbConnect();
+  const secret = process.env.RECURRING_RUN_SECRET;
+  if (!secret) {
+    return errorResponse("Recurring secret not configured", 500);
   }
 
-  const month = parseMonth(parsedMonth.data);
-  if (!month) {
-    return errorResponse("Invalid month", 400);
+  const provided = request.headers.get("x-recurring-secret");
+  if (provided !== secret) {
+    return errorResponse("Unauthorized", 401);
   }
 
+  const now = normalizeUtcDate(new Date());
   const recurring = await RecurringModel.find({
-    workspaceId: auth.workspace.id,
-    isActive: true,
+    isArchived: false,
+    nextRunAt: { $lte: now },
   });
 
   const created: string[] = [];
 
   for (const rule of recurring) {
-    const runDate = getRunDateForMonth(
-      month.year,
-      month.monthIndex,
-      rule.schedule.dayOfMonth
-    );
+    let nextRunAt = normalizeUtcDate(rule.nextRunAt);
+    while (nextRunAt <= now) {
+      const existing = await TransactionModel.findOne({
+        workspaceId: rule.workspaceId,
+        recurringId: rule._id,
+        date: nextRunAt,
+      }).select("_id");
 
-    const existing = await TransactionModel.findOne({
-      workspaceId: auth.workspace.id,
-      recurringId: rule._id,
-      date: { $gte: month.start, $lt: month.end },
-    }).select("_id");
+      if (!existing) {
+        const transaction = await TransactionModel.create({
+          workspaceId: rule.workspaceId,
+          recurringId: rule._id,
+          categoryId: rule.categoryId ?? null,
+          merchantId: rule.merchantId ?? null,
+          amountMinor: rule.amountMinor,
+          currency: rule.currency,
+          kind: rule.kind,
+          date: nextRunAt,
+          note: rule.name ? `Recurring: ${rule.name}` : undefined,
+          receiptUrls: [],
+          isPending: true,
+          isArchived: false,
+        });
+        created.push(transaction._id.toString());
+      }
 
-    if (existing) {
-      continue;
+      nextRunAt = getNextRun(nextRunAt, rule.schedule);
     }
 
-    const transaction = await TransactionModel.create({
-      workspaceId: auth.workspace.id,
-      recurringId: rule._id,
-      categoryId: rule.categoryId ?? null,
-      amountMinor: rule.amountMinor,
-      currency: rule.currency,
-      kind: rule.kind,
-      date: runDate,
-      note: `Recurring: ${rule.name}`,
-      receiptUrls: [],
-      isArchived: false,
-    });
-    created.push(transaction._id.toString());
+    await RecurringModel.updateOne(
+      { _id: rule._id },
+      { nextRunAt }
+    );
   }
 
   return NextResponse.json({ data: { created } });

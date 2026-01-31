@@ -2,11 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
+import { MerchantModel } from "@/src/models/Merchant";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const scheduleSchema = z.object({
-  cadence: z.literal("monthly"),
-  dayOfMonth: z.number().int().min(1).max(31),
+  frequency: z.enum(["monthly", "weekly"]),
+  interval: z.number().int().min(1),
+  dayOfMonth: z.number().int().min(1).max(31).optional(),
+}).superRefine((value, context) => {
+  if (value.frequency === "monthly" && !value.dayOfMonth) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Day of month is required." });
+  }
 });
 
 const baseSchema = z.object({
@@ -15,23 +21,58 @@ const baseSchema = z.object({
   currency: z.string().trim().min(1),
   kind: z.enum(["expense", "income"]),
   categoryId: z.string().nullable().optional(),
+  merchantId: z.string().nullable().optional(),
   schedule: scheduleSchema,
+  startDate: z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), "Invalid date"),
 });
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
 
-const computeNextRunDate = (schedule: { dayOfMonth: number }) => {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const monthIndex = now.getUTCMonth();
+const normalizeUtcDate = (value: Date) => {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+};
+
+const addWeeks = (value: Date, interval: number) => {
+  const next = new Date(value);
+  next.setUTCDate(next.getUTCDate() + interval * 7);
+  return normalizeUtcDate(next);
+};
+
+const addMonths = (value: Date, interval: number, dayOfMonth: number) => {
+  const year = value.getUTCFullYear();
+  const monthIndex = value.getUTCMonth() + interval;
+  const target = new Date(Date.UTC(year, monthIndex, 1));
+  const daysInMonth = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  const day = Math.min(dayOfMonth, daysInMonth);
+  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), day));
+};
+
+const getMonthlyRunDate = (base: Date, dayOfMonth: number) => {
+  const year = base.getUTCFullYear();
+  const monthIndex = base.getUTCMonth();
   const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const day = Math.min(schedule.dayOfMonth, daysInMonth);
-  const candidate = new Date(Date.UTC(year, monthIndex, day));
-  if (candidate >= now) return candidate;
-  const nextMonth = new Date(Date.UTC(year, monthIndex + 1, 1));
-  const nextDays = new Date(Date.UTC(nextMonth.getUTCFullYear(), nextMonth.getUTCMonth() + 1, 0)).getUTCDate();
-  const nextDay = Math.min(schedule.dayOfMonth, nextDays);
-  return new Date(Date.UTC(nextMonth.getUTCFullYear(), nextMonth.getUTCMonth(), nextDay));
+  const day = Math.min(dayOfMonth, daysInMonth);
+  return new Date(Date.UTC(year, monthIndex, day));
+};
+
+const computeNextRunAt = (
+  startDate: Date,
+  schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number }
+) => {
+  const now = normalizeUtcDate(new Date());
+  const baseline = normalizeUtcDate(startDate);
+  const target = baseline > now ? baseline : now;
+  let next =
+    schedule.frequency === "monthly"
+      ? getMonthlyRunDate(startDate, schedule.dayOfMonth ?? startDate.getUTCDate())
+      : normalizeUtcDate(startDate);
+  while (next < target) {
+    next =
+      schedule.frequency === "monthly"
+        ? addMonths(next, schedule.interval, schedule.dayOfMonth ?? startDate.getUTCDate())
+        : addWeeks(next, schedule.interval);
+  }
+  return next;
 };
 
 export async function GET() {
@@ -70,6 +111,27 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  let merchantObjectId = null;
+  if (parsed.data.merchantId !== undefined) {
+    if (parsed.data.merchantId === null) {
+      merchantObjectId = null;
+    } else {
+      merchantObjectId = parseObjectId(parsed.data.merchantId);
+      if (!merchantObjectId) {
+        return errorResponse("Invalid merchant id", 400);
+      }
+      const merchant = await MerchantModel.findOne({
+        _id: merchantObjectId,
+        workspaceId: auth.workspace.id,
+      });
+      if (!merchant) {
+        return errorResponse("Merchant not found", 404);
+      }
+    }
+  }
+
+  const startDate = new Date(parsed.data.startDate);
+
   const recurring = await RecurringModel.create({
     workspaceId: auth.workspace.id,
     name: parsed.data.name,
@@ -77,9 +139,11 @@ export async function POST(request: NextRequest) {
     currency: parsed.data.currency,
     kind: parsed.data.kind,
     categoryId: categoryObjectId,
+    merchantId: merchantObjectId,
     schedule: parsed.data.schedule,
-    nextRunDate: computeNextRunDate(parsed.data.schedule),
-    isActive: true,
+    startDate,
+    nextRunAt: computeNextRunAt(startDate, parsed.data.schedule),
+    isArchived: false,
   });
 
   return NextResponse.json({ data: recurring });
