@@ -27,7 +27,7 @@ const PlannedLineSchema = new mongoose.Schema<PlannedLine>(
 
 const BudgetMonthSchema = new mongoose.Schema<BudgetMonthDoc>(
   {
-    workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
+    workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true },
     month: { type: String, required: true },
     currency: { type: String, required: true },
     plannedLines: { type: [PlannedLineSchema], default: [] },
@@ -36,6 +36,5 @@ const BudgetMonthSchema = new mongoose.Schema<BudgetMonthDoc>(
 );
 
 BudgetMonthSchema.index({ workspaceId: 1, month: 1 }, { unique: true });
-BudgetMonthSchema.index({ workspaceId: 1, month: 1 });
 
 export const BudgetMonthModel = getModel<BudgetMonthDoc>("BudgetMonth", BudgetMonthSchema);
