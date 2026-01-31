@@ -244,7 +244,7 @@ export function TransactionsClient({
       }
     }, 250);
     return () => clearTimeout(timeout);
-  }, [formState.merchantQuery, locale, modalOpen]);
+  }, [formState.merchantId, formState.merchantQuery, locale, modalOpen]);
 
   const openAddModal = () => {
     setEditingTransaction(null);
