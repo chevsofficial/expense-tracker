@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
@@ -102,11 +103,12 @@ const getCurrentMonth = () => {
 };
 
 const formatDateInput = (value: string) => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return getTodayInput();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
@@ -615,10 +617,10 @@ export function TransactionsClient({
             </tr>
           ) : null}
           {rows.map((transaction) => {
-            const date = new Date(transaction.date);
-            const dateLabel = Number.isNaN(date.getTime())
+            const dateObj = new Date(transaction.date);
+            const dateLabel = Number.isNaN(dateObj.getTime())
               ? transaction.date
-              : new Intl.DateTimeFormat(locale).format(date);
+              : new Intl.DateTimeFormat(locale, { timeZone: "UTC" }).format(dateObj);
             const categoryLabel = transaction.categoryId
               ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
               : t(locale, "transactions_uncategorized");
@@ -745,6 +747,7 @@ export function TransactionsClient({
                 value={month}
                 onChange={(event) => setMonth(event.target.value)}
               />
+              <div className="mt-1 text-xs opacity-60">{formattedMonth}</div>
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
@@ -1081,11 +1084,15 @@ export function TransactionsClient({
         <div className="space-y-4">
           {receiptPreviewUrl ? (
             <>
-              <img
-                src={receiptPreviewUrl}
-                alt={t(locale, "transactions_receipt")}
-                className="max-h-[60vh] w-full rounded border object-contain"
-              />
+              <div className="relative h-[60vh] w-full">
+                <Image
+                  src={receiptPreviewUrl}
+                  alt={t(locale, "transactions_receipt")}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 800px"
+                  className="rounded border object-contain"
+                />
+              </div>
               <a
                 className="link link-primary"
                 href={receiptPreviewUrl}

@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
+import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const amountSchema = z
@@ -11,7 +12,9 @@ const amountSchema = z
   .positive()
   .refine(Number.isFinite, "Invalid amount");
 
-const dateSchema = z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), "Invalid date");
+const dateSchema = z
+  .string()
+  .refine((value) => isYmd(value) || !Number.isNaN(new Date(value).getTime()), "Invalid date");
 
 const updateSchema = z.object({
   date: dateSchema.optional(),
@@ -52,7 +55,7 @@ export async function PUT(
   const update: Record<string, unknown> = {};
 
   if (parsed.data.date) {
-    update.date = new Date(parsed.data.date);
+    update.date = normalizeToUtcMidnight(parsed.data.date);
   }
 
   if (parsed.data.amount !== undefined) {
