@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
+import { monthRange } from "@/src/utils/month";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
 
 const currencySchema = z.enum(SUPPORTED_CURRENCIES);
@@ -31,27 +32,11 @@ function toMinorUnits(amount: number) {
   return Math.round(amount * 100);
 }
 
-function parseMonthRange(monthParam: string) {
-  if (!/^\d{4}-\d{2}$/.test(monthParam)) {
-    return null;
-  }
-
-  const [yearRaw, monthRaw] = monthParam.split("-");
-  const year = Number(yearRaw);
-  const monthIndex = Number(monthRaw) - 1;
-
-  if (!Number.isInteger(year) || !Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) {
-    return null;
-  }
-
-  const start = new Date(Date.UTC(year, monthIndex, 1));
-  const end = new Date(Date.UTC(year, monthIndex + 1, 1));
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return null;
-  }
-
-  return { start, end };
+function isValidMonthParam(monthParam: string) {
+  if (!/^\d{4}-\d{2}$/.test(monthParam)) return false;
+  const [, monthValue] = monthParam.split("-");
+  const monthNumber = Number(monthValue);
+  return Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12;
 }
 
 export async function GET(request: NextRequest) {
@@ -73,11 +58,13 @@ export async function GET(request: NextRequest) {
   };
 
   if (monthParam) {
-    const range = parseMonthRange(monthParam);
-    if (!range) {
+    if (!isValidMonthParam(monthParam)) {
       return errorResponse("Invalid month", 400);
     }
-    filter.date = { $gte: range.start, $lt: range.end };
+    const range = monthRange(monthParam);
+    const startDate = new Date(`${range.start}T00:00:00.000Z`);
+    const endDate = new Date(`${range.end}T00:00:00.000Z`);
+    filter.date = { $gte: startDate, $lt: endDate };
   }
 
   if (kindParam) {

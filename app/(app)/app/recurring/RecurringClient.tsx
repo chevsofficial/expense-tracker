@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 
@@ -80,12 +81,19 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
   const [recurringToDelete, setRecurringToDelete] = useState<Recurring | null>(null);
   const [dayOfMonthOverridden, setDayOfMonthOverridden] = useState(false);
 
+  const resolvedDefaultCurrency = useMemo(() => {
+    if (SUPPORTED_CURRENCIES.includes(defaultCurrency as (typeof SUPPORTED_CURRENCIES)[number])) {
+      return defaultCurrency;
+    }
+    return "MXN";
+  }, [defaultCurrency]);
+
   const [formState, setFormState] = useState<RecurringForm>(() => {
     const today = getTodayInput();
     return {
       name: "",
       amount: "",
-      currency: defaultCurrency,
+      currency: resolvedDefaultCurrency,
       kind: "expense",
       categoryId: "uncategorized",
       merchantId: "unassigned",
@@ -210,7 +218,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     setFormState({
       name: "",
       amount: "",
-      currency: defaultCurrency,
+      currency: resolvedDefaultCurrency,
       kind: "expense",
       categoryId: "uncategorized",
       merchantId: "unassigned",
@@ -401,12 +409,18 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
             </label>
             <label className="form-control w-full">
               <span className="label-text">{t(locale, "recurring_currency")}</span>
-              <input
-                className="input input-bordered"
+              <select
+                className="select select-bordered w-full"
                 value={formState.currency}
                 onChange={(event) => setFormState({ ...formState, currency: event.target.value })}
                 required
-              />
+              >
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="form-control w-full">
               <span className="label-text">{t(locale, "recurring_kind")}</span>

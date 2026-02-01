@@ -16,7 +16,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
-import { formatMonthLabel } from "@/src/i18n/formatMonthLabel";
+import { formatMonthLabel } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import type { Locale } from "@/src/i18n/messages";
@@ -501,7 +501,7 @@ export function TransactionsClient({
     }
   };
 
-  const formattedMonth = useMemo(() => formatMonthLabel(locale, month), [locale, month]);
+  const formattedMonth = useMemo(() => formatMonthLabel(month, locale), [locale, month]);
 
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
