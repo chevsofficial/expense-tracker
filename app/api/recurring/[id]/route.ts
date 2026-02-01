@@ -3,6 +3,7 @@ import { z } from "zod";
 import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 import { isDateOnlyString, parseDateOnly } from "@/src/server/dates";
 
@@ -17,7 +18,7 @@ const scheduleSchema = z
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   amount: z.number().positive().optional(),
-  currency: z.string().trim().min(1).optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   kind: z.enum(["expense", "income"]).optional(),
   categoryId: z.string().nullable().optional(),
   merchantId: z.string().nullable().optional(),
