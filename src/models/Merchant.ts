@@ -5,6 +5,9 @@ export type MerchantDoc = {
   workspaceId: mongoose.Types.ObjectId;
   name: string;
   nameKey: string;
+  defaultCategoryId?: mongoose.Types.ObjectId | null;
+  defaultKind?: "income" | "expense" | null;
+  aliases?: string[];
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +31,13 @@ const MerchantSchema = new mongoose.Schema<MerchantDoc>(
     },
     name: { type: String, required: true, trim: true },
     nameKey: { type: String, required: true, trim: true, lowercase: true },
+    defaultCategoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+    },
+    defaultKind: { type: String, enum: ["income", "expense"], default: null },
+    aliases: { type: [String], default: [] },
     isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -44,6 +54,11 @@ MerchantSchema.pre("validate", function () {
     throw new Error("Merchant must have a valid nameKey");
   }
   doc.nameKey = normalized;
+  if (Array.isArray(doc.aliases)) {
+    doc.aliases = doc.aliases
+      .map((alias) => alias.trim().toLowerCase())
+      .filter((alias) => alias.length > 0);
+  }
 });
 
 MerchantSchema.index({ workspaceId: 1, nameKey: 1 }, { unique: true });
