@@ -5,7 +5,8 @@ import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
-import { isDateOnlyString, parseDateOnly } from "@/src/server/dates";
+import { isDateOnlyString, parseDateOnly, toDateOnlyString } from "@/src/server/dates";
+import { computeNextRunAt } from "@/src/utils/recurring";
 
 const scheduleSchema = z.object({
   frequency: z.enum(["monthly", "weekly"]),
@@ -26,11 +27,36 @@ const baseSchema = z.object({
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
 
-export async function GET() {
+const resolveNextRunOn = (schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number }, startDate: string) => {
+  const today = toDateOnlyString(new Date());
+  let nextRunOn = startDate;
+  if (nextRunOn >= today) return nextRunOn;
+
+  let cursor = nextRunOn;
+  while (cursor < today) {
+    const next = computeNextRunAt({
+      frequency: schedule.frequency,
+      interval: schedule.interval,
+      dayOfMonth: schedule.dayOfMonth,
+      startDate,
+      fromDate: cursor,
+    });
+    if (next <= cursor) break;
+    cursor = next;
+  }
+  return cursor;
+};
+
+export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const recurring = await RecurringModel.find({ workspaceId: auth.workspace.id }).sort({
+  const includeArchived = request.nextUrl.searchParams.get("includeArchived") === "true";
+
+  const recurring = await RecurringModel.find({
+    workspaceId: auth.workspace.id,
+    ...(includeArchived ? {} : { isArchived: false }),
+  }).sort({
     createdAt: -1,
   });
 
@@ -96,6 +122,8 @@ export async function POST(request: NextRequest) {
           dayOfMonth: undefined,
         };
 
+  const nextRunOn = resolveNextRunOn(schedule, parsed.data.startDate);
+
   const recurring = await RecurringModel.create({
     workspaceId: auth.workspace.id,
     name: parsed.data.name,
@@ -106,7 +134,7 @@ export async function POST(request: NextRequest) {
     merchantId: merchantObjectId,
     schedule,
     startDate: parsed.data.startDate,
-    nextRunOn: parsed.data.startDate,
+    nextRunOn,
     isArchived: false,
   });
 

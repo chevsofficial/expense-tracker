@@ -3,13 +3,8 @@ import { RecurringModel } from "@/src/models/Recurring";
 import { TransactionModel } from "@/src/models/Transaction";
 import { dbConnect } from "@/src/db/mongoose";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
-import {
-  addDaysDateOnly,
-  addMonthsDateOnly,
-  dateOnlyToDate,
-  parseDateOnly,
-  toDateOnlyString,
-} from "@/src/server/dates";
+import { dateOnlyToDate, parseDateOnly, toDateOnlyString } from "@/src/server/dates";
+import { computeNextRunAt } from "@/src/utils/recurring";
 
 export async function POST(request: NextRequest) {
   await dbConnect();
@@ -86,19 +81,13 @@ export async function POST(request: NextRequest) {
           created.push(transaction._id.toString());
         }
 
-        if (rule.schedule.frequency === "weekly") {
-          const next = addDaysDateOnly(nextRunOn, rule.schedule.interval * 7);
-          if (!next) break;
-          nextRunOn = next;
-        } else {
-          const next = addMonthsDateOnly(
-            nextRunOn,
-            rule.schedule.interval,
-            scheduleDayOfMonth ?? 1
-          );
-          if (!next) break;
-          nextRunOn = next;
-        }
+        nextRunOn = computeNextRunAt({
+          frequency: rule.schedule.frequency,
+          interval: rule.schedule.interval,
+          dayOfMonth: scheduleDayOfMonth,
+          startDate: rule.startDate,
+          fromDate: nextRunOn,
+        });
       }
 
       await RecurringModel.updateOne({ _id: rule._id }, { nextRunOn });

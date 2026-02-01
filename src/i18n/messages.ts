@@ -26,6 +26,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     dashboard_top_categories: "Top categories",
     dashboard_top_merchants: "Top merchants",
     dashboard_spend_by_currency: "Spend by currency",
+    dashboard_transactions: "transactions",
     dashboard_no_activity: "No activity yet.",
     dashboard_no_categories: "No category spend yet.",
     dashboard_no_merchants: "No merchant spend yet.",
@@ -235,6 +236,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     recurring_frequency_weekly: "Weekly",
     recurring_interval: "Interval",
     recurring_day_of_month: "Day of month",
+    recurring_override_day: "Override day of month",
     recurring_day_of_month_help:
       "Day of month controls future months. If the month has fewer days, we run on the last day of that month.",
     recurring_day_of_month_invalid: "Enter a valid day of month.",
@@ -293,6 +295,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     dashboard_top_categories: "Categorías principales",
     dashboard_top_merchants: "Comercios principales",
     dashboard_spend_by_currency: "Gasto por moneda",
+    dashboard_transactions: "transacciones",
     dashboard_no_activity: "Sin actividad todavía.",
     dashboard_no_categories: "Sin gasto por categoría.",
     dashboard_no_merchants: "Sin gasto por comercio.",
@@ -502,6 +505,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     recurring_frequency_weekly: "Semanal",
     recurring_interval: "Intervalo",
     recurring_day_of_month: "Día del mes",
+    recurring_override_day: "Sobrescribir día del mes",
     recurring_day_of_month_help:
       "El día del mes controla los meses futuros. Si el mes tiene menos días, se ejecuta el último día.",
     recurring_day_of_month_invalid: "Ingresa un día válido del mes.",
