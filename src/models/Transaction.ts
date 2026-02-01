@@ -7,6 +7,8 @@ export type TransactionDoc = {
   workspaceId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId | null;
   recurringId?: mongoose.Types.ObjectId | null;
+  sourceRecurringId?: mongoose.Types.ObjectId | null;
+  sourceOccurrenceOn?: string | null;
   amountMinor: number;
   currency: string;
   kind: TransactionKind;
@@ -26,6 +28,8 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null, index: true },
     recurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
+    sourceRecurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
+    sourceOccurrenceOn: { type: String, default: null, index: true },
     amountMinor: { type: Number, required: true },
     currency: { type: String, required: true },
     kind: { type: String, enum: ["income", "expense"], required: true },
@@ -42,5 +46,9 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
 
 TransactionSchema.index({ workspaceId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, categoryId: 1, date: 1 });
+TransactionSchema.index(
+  { workspaceId: 1, sourceRecurringId: 1, sourceOccurrenceOn: 1 },
+  { unique: true, sparse: true }
+);
 
 export const TransactionModel = getModel<TransactionDoc>("Transaction", TransactionSchema);

@@ -16,8 +16,8 @@ export type RecurringDoc = {
   categoryId?: mongoose.Types.ObjectId | null;
   merchantId?: mongoose.Types.ObjectId | null;
   schedule: RecurringSchedule;
-  startDate: Date;
-  nextRunAt: Date;
+  startDate: string;
+  nextRunOn: string;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -42,8 +42,8 @@ const RecurringSchema = new mongoose.Schema<RecurringDoc>(
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null },
     merchantId: { type: mongoose.Schema.Types.ObjectId, ref: "Merchant", default: null },
     schedule: { type: RecurringScheduleSchema, required: true },
-    startDate: { type: Date, required: true },
-    nextRunAt: { type: Date, required: true },
+    startDate: { type: String, required: true },
+    nextRunOn: { type: String, required: true },
     isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }

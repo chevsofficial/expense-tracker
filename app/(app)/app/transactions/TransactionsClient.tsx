@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { CategoryPicker } from "@/components/pickers/CategoryPicker";
+import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
@@ -104,7 +105,6 @@ export function TransactionsClient({
   locale: Locale;
   defaultCurrency: string;
 }) {
-  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryQuery, setCategoryQuery] = useState("");
@@ -159,37 +159,6 @@ export function TransactionsClient({
     return map;
   }, [categories, categoryName]);
 
-  const selectedCategoryLabel = useMemo(() => {
-    if (!formState.categoryId || formState.categoryId === "uncategorized") {
-      return t(locale, "transactions_category_uncategorized");
-    }
-    return categoryMap.get(formState.categoryId) ?? "";
-  }, [categoryMap, formState.categoryId, locale]);
-
-  const categoryMatches = useMemo(() => {
-    const query = categoryQuery.trim().toLowerCase();
-    const visibleCategories = categories.filter((category) => !category.isArchived);
-    if (!query) return visibleCategories;
-    return visibleCategories.filter((category) =>
-      categoryName(category).toLowerCase().trim().includes(query)
-    );
-  }, [categories, categoryName, categoryQuery]);
-
-  const incomeCategoryMatches = useMemo(
-    () =>
-      categoryMatches.filter(
-        (category) => category.kind === "income" && !category.isArchived
-      ),
-    [categoryMatches]
-  );
-  const expenseCategoryMatches = useMemo(
-    () =>
-      categoryMatches.filter(
-        (category) => category.kind === "expense" && !category.isArchived
-      ),
-    [categoryMatches]
-  );
-
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
     merchants.forEach((merchant) => {
@@ -197,17 +166,6 @@ export function TransactionsClient({
     });
     return map;
   }, [merchants]);
-
-  const merchantMatches = useMemo(() => {
-    const query = merchantQuery.trim().toLowerCase();
-    if (!query) return merchants;
-    return merchants.filter((merchant) => merchant.name.toLowerCase().includes(query));
-  }, [merchantQuery, merchants]);
-
-  const selectedMerchantLabel = useMemo(() => {
-    if (!formState.merchantId) return "";
-    return formState.merchantNameSnapshot || merchantMap.get(formState.merchantId) || "";
-  }, [formState.merchantId, formState.merchantNameSnapshot, merchantMap]);
 
   const formatCurrency = useCallback(
     (amountMinor: number, currency: string) =>
@@ -752,196 +710,45 @@ export function TransactionsClient({
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_category")}
               </span>
-              <div
-                className={`dropdown dropdown-bottom w-full ${
-                  categoryDropdownOpen ? "dropdown-open" : ""
-                }`}
-                tabIndex={0}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setCategoryDropdownOpen(false);
-                    setCategoryQuery("");
-                  }
-                }}
-              >
-                <button
-                  type="button"
-                  className="input input-bordered flex w-full items-center justify-between text-left"
-                  onClick={() => {
-                    setCategoryDropdownOpen(true);
-                    setCategoryQuery("");
-                  }}
-                >
-                  <span className={selectedCategoryLabel ? "" : "opacity-60"}>
-                    {selectedCategoryLabel || t(locale, "transactions_category_search_placeholder")}
-                  </span>
-                  <span className="text-xs opacity-60">▾</span>
-                </button>
-                <ul className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow z-[50]">
-                  <li>
-                    <input
-                      className="input input-sm input-bordered w-full"
-                      placeholder={t(locale, "transactions_category_search_placeholder")}
-                      value={categoryQuery}
-                      onChange={(event) => setCategoryQuery(event.target.value)}
-                    />
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm justify-start w-full"
-                      onClick={() => handleSelectCategory(null)}
-                    >
-                      {t(locale, "transactions_category_uncategorized")}
-                    </button>
-                  </li>
-                  {incomeCategoryMatches.length ? (
-                    <li className="mt-1">
-                      <div className="px-2 py-1 font-bold opacity-80">
-                        {t(locale, "transactions_category_income_header")}
-                      </div>
-                    </li>
-                  ) : null}
-                  {incomeCategoryMatches.map((category) => (
-                    <li key={category._id}>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm justify-start w-full"
-                        onClick={() => handleSelectCategory(category._id)}
-                      >
-                        {categoryName(category)}
-                      </button>
-                    </li>
-                  ))}
-                  {expenseCategoryMatches.length ? (
-                    <li className="mt-1">
-                      <div className="px-2 py-1 font-bold opacity-80">
-                        {t(locale, "transactions_category_expense_header")}
-                      </div>
-                    </li>
-                  ) : null}
-                  {expenseCategoryMatches.map((category) => (
-                    <li key={category._id}>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm justify-start w-full"
-                        onClick={() => handleSelectCategory(category._id)}
-                      >
-                        {categoryName(category)}
-                      </button>
-                    </li>
-                  ))}
-                  <li className="mt-2 border-t border-base-200 pt-2">
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-xs w-full justify-start"
-                      onClick={() => {
-                        setCategoryDropdownOpen(false);
-                        setCategoryQuery("");
-                        router.push("/app/settings/categories");
-                      }}
-                    >
-                      {t(locale, "transactions_category_manage")}
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              <CategoryPicker
+                locale={locale}
+                categories={categories}
+                selectedCategoryId={
+                  formState.categoryId === "uncategorized" ? null : formState.categoryId
+                }
+                query={categoryQuery}
+                dropdownOpen={categoryDropdownOpen}
+                onDropdownOpenChange={setCategoryDropdownOpen}
+                onQueryChange={setCategoryQuery}
+                onSelectCategory={handleSelectCategory}
+              />
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_merchant")}
               </span>
-              <div
-                className={`dropdown w-full ${merchantDropdownOpen ? "dropdown-open" : ""}`}
-                tabIndex={0}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setMerchantDropdownOpen(false);
-                    setMerchantQuery("");
-                  }
+              <MerchantPicker
+                locale={locale}
+                merchants={merchants}
+                merchantsLoading={merchantsLoading}
+                selectedMerchantId={formState.merchantId}
+                selectedMerchantName={formState.merchantNameSnapshot}
+                query={merchantQuery}
+                dropdownOpen={merchantDropdownOpen}
+                creatingMerchant={creatingMerchant}
+                onDropdownOpenChange={setMerchantDropdownOpen}
+                onQueryChange={(value) => {
+                  setMerchantQuery(value);
+                  setFormState((current) => ({
+                    ...current,
+                    merchantId: null,
+                    merchantNameSnapshot: "",
+                  }));
                 }}
-              >
-                <button
-                  type="button"
-                  className="input input-bordered flex w-full items-center justify-between text-left"
-                  onClick={() => {
-                    setMerchantDropdownOpen(true);
-                    setMerchantQuery("");
-                    if (!merchants.length && !merchantsLoading) {
-                      void loadMerchants();
-                    }
-                  }}
-                >
-                  <span className={selectedMerchantLabel ? "" : "opacity-60"}>
-                    {selectedMerchantLabel || t(locale, "transactions_merchant_placeholder")}
-                  </span>
-                  <span className="text-xs opacity-60">▾</span>
-                </button>
-                <div className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow">
-                  <input
-                    className="input input-sm input-bordered w-full"
-                    placeholder={t(locale, "transactions_merchant_placeholder")}
-                    value={merchantQuery}
-                    onChange={(event) => {
-                      setMerchantQuery(event.target.value);
-                      setFormState((current) => ({
-                        ...current,
-                        merchantId: null,
-                        merchantNameSnapshot: "",
-                      }));
-                    }}
-                  />
-                  <div className="mt-2 max-h-56 overflow-y-auto">
-                    {merchantsLoading ? (
-                      <div className="px-2 py-2 text-sm opacity-60">
-                        {t(locale, "merchants_loading")}
-                      </div>
-                    ) : merchantMatches.length ? (
-                      <ul className="space-y-1">
-                        {merchantMatches.map((merchant) => (
-                          <li key={merchant._id}>
-                            <button
-                              type="button"
-                              className="w-full rounded px-2 py-1 text-left text-sm hover:bg-base-200"
-                              onClick={() => handleSelectMerchant(merchant)}
-                            >
-                              {merchant.name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="space-y-2 px-2 py-2 text-sm">
-                        <p className="opacity-60">{t(locale, "transactions_no_merchants")}</p>
-                        {merchantQuery.trim() ? (
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-xs"
-                            onClick={handleCreateMerchant}
-                            disabled={creatingMerchant || merchantQuery.trim().length < 2}
-                          >
-                            {t(locale, "transactions_create_merchant")} “
-                            {merchantQuery.trim()}”
-                          </button>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 border-t border-base-200 pt-2">
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-xs w-full justify-start"
-                      onClick={() => {
-                        setMerchantDropdownOpen(false);
-                        setMerchantQuery("");
-                        router.push("/app/settings/merchants");
-                      }}
-                    >
-                      {t(locale, "transactions_manage_merchants")}
-                    </button>
-                  </div>
-                </div>
-              </div>
+                onSelectMerchant={handleSelectMerchant}
+                onCreateMerchant={handleCreateMerchant}
+                onLoadMerchants={() => void loadMerchants()}
+              />
             </label>
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">
