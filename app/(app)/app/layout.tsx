@@ -26,6 +26,7 @@ export default async function AppLayout({
         dashboardLabel={t(locale, "nav_dashboard")}
         categoriesLabel={t(locale, "nav_categories")}
         merchantsLabel={t(locale, "nav_merchants")}
+        importLabel={t(locale, "nav_import")}
         transactionsLabel={t(locale, "nav_transactions")}
         budgetLabel={t(locale, "nav_budget")}
         recurringLabel={t(locale, "nav_recurring")}
