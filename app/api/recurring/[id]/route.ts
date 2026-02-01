@@ -4,17 +4,13 @@ import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
+import { isDateOnlyString, parseDateOnly } from "@/src/server/dates";
 
 const scheduleSchema = z
   .object({
     frequency: z.enum(["monthly", "weekly"]),
     interval: z.number().int().min(1),
     dayOfMonth: z.number().int().min(1).max(31).optional(),
-  })
-  .superRefine((value, context) => {
-    if (value.frequency === "monthly" && !value.dayOfMonth) {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: "Day of month is required." });
-    }
   })
   .optional();
 
@@ -28,59 +24,13 @@ const updateSchema = z.object({
   schedule: scheduleSchema,
   startDate: z
     .string()
-    .refine((value) => !Number.isNaN(new Date(value).getTime()), "Invalid date")
+    .refine((value) => isDateOnlyString(value), "Invalid date")
     .optional(),
   isArchived: z.boolean().optional(),
 });
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
 
-const normalizeUtcDate = (value: Date) => {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-};
-
-const addWeeks = (value: Date, interval: number) => {
-  const next = new Date(value);
-  next.setUTCDate(next.getUTCDate() + interval * 7);
-  return normalizeUtcDate(next);
-};
-
-const addMonths = (value: Date, interval: number, dayOfMonth: number) => {
-  const year = value.getUTCFullYear();
-  const monthIndex = value.getUTCMonth() + interval;
-  const target = new Date(Date.UTC(year, monthIndex, 1));
-  const daysInMonth = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-  const day = Math.min(dayOfMonth, daysInMonth);
-  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), day));
-};
-
-const getMonthlyRunDate = (base: Date, dayOfMonth: number) => {
-  const year = base.getUTCFullYear();
-  const monthIndex = base.getUTCMonth();
-  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const day = Math.min(dayOfMonth, daysInMonth);
-  return new Date(Date.UTC(year, monthIndex, day));
-};
-
-const computeNextRunAt = (
-  startDate: Date,
-  schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number }
-) => {
-  const now = normalizeUtcDate(new Date());
-  const baseline = normalizeUtcDate(startDate);
-  const target = baseline > now ? baseline : now;
-  let next =
-    schedule.frequency === "monthly"
-      ? getMonthlyRunDate(startDate, schedule.dayOfMonth ?? startDate.getUTCDate())
-      : normalizeUtcDate(startDate);
-  while (next < target) {
-    next =
-      schedule.frequency === "monthly"
-        ? addMonths(next, schedule.interval, schedule.dayOfMonth ?? startDate.getUTCDate())
-        : addWeeks(next, schedule.interval);
-  }
-  return next;
-};
 
 export async function PUT(
   request: NextRequest,
@@ -116,7 +66,6 @@ export async function PUT(
   if (parsed.data.amount !== undefined) update.amountMinor = toMinorUnits(parsed.data.amount);
   if (parsed.data.currency !== undefined) update.currency = parsed.data.currency;
   if (parsed.data.kind !== undefined) update.kind = parsed.data.kind;
-  if (parsed.data.schedule !== undefined) update.schedule = parsed.data.schedule;
   if (parsed.data.isArchived !== undefined) update.isArchived = parsed.data.isArchived;
 
   if (parsed.data.categoryId !== undefined) {
@@ -157,19 +106,30 @@ export async function PUT(
     }
   }
 
-  const startDate = parsed.data.startDate ? new Date(parsed.data.startDate) : recurring.startDate;
-  const schedule = (parsed.data.schedule ?? recurring.schedule) as {
-    frequency: "monthly" | "weekly";
-    interval: number;
-    dayOfMonth?: number;
-  };
+  const startDate = parsed.data.startDate ?? recurring.startDate;
+  const parsedStart = parseDateOnly(startDate);
+  if (!parsedStart) {
+    return errorResponse("Invalid date", 400);
+  }
+  const schedule = {
+    ...(parsed.data.schedule ?? recurring.schedule),
+    ...((parsed.data.schedule?.frequency ?? recurring.schedule.frequency) === "monthly"
+      ? {
+          dayOfMonth:
+            parsed.data.schedule?.dayOfMonth ??
+            recurring.schedule.dayOfMonth ??
+            parsedStart.d,
+        }
+      : { dayOfMonth: undefined }),
+  } as { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number };
 
   if (parsed.data.startDate !== undefined) {
     update.startDate = startDate;
+    update.nextRunOn = startDate;
   }
 
-  if (parsed.data.schedule !== undefined || parsed.data.startDate !== undefined) {
-    update.nextRunAt = computeNextRunAt(startDate, schedule);
+  if (parsed.data.schedule !== undefined) {
+    update.schedule = schedule;
   }
 
   const updated = await RecurringModel.findOneAndUpdate(
@@ -196,6 +156,19 @@ export async function DELETE(
   const objectId = parseObjectId(id);
   if (!objectId) {
     return errorResponse("Invalid recurring id", 400);
+  }
+
+  const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+
+  if (hardDelete) {
+    const deleted = await RecurringModel.deleteOne({
+      _id: objectId,
+      workspaceId: auth.workspace.id,
+    });
+    if (!deleted.deletedCount) {
+      return errorResponse("Recurring not found", 404);
+    }
+    return NextResponse.json({ data: { deleted: true } });
   }
 
   const recurring = await RecurringModel.findOneAndUpdate(

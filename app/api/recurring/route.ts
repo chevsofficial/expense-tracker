@@ -4,15 +4,12 @@ import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
+import { isDateOnlyString, parseDateOnly } from "@/src/server/dates";
 
 const scheduleSchema = z.object({
   frequency: z.enum(["monthly", "weekly"]),
   interval: z.number().int().min(1),
   dayOfMonth: z.number().int().min(1).max(31).optional(),
-}).superRefine((value, context) => {
-  if (value.frequency === "monthly" && !value.dayOfMonth) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Day of month is required." });
-  }
 });
 
 const baseSchema = z.object({
@@ -23,57 +20,10 @@ const baseSchema = z.object({
   categoryId: z.string().nullable().optional(),
   merchantId: z.string().nullable().optional(),
   schedule: scheduleSchema,
-  startDate: z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), "Invalid date"),
+  startDate: z.string().refine((value) => isDateOnlyString(value), "Invalid date"),
 });
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
-
-const normalizeUtcDate = (value: Date) => {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-};
-
-const addWeeks = (value: Date, interval: number) => {
-  const next = new Date(value);
-  next.setUTCDate(next.getUTCDate() + interval * 7);
-  return normalizeUtcDate(next);
-};
-
-const addMonths = (value: Date, interval: number, dayOfMonth: number) => {
-  const year = value.getUTCFullYear();
-  const monthIndex = value.getUTCMonth() + interval;
-  const target = new Date(Date.UTC(year, monthIndex, 1));
-  const daysInMonth = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-  const day = Math.min(dayOfMonth, daysInMonth);
-  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), day));
-};
-
-const getMonthlyRunDate = (base: Date, dayOfMonth: number) => {
-  const year = base.getUTCFullYear();
-  const monthIndex = base.getUTCMonth();
-  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const day = Math.min(dayOfMonth, daysInMonth);
-  return new Date(Date.UTC(year, monthIndex, day));
-};
-
-const computeNextRunAt = (
-  startDate: Date,
-  schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number }
-) => {
-  const now = normalizeUtcDate(new Date());
-  const baseline = normalizeUtcDate(startDate);
-  const target = baseline > now ? baseline : now;
-  let next =
-    schedule.frequency === "monthly"
-      ? getMonthlyRunDate(startDate, schedule.dayOfMonth ?? startDate.getUTCDate())
-      : normalizeUtcDate(startDate);
-  while (next < target) {
-    next =
-      schedule.frequency === "monthly"
-        ? addMonths(next, schedule.interval, schedule.dayOfMonth ?? startDate.getUTCDate())
-        : addWeeks(next, schedule.interval);
-  }
-  return next;
-};
 
 export async function GET() {
   const auth = await requireAuthContext();
@@ -130,7 +80,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const startDate = new Date(parsed.data.startDate);
+  const parsedStart = parseDateOnly(parsed.data.startDate);
+  if (!parsedStart) {
+    return errorResponse("Invalid date", 400);
+  }
+  const schedule =
+    parsed.data.schedule.frequency === "monthly"
+      ? {
+          ...parsed.data.schedule,
+          dayOfMonth: parsed.data.schedule.dayOfMonth ?? parsedStart.d,
+        }
+      : {
+          ...parsed.data.schedule,
+          dayOfMonth: undefined,
+        };
 
   const recurring = await RecurringModel.create({
     workspaceId: auth.workspace.id,
@@ -140,9 +103,9 @@ export async function POST(request: NextRequest) {
     kind: parsed.data.kind,
     categoryId: categoryObjectId,
     merchantId: merchantObjectId,
-    schedule: parsed.data.schedule,
-    startDate,
-    nextRunAt: computeNextRunAt(startDate, parsed.data.schedule),
+    schedule,
+    startDate: parsed.data.startDate,
+    nextRunOn: parsed.data.startDate,
     isArchived: false,
   });
 
