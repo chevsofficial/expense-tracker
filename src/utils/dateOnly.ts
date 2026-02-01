@@ -1,3 +1,5 @@
+import type { Locale } from "@/src/i18n/messages";
+
 export function isYmd(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -34,4 +36,16 @@ export function toYmdUtc(input: string | Date): string {
 export function normalizeToUtcMidnight(input: string): Date {
   if (isYmd(input)) return ymdToUtcDate(input);
   return ymdToUtcDate(toYmdUtc(input));
+}
+
+export function formatDateOnly(value: string, locale: Locale) {
+  if (!isYmd(value)) return value;
+  const date = ymdToUtcDate(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }

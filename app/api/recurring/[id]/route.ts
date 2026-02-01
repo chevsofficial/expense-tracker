@@ -5,7 +5,8 @@ import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
-import { isDateOnlyString, parseDateOnly } from "@/src/server/dates";
+import { isDateOnlyString, parseDateOnly, toDateOnlyString } from "@/src/server/dates";
+import { computeNextRunAt } from "@/src/utils/recurring";
 
 const scheduleSchema = z
   .object({
@@ -31,6 +32,29 @@ const updateSchema = z.object({
 });
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
+
+const resolveNextRunOn = (
+  schedule: { frequency: "monthly" | "weekly"; interval: number; dayOfMonth?: number },
+  startDate: string
+) => {
+  const today = toDateOnlyString(new Date());
+  let nextRunOn = startDate;
+  if (nextRunOn >= today) return nextRunOn;
+
+  let cursor = nextRunOn;
+  while (cursor < today) {
+    const next = computeNextRunAt({
+      frequency: schedule.frequency,
+      interval: schedule.interval,
+      dayOfMonth: schedule.dayOfMonth,
+      startDate,
+      fromDate: cursor,
+    });
+    if (next <= cursor) break;
+    cursor = next;
+  }
+  return cursor;
+};
 
 
 export async function PUT(
@@ -126,11 +150,14 @@ export async function PUT(
 
   if (parsed.data.startDate !== undefined) {
     update.startDate = startDate;
-    update.nextRunOn = startDate;
   }
 
   if (parsed.data.schedule !== undefined) {
     update.schedule = schedule;
+  }
+
+  if (parsed.data.startDate !== undefined || parsed.data.schedule !== undefined) {
+    update.nextRunOn = resolveNextRunOn(schedule, startDate);
   }
 
   const updated = await RecurringModel.findOneAndUpdate(

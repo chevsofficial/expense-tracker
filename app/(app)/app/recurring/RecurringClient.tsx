@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { CategoryPicker } from "@/components/pickers/CategoryPicker";
-import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { t } from "@/src/i18n/t";
+import { toYmdUtc } from "@/src/utils/dateOnly";
+import { RecurringFormModal } from "@/components/recurring/RecurringFormModal";
+import { RecurringTable } from "@/components/recurring/RecurringTable";
 import type { Locale } from "@/src/i18n/messages";
 
 type Recurring = {
@@ -42,16 +43,8 @@ type Merchant = {
 };
 
 type ApiListResponse<T> = { data: T[] };
+
 type ApiItemResponse<T> = { data: T };
-
-const getTodayInput = () => {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-};
-
-const getDayFromDateInput = (value: string) => Number(value.split("-")[2]) || 1;
 
 type RecurringForm = {
   name: string;
@@ -65,6 +58,10 @@ type RecurringForm = {
   dayOfMonth: string;
   startDate: string;
 };
+
+const getTodayInput = () => toYmdUtc(new Date());
+
+const getDayFromDateInput = (value: string) => Number(value.split("-")[2]) || 1;
 
 export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; defaultCurrency: string }) {
   const [recurring, setRecurring] = useState<Recurring[]>([]);
@@ -138,20 +135,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     [locale]
   );
 
-  const formatDateOnly = useCallback(
-    (value: string) => {
-      const date = new Date(`${value}T00:00:00Z`);
-      if (Number.isNaN(date.getTime())) return value;
-      return new Intl.DateTimeFormat(locale, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      }).format(date);
-    },
-    [locale]
-  );
-
   const loadMerchants = useCallback(async () => {
     setMerchantsLoading(true);
     try {
@@ -193,7 +176,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     setLoading(true);
     try {
       const [recurringResponse, categoryResponse, merchantsResponse] = await Promise.all([
-        getJSON<ApiListResponse<Recurring>>("/api/recurring"),
+        getJSON<ApiListResponse<Recurring>>(`/api/recurring?includeArchived=${showArchived}`),
         getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
         getJSON<ApiListResponse<Merchant>>("/api/merchants?includeArchived=false"),
       ]);
@@ -206,7 +189,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     } finally {
       setLoading(false);
     }
-  }, [locale]);
+  }, [locale, showArchived]);
 
   useEffect(() => {
     void loadData();
@@ -244,7 +227,11 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
       setToast(t(locale, "recurring_interval_invalid"));
       return;
     }
-    if (formState.frequency === "monthly" && (!Number.isInteger(dayValue) || dayValue < 1 || dayValue > 31)) {
+    if (
+      formState.frequency === "monthly" &&
+      dayOfMonthOverridden &&
+      (!Number.isInteger(dayValue) || dayValue < 1 || dayValue > 31)
+    ) {
       setToast(t(locale, "recurring_day_of_month_invalid"));
       return;
     }
@@ -259,7 +246,9 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
       schedule: {
         frequency: formState.frequency,
         interval: intervalValue,
-        ...(formState.frequency === "monthly" ? { dayOfMonth: dayValue } : {}),
+        ...(formState.frequency === "monthly" && dayOfMonthOverridden
+          ? { dayOfMonth: dayValue }
+          : {}),
       },
       startDate: formState.startDate,
     };
@@ -281,7 +270,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
   const handleEdit = (item: Recurring) => {
     const startDate = item.startDate ? item.startDate.slice(0, 10) : getTodayInput();
     const startDay = Number(startDate.split("-")[2]) || 1;
-    const dayOfMonth = item.schedule.dayOfMonth ? String(item.schedule.dayOfMonth) : "1";
+    const dayOfMonth = item.schedule.dayOfMonth ? String(item.schedule.dayOfMonth) : String(startDay);
     setEditing(item);
     setFormState({
       name: item.name,
@@ -350,6 +339,36 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     [recurring]
   );
 
+  const handleFrequencyChange = (value: "monthly" | "weekly") => {
+    setFormState((current) => {
+      if (value === "monthly" && !dayOfMonthOverridden) {
+        const startDay = getDayFromDateInput(current.startDate);
+        return { ...current, frequency: value, dayOfMonth: String(startDay) };
+      }
+      return { ...current, frequency: value };
+    });
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setFormState((current) => {
+      if (current.frequency !== "monthly" || dayOfMonthOverridden) {
+        return { ...current, startDate: value };
+      }
+      const startDay = getDayFromDateInput(value);
+      return { ...current, startDate: value, dayOfMonth: String(startDay) };
+    });
+  };
+
+  const handleOverrideChange = (value: boolean) => {
+    setDayOfMonthOverridden(value);
+    if (!value) {
+      setFormState((current) => {
+        const startDay = getDayFromDateInput(current.startDate);
+        return { ...current, dayOfMonth: String(startDay) };
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -379,253 +398,62 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
         </div>
       ) : null}
 
-      <Modal
+      <RecurringFormModal
         open={modalOpen}
         title={editing ? t(locale, "recurring_edit") : t(locale, "recurring_add")}
+        submitLabel={editing ? t(locale, "recurring_save") : t(locale, "recurring_add")}
+        locale={locale}
+        formState={formState}
+        dayOfMonthOverridden={dayOfMonthOverridden}
+        categories={categories}
+        merchants={merchants}
+        creatingMerchant={creatingMerchant}
+        merchantsLoading={merchantsLoading}
         onClose={resetForm}
-      >
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_name")}</span>
-              <input
-                className="input input-bordered"
-                value={formState.name}
-                onChange={(event) => setFormState({ ...formState, name: event.target.value })}
-                required
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_amount")}</span>
-              <input
-                className="input input-bordered"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formState.amount}
-                onChange={(event) => setFormState({ ...formState, amount: event.target.value })}
-                required
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_currency")}</span>
-              <select
-                className="select select-bordered w-full"
-                value={formState.currency}
-                onChange={(event) => setFormState({ ...formState, currency: event.target.value })}
-                required
-              >
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_kind")}</span>
-              <select
-                className="select select-bordered"
-                value={formState.kind}
-                onChange={(event) =>
-                  setFormState({ ...formState, kind: event.target.value as Recurring["kind"] })
-                }
-              >
-                <option value="expense">{t(locale, "category_kind_expense")}</option>
-                <option value="income">{t(locale, "category_kind_income")}</option>
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_category")}</span>
-              <CategoryPicker
-                locale={locale}
-                categories={categories}
-                value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
-                onChange={(categoryId) =>
-                  setFormState((current) => ({
-                    ...current,
-                    categoryId: categoryId || "uncategorized",
-                  }))
-                }
-                allowEmpty
-                emptyLabel={t(locale, "transactions_category_uncategorized")}
-                placeholder={t(locale, "transactions_category_search_placeholder")}
-                showManageLink
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_merchant")}</span>
-              <MerchantPicker
-                locale={locale}
-                merchants={merchants}
-                value={formState.merchantId === "unassigned" ? "" : formState.merchantId}
-                onChange={(merchantId) =>
-                  setFormState((current) => ({
-                    ...current,
-                    merchantId: merchantId || "unassigned",
-                  }))
-                }
-                placeholder={t(locale, "transactions_merchant_placeholder")}
-                allowCreate
-                creating={creatingMerchant}
-                onCreateMerchant={createMerchant}
-                onLoadMerchants={() => void loadMerchants()}
-                loading={merchantsLoading}
-                showManageLink
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_frequency")}</span>
-              <select
-                className="select select-bordered"
-                value={formState.frequency}
-                onChange={(event) =>
-                  setFormState((current) => {
-                    const frequency = event.target.value as RecurringForm["frequency"];
-                    if (frequency === "monthly" && !dayOfMonthOverridden) {
-                      const startDay = Number(current.startDate.split("-")[2]) || 1;
-                      return {
-                        ...current,
-                        frequency,
-                        dayOfMonth: String(startDay),
-                      };
-                    }
-                    return {
-                      ...current,
-                      frequency,
-                    };
-                  })
-                }
-              >
-                <option value="monthly">{t(locale, "recurring_frequency_monthly")}</option>
-                <option value="weekly">{t(locale, "recurring_frequency_weekly")}</option>
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_interval")}</span>
-              <input
-                className="input input-bordered"
-                type="number"
-                min="1"
-                value={formState.interval}
-                onChange={(event) => setFormState({ ...formState, interval: event.target.value })}
-              />
-            </label>
-            {formState.frequency === "monthly" ? (
-              <label className="form-control w-full">
-                <span className="label-text">{t(locale, "recurring_day_of_month")}</span>
-                <input
-                  className="input input-bordered"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={formState.dayOfMonth}
-                  onChange={(event) => {
-                    setDayOfMonthOverridden(true);
-                    setFormState({ ...formState, dayOfMonth: event.target.value });
-                  }}
-                />
-                <span className="mt-1 text-xs opacity-60">
-                  {t(locale, "recurring_day_of_month_help")}
-                </span>
-              </label>
-            ) : null}
-            <label className="form-control w-full">
-              <span className="label-text">{t(locale, "recurring_start_date")}</span>
-              <input
-                className="input input-bordered"
-                type="date"
-                value={formState.startDate}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setFormState((current) => {
-                    if (current.frequency !== "monthly" || dayOfMonthOverridden) {
-                      return { ...current, startDate: value };
-                    }
-                    const startDay = Number(value.split("-")[2]) || 1;
-                    return {
-                      ...current,
-                      startDate: value,
-                      dayOfMonth: String(startDay),
-                    };
-                  });
-                }}
-              />
-            </label>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button className="btn btn-ghost" type="button" onClick={resetForm}>
-              {t(locale, "recurring_cancel")}
-            </button>
-            <button className="btn btn-primary" type="submit">
-              {editing ? t(locale, "recurring_save") : t(locale, "recurring_add")}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onSubmit={handleSubmit}
+        onFormChange={setFormState}
+        onFrequencyChange={handleFrequencyChange}
+        onIntervalChange={(value) => setFormState((current) => ({ ...current, interval: value }))}
+        onDayOfMonthChange={(value) => {
+          setDayOfMonthOverridden(true);
+          setFormState((current) => ({ ...current, dayOfMonth: value }));
+        }}
+        onStartDateChange={handleStartDateChange}
+        onOverrideChange={handleOverrideChange}
+        onCreateMerchant={createMerchant}
+        onLoadMerchants={() => void loadMerchants()}
+      />
 
       {loading ? (
         <p className="text-sm opacity-60">{t(locale, "recurring_loading")}</p>
       ) : activeRecurring.length || (showArchived && archivedRecurring.length) ? (
         <div className="space-y-6">
           {activeRecurring.length ? (
-            <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t(locale, "recurring_name")}</th>
-                    <th>{t(locale, "recurring_amount")}</th>
-                    <th>{t(locale, "recurring_category")}</th>
-                    <th>{t(locale, "recurring_merchant")}</th>
-                    <th>{t(locale, "recurring_schedule")}</th>
-                    <th>{t(locale, "recurring_next_run")}</th>
-                    <th>{t(locale, "recurring_status")}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeRecurring.map((item) => (
-                    <tr key={item._id}>
-                      <td>{item.name}</td>
-                      <td>
-                        {(item.amountMinor / 100).toLocaleString(locale, {
-                          style: "currency",
-                          currency: item.currency,
-                        })}
-                      </td>
-                      <td>{item.categoryId ? categoryMap.get(item.categoryId) : "-"}</td>
-                      <td>{item.merchantId ? merchantMap.get(item.merchantId) : "-"}</td>
-                      <td>{scheduleLabel(item)}</td>
-                      <td>{formatDateOnly(item.nextRunOn)}</td>
-                      <td>{t(locale, "recurring_status_active")}</td>
-                      <td className="flex gap-2">
-                        <button
-                          className="btn btn-xs"
-                          type="button"
-                          onClick={() => handleEdit(item)}
-                        >
-                          {t(locale, "recurring_edit")}
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          type="button"
-                          onClick={() => handleArchive(item)}
-                        >
-                          {t(locale, "recurring_archive")}
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          type="button"
-                          onClick={() => openDeleteModal(item)}
-                        >
-                          {t(locale, "recurring_delete")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <RecurringTable
+              items={activeRecurring}
+              locale={locale}
+              statusValue={t(locale, "recurring_status_active")}
+              labels={{
+                name: t(locale, "recurring_name"),
+                amount: t(locale, "recurring_amount"),
+                category: t(locale, "recurring_category"),
+                merchant: t(locale, "recurring_merchant"),
+                schedule: t(locale, "recurring_schedule"),
+                nextRun: t(locale, "recurring_next_run"),
+                status: t(locale, "recurring_status"),
+                edit: t(locale, "recurring_edit"),
+                archive: t(locale, "recurring_archive"),
+                restore: t(locale, "recurring_restore"),
+                delete: t(locale, "recurring_delete"),
+              }}
+              categoryMap={categoryMap}
+              merchantMap={merchantMap}
+              scheduleLabel={scheduleLabel}
+              onEdit={handleEdit}
+              onArchive={handleArchive}
+              onRestore={handleRestore}
+              onDelete={openDeleteModal}
+            />
           ) : (
             <p className="text-sm opacity-60">{t(locale, "recurring_empty")}</p>
           )}
@@ -635,63 +463,31 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
                 <h2 className="text-sm font-semibold uppercase tracking-wide opacity-60">
                   {t(locale, "recurring_archived_section")}
                 </h2>
-                <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t(locale, "recurring_name")}</th>
-                        <th>{t(locale, "recurring_amount")}</th>
-                        <th>{t(locale, "recurring_category")}</th>
-                        <th>{t(locale, "recurring_merchant")}</th>
-                        <th>{t(locale, "recurring_schedule")}</th>
-                        <th>{t(locale, "recurring_next_run")}</th>
-                        <th>{t(locale, "recurring_status")}</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {archivedRecurring.map((item) => (
-                        <tr key={item._id} className="opacity-60">
-                          <td>{item.name}</td>
-                          <td>
-                            {(item.amountMinor / 100).toLocaleString(locale, {
-                              style: "currency",
-                              currency: item.currency,
-                            })}
-                          </td>
-                          <td>{item.categoryId ? categoryMap.get(item.categoryId) : "-"}</td>
-                          <td>{item.merchantId ? merchantMap.get(item.merchantId) : "-"}</td>
-                          <td>{scheduleLabel(item)}</td>
-                          <td>{formatDateOnly(item.nextRunOn)}</td>
-                          <td>{t(locale, "recurring_status_archived")}</td>
-                          <td className="flex gap-2">
-                            <button
-                              className="btn btn-xs"
-                              type="button"
-                              onClick={() => handleEdit(item)}
-                            >
-                              {t(locale, "recurring_edit")}
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-xs"
-                              type="button"
-                              onClick={() => handleRestore(item)}
-                            >
-                              {t(locale, "recurring_restore")}
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-xs"
-                              type="button"
-                              onClick={() => openDeleteModal(item)}
-                            >
-                              {t(locale, "recurring_delete")}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <RecurringTable
+                  items={archivedRecurring}
+                  locale={locale}
+                  statusValue={t(locale, "recurring_status_archived")}
+                  labels={{
+                    name: t(locale, "recurring_name"),
+                    amount: t(locale, "recurring_amount"),
+                    category: t(locale, "recurring_category"),
+                    merchant: t(locale, "recurring_merchant"),
+                    schedule: t(locale, "recurring_schedule"),
+                    nextRun: t(locale, "recurring_next_run"),
+                    status: t(locale, "recurring_status"),
+                    edit: t(locale, "recurring_edit"),
+                    archive: t(locale, "recurring_archive"),
+                    restore: t(locale, "recurring_restore"),
+                    delete: t(locale, "recurring_delete"),
+                  }}
+                  categoryMap={categoryMap}
+                  merchantMap={merchantMap}
+                  scheduleLabel={scheduleLabel}
+                  onEdit={handleEdit}
+                  onArchive={handleArchive}
+                  onRestore={handleRestore}
+                  onDelete={openDeleteModal}
+                />
               </div>
             ) : (
               <p className="text-sm opacity-60">{t(locale, "recurring_archived_empty")}</p>

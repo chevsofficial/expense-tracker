@@ -1,52 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJSON, postJSON, putJSON, delJSON } from "@/src/lib/apiClient";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
+import { MonthPicker } from "@/components/shared/MonthPicker";
+import { CurrencySection } from "@/components/budget/CurrencySection";
+import { formatMonthLabel } from "@/src/utils/month";
 import type { Locale } from "@/src/i18n/messages";
 
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  kind?: "income" | "expense" | "both";
-  isArchived?: boolean;
-};
-
-type PlannedLine = {
-  categoryId: string;
-  plannedAmountMinor: number;
-};
-
-type BudgetMonth = {
-  _id: string;
-  month: string;
-  currency: string;
-  plannedLines: PlannedLine[];
-};
-
-type SummaryLine = {
-  categoryId: string;
+type SummaryRow = {
+  categoryId: string | null;
+  categoryName: string;
   plannedMinor: number;
-  spentMinor: number;
+  actualMinor: number;
   remainingMinor: number;
+  progressPct: number;
+  transactionCount: number;
+};
+
+type CurrencySectionData = {
+  currency: string;
+  rows: SummaryRow[];
+  totals: { plannedMinor: number; actualMinor: number; remainingMinor: number };
 };
 
 type BudgetSummary = {
   month: string;
-  currency: string;
-  totalPlannedMinor: number;
-  totalSpentMinor: number;
-  remainingMinor: number;
-  byCategory: SummaryLine[];
-  totalsByCurrency: {
-    currency: string;
-    totalSpentMinor: number;
-  }[];
+  currencies: CurrencySectionData[];
 };
 
 type ApiItemResponse<T> = { data: T };
-type ApiListResponse<T> = { data: T[] };
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -54,72 +38,28 @@ const getCurrentMonth = () => {
   return `${now.getFullYear()}-${month}`;
 };
 
-const getPreviousMonth = (value: string) => {
-  const [yearRaw, monthRaw] = value.split("-");
-  const year = Number(yearRaw);
-  const month = Number(monthRaw);
-  if (!year || !month) return value;
-  const date = new Date(Date.UTC(year, month - 1, 1));
-  date.setUTCMonth(date.getUTCMonth() - 1);
-  const prevMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${date.getUTCFullYear()}-${prevMonth}`;
-};
-
-export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defaultCurrency: string }) {
+export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: string }) {
+  const searchParams = useSearchParams();
+  const initializedFromQuery = useRef(false);
   const [month, setMonth] = useState(getCurrentMonth());
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [budget, setBudget] = useState<BudgetMonth | null>(null);
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
-  const [plannedInputs, setPlannedInputs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const categoryName = useCallback(
-    (category?: Category | null) =>
-      category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name"),
-    [locale]
-  );
+  useEffect(() => {
+    if (initializedFromQuery.current) return;
+    const monthParam = searchParams.get("month");
+    if (monthParam) {
+      setMonth(monthParam);
+    }
+    initializedFromQuery.current = true;
+  }, [searchParams]);
 
-  const summaryMap = useMemo(() => {
-    const map = new Map<string, SummaryLine>();
-    summary?.byCategory.forEach((line) => map.set(line.categoryId, line));
-    return map;
-  }, [summary]);
-
-  const formatCurrency = useCallback(
-    (amountMinor: number, currency?: string) =>
-      new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: currency || defaultCurrency,
-      }).format(amountMinor / 100),
-    [defaultCurrency, locale]
-  );
-
-  const loadBudget = useCallback(async () => {
+  const loadSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const [categoriesResponse, budgetResponse, summaryResponse] = await Promise.all([
-        getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
-        getJSON<ApiItemResponse<BudgetMonth>>(`/api/budget?month=${month}`),
-        getJSON<ApiItemResponse<BudgetSummary>>(`/api/budget/summary?month=${month}`),
-      ]);
-      const expenseCategories = categoriesResponse.data.filter(
-        (category) => category.kind !== "income"
-      );
-      setCategories(expenseCategories);
-      setBudget(budgetResponse.data);
-      setSummary(summaryResponse.data);
-
-      const inputs: Record<string, string> = {};
-      budgetResponse.data.plannedLines.forEach((line) => {
-        if (expenseCategories.some((category) => category._id === line.categoryId)) {
-          inputs[line.categoryId] = (line.plannedAmountMinor / 100).toFixed(2);
-        }
-      });
-      expenseCategories.forEach((category) => {
-        if (!(category._id in inputs)) inputs[category._id] = "";
-      });
-      setPlannedInputs(inputs);
+      const response = await getJSON<ApiItemResponse<BudgetSummary>>(`/api/budget/summary?month=${month}`);
+      setSummary(response.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budget_loading");
       setToast(message);
@@ -129,57 +69,17 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
   }, [locale, month]);
 
   useEffect(() => {
-    void loadBudget();
-  }, [loadBudget]);
+    void loadSummary();
+  }, [loadSummary]);
 
-  const handleSave = async (categoryId: string) => {
-    const raw = plannedInputs[categoryId] ?? "";
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      setToast(t(locale, "transactions_amount_invalid"));
-      return;
-    }
-    try {
-      const response = await putJSON<ApiItemResponse<BudgetMonth>>(
-        `/api/budget?month=${month}`,
-        {
-          plannedLines: [{ categoryId, plannedAmount: parsed }],
-          currency: budget?.currency,
-        }
-      );
-      setBudget(response.data);
-      const summaryResponse = await getJSON<ApiItemResponse<BudgetSummary>>(
-        `/api/budget/summary?month=${month}`
-      );
-      setSummary(summaryResponse.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "budget_loading");
-      setToast(message);
-    }
-  };
+  const sections = useMemo(() => summary?.currencies ?? [], [summary]);
 
-  const handleCopyLastMonth = async () => {
-    try {
-      const prev = getPreviousMonth(month);
-      await postJSON<ApiItemResponse<BudgetMonth>>(
-        `/api/budget/copy?from=${prev}&to=${month}`,
-        {}
-      );
-      await loadBudget();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "budget_loading");
-      setToast(message);
-    }
-  };
-
-  const handleReset = async () => {
-    try {
-      await delJSON<ApiItemResponse<BudgetMonth>>(`/api/budget?month=${month}`);
-      await loadBudget();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "budget_loading");
-      setToast(message);
-    }
+  const labels = {
+    category: t(locale, "budget_category"),
+    planned: t(locale, "budget_planned"),
+    actual: t(locale, "budget_spent"),
+    remaining: t(locale, "budget_remaining"),
+    progress: t(locale, "budget_progress"),
   };
 
   return (
@@ -187,44 +87,15 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{t(locale, "budget_title")}</h1>
-          <p className="text-sm opacity-70">
-            {summary
-              ? `${formatCurrency(summary.totalPlannedMinor, summary.currency)} • ${formatCurrency(
-                  summary.totalSpentMinor,
-                  summary.currency
-                )}`
-              : t(locale, "budget_loading")}
-          </p>
-          {summary?.totalsByCurrency?.length ? (
-            <div className="mt-1 flex flex-wrap gap-2 text-xs opacity-70">
-              {summary.totalsByCurrency
-                .filter((row) => row.currency !== summary.currency)
-                .map((row) => (
-                  <span key={row.currency}>
-                    {t(locale, "budget_spent")} {row.currency}:{" "}
-                    {formatCurrency(row.totalSpentMinor, row.currency)}
-                  </span>
-                ))}
-            </div>
-          ) : null}
+          <p className="text-sm opacity-70">{formatMonthLabel(month, locale)}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="form-control">
-            <span className="label-text text-xs">{t(locale, "budget_month")}</span>
-            <input
-              className="input input-bordered"
-              type="month"
-              value={month}
-              onChange={(event) => setMonth(event.target.value)}
-            />
-          </label>
-          <button className="btn btn-outline" type="button" onClick={handleCopyLastMonth}>
-            {t(locale, "budget_copy_last_month")}
-          </button>
-          <button className="btn btn-ghost" type="button" onClick={handleReset}>
-            {t(locale, "budget_reset_month")}
-          </button>
-        </div>
+        <MonthPicker
+          locale={locale}
+          month={month}
+          label={t(locale, "budget_month")}
+          helperText={formatMonthLabel(month, locale)}
+          onChange={setMonth}
+        />
       </div>
 
       {toast ? (
@@ -238,72 +109,18 @@ export function BudgetClient({ locale, defaultCurrency }: { locale: Locale; defa
 
       {loading ? (
         <p className="text-sm opacity-60">{t(locale, "budget_loading")}</p>
-      ) : categories.length ? (
-        <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t(locale, "budget_category")}</th>
-                <th>{t(locale, "budget_planned")}</th>
-                <th>{t(locale, "budget_spent")}</th>
-                <th>{t(locale, "budget_remaining")}</th>
-                <th>{t(locale, "budget_progress")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => {
-                const summaryLine = summaryMap.get(category._id);
-                const plannedMinor = summaryLine?.plannedMinor ?? 0;
-                const spentMinor = summaryLine?.spentMinor ?? 0;
-                const progressValue =
-                  plannedMinor > 0 ? Math.min(100, Math.round((spentMinor / plannedMinor) * 100)) : 0;
-                return (
-                  <tr key={category._id}>
-                    <td>{categoryName(category)}</td>
-                    <td>
-                      <input
-                        className="input input-bordered input-sm w-32"
-                        value={plannedInputs[category._id] ?? ""}
-                        onChange={(event) =>
-                          setPlannedInputs((current) => ({
-                            ...current,
-                            [category._id]: event.target.value,
-                          }))
-                        }
-                        placeholder="0.00"
-                      />
-                    </td>
-                    <td>
-                      {summaryLine
-                        ? formatCurrency(summaryLine.spentMinor, summary?.currency)
-                        : formatCurrency(0, summary?.currency)}
-                    </td>
-                    <td>
-                      {summaryLine
-                        ? formatCurrency(summaryLine.remainingMinor, summary?.currency)
-                        : formatCurrency(0, summary?.currency)}
-                    </td>
-                    <td>
-                      <div className="flex min-w-[120px] items-center gap-2">
-                        <progress className="progress progress-primary" value={progressValue} max={100} />
-                        <span className="text-xs">{progressValue}%</span>
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        type="button"
-                        onClick={() => handleSave(category._id)}
-                      >
-                        {t(locale, "budget_save")}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      ) : sections.length ? (
+        <div className="space-y-6">
+          {sections.map((section) => (
+            <CurrencySection
+              key={section.currency}
+              currency={section.currency}
+              rows={section.rows}
+              totals={section.totals}
+              locale={locale}
+              labels={labels}
+            />
+          ))}
         </div>
       ) : (
         <p className="text-sm opacity-60">{t(locale, "budget_empty")}</p>
