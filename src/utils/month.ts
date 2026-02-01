@@ -6,17 +6,17 @@ export function monthRange(month: string): { start: string; end: string } {
   const m = Number(monthValue);
   const start = `${year}-${monthValue}-01`;
 
-  const nextY = m === 12 ? y + 1 : y;
-  const nextM = m === 12 ? 1 : m + 1;
-  const nextMStr = String(nextM).padStart(2, "0");
-  const end = `${nextY}-${nextMStr}-01`;
+  const next = new Date(Date.UTC(y, m, 1));
+  const nextYear = next.getUTCFullYear();
+  const nextMonth = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const end = `${nextYear}-${nextMonth}-01`;
 
   return { start, end };
 }
 
 export function formatMonthLabel(month: string, locale: Locale) {
-  const [yearValue, monthValue] = month.split("-").map(Number);
-  const date = new Date(Date.UTC(yearValue, monthValue - 1, 1));
+  const [yearValue, monthValue] = month.split("-");
+  const date = new Date(Date.UTC(Number(yearValue), Number(monthValue) - 1, 1));
   if (Number.isNaN(date.getTime())) return month;
 
   const label = new Intl.DateTimeFormat(locale, {

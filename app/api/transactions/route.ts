@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
+import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
 
@@ -14,7 +15,9 @@ const amountSchema = z
   .positive()
   .refine(Number.isFinite, "Invalid amount");
 
-const dateSchema = z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), "Invalid date");
+const dateSchema = z
+  .string()
+  .refine((value) => isYmd(value) || !Number.isNaN(new Date(value).getTime()), "Invalid date");
 
 const createSchema = z.object({
   date: dateSchema,
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
     workspaceId: auth.workspace.id,
     categoryId: categoryObjectId ?? null,
     amountMinor: toMinorUnits(amount),
-    date: new Date(date),
+    date: normalizeToUtcMidnight(date),
     merchantId: merchantObjectId,
     merchantNameSnapshot: resolvedMerchantNameSnapshot,
     receiptUrls: receiptUrls ?? [],
