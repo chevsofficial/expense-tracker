@@ -71,26 +71,10 @@ export async function POST(request: NextRequest) {
         if (!options.skipInvalidRows) break;
         continue;
       }
-      const defaultCategoryName = getFieldValue(row, mapping, "defaultCategory").trim();
-      const defaultKind = getFieldValue(row, mapping, "defaultKind").trim();
       const aliasesRaw = getFieldValue(row, mapping, "aliases").trim();
       const aliases = aliasesRaw
         ? aliasesRaw.split("|").map((alias) => alias.trim().toLowerCase()).filter(Boolean)
         : [];
-
-      let defaultCategoryId = null;
-      if (defaultCategoryName) {
-        const category = await CategoryModel.findOne({
-          workspaceId: auth.workspace.id,
-          nameKey: normalizeNameKey(defaultCategoryName),
-        }).lean();
-        if (!category) {
-          reportError(i, "Default category not found.");
-          if (!options.skipInvalidRows) break;
-          continue;
-        }
-        defaultCategoryId = category._id;
-      }
 
       const nameKey = normalizeMerchantNameKey(name);
       const existing = await MerchantModel.findOne({
@@ -99,8 +83,6 @@ export async function POST(request: NextRequest) {
       });
       if (existing) {
         existing.name = name;
-        existing.defaultCategoryId = defaultCategoryId;
-        existing.defaultKind = defaultKind === "income" || defaultKind === "expense" ? defaultKind : null;
         existing.aliases = aliases;
         await existing.save();
         updated += 1;
@@ -108,8 +90,6 @@ export async function POST(request: NextRequest) {
         await MerchantModel.create({
           workspaceId: auth.workspace.id,
           name,
-          defaultCategoryId,
-          defaultKind: defaultKind === "income" || defaultKind === "expense" ? defaultKind : null,
           aliases,
           isArchived: false,
         });

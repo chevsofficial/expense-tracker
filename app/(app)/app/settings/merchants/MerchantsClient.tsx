@@ -11,16 +11,8 @@ import type { Locale } from "@/src/i18n/messages";
 type Merchant = {
   _id: string;
   name: string;
-  defaultCategoryId?: string | null;
-  defaultKind?: "income" | "expense" | null;
   aliases?: string[];
   isArchived?: boolean;
-};
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
 };
 
 type ApiListResponse<T> = { data: T[] };
@@ -29,7 +21,6 @@ type DeleteResponse = { data: { deleted: boolean } };
 
 export function MerchantsClient({ locale }: { locale: Locale }) {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -38,8 +29,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editingMerchant, setEditingMerchant] = useState<Merchant | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDefaultCategoryId, setEditDefaultCategoryId] = useState<string>("");
-  const [editDefaultKind, setEditDefaultKind] = useState<string>("");
   const [editAliases, setEditAliases] = useState("");
 
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -55,18 +44,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     () => merchants.filter((merchant) => merchant.isArchived),
     [merchants]
   );
-
-  const categoryName = useCallback(
-    (category?: Category | null) =>
-      category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name"),
-    [locale]
-  );
-
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, string>();
-    categories.forEach((category) => map.set(category._id, categoryName(category)));
-    return map;
-  }, [categories, categoryName]);
 
   const normalizeAliases = (value: string) =>
     Array.from(
@@ -93,31 +70,13 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     }
   }, [locale]);
 
-  const loadCategories = useCallback(async () => {
-    try {
-      const response = await getJSON<ApiListResponse<Category>>(
-        "/api/categories?includeArchived=true"
-      );
-      setCategories(response.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "merchants_generic_error");
-      setToast(message);
-    }
-  }, [locale]);
-
   useEffect(() => {
     void loadMerchants();
   }, [loadMerchants]);
 
-  useEffect(() => {
-    void loadCategories();
-  }, [loadCategories]);
-
   const openAdd = () => {
     setEditingMerchant(null);
     setEditName("");
-    setEditDefaultCategoryId("");
-    setEditDefaultKind("");
     setEditAliases("");
     setEditOpen(true);
   };
@@ -125,8 +84,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
   const openEdit = (merchant: Merchant) => {
     setEditingMerchant(merchant);
     setEditName(merchant.name);
-    setEditDefaultCategoryId(merchant.defaultCategoryId ?? "");
-    setEditDefaultKind(merchant.defaultKind ?? "");
     setEditAliases((merchant.aliases ?? []).join(", "));
     setEditOpen(true);
   };
@@ -138,8 +95,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     try {
       const payload = {
         nameCustom: editName.trim(),
-        defaultCategoryId: editDefaultCategoryId || null,
-        defaultKind: editDefaultKind ? (editDefaultKind as "income" | "expense") : null,
         aliases: normalizeAliases(editAliases),
       };
       if (editingMerchant) {
@@ -250,8 +205,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                   <thead>
                     <tr>
                       <th>{t(locale, "merchants_name")}</th>
-                      <th>{t(locale, "merchants_default_category")}</th>
-                      <th>{t(locale, "merchants_default_kind")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
                     </tr>
@@ -260,21 +213,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     {activeMerchants.map((merchant) => (
                       <tr key={merchant._id}>
                         <td>{merchant.name}</td>
-                        <td>
-                          {merchant.defaultCategoryId
-                            ? categoryMap.get(merchant.defaultCategoryId) ?? "—"
-                            : "—"}
-                        </td>
-                        <td>
-                          {merchant.defaultKind
-                            ? t(
-                                locale,
-                                merchant.defaultKind === "income"
-                                  ? "category_kind_income"
-                                  : "category_kind_expense"
-                              )
-                            : "—"}
-                        </td>
                         <td>
                           {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
                         </td>
@@ -327,8 +265,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <thead>
                       <tr>
                         <th>{t(locale, "merchants_name")}</th>
-                        <th>{t(locale, "merchants_default_category")}</th>
-                        <th>{t(locale, "merchants_default_kind")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
                       </tr>
@@ -337,21 +273,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                       {archivedMerchants.map((merchant) => (
                         <tr key={merchant._id}>
                           <td>{merchant.name}</td>
-                          <td>
-                            {merchant.defaultCategoryId
-                              ? categoryMap.get(merchant.defaultCategoryId) ?? "—"
-                              : "—"}
-                          </td>
-                          <td>
-                            {merchant.defaultKind
-                              ? t(
-                                  locale,
-                                  merchant.defaultKind === "income"
-                                    ? "category_kind_income"
-                                    : "category_kind_expense"
-                                )
-                              : "—"}
-                          </td>
                           <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
                           <td>
                             <div className="flex flex-wrap gap-2">
@@ -398,37 +319,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
             value={editName}
             onChange={(event) => setEditName(event.target.value)}
           />
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
-              {t(locale, "merchants_default_category")}
-            </span>
-            <select
-              className="select select-bordered"
-              value={editDefaultCategoryId}
-              onChange={(event) => setEditDefaultCategoryId(event.target.value)}
-            >
-              <option value="">{t(locale, "merchants_default_category_none")}</option>
-              {categories.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {categoryName(category)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
-              {t(locale, "merchants_default_kind")}
-            </span>
-            <select
-              className="select select-bordered"
-              value={editDefaultKind}
-              onChange={(event) => setEditDefaultKind(event.target.value)}
-            >
-              <option value="">{t(locale, "merchants_default_kind_any")}</option>
-              <option value="expense">{t(locale, "category_kind_expense")}</option>
-              <option value="income">{t(locale, "category_kind_income")}</option>
-            </select>
-          </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
               {t(locale, "merchants_aliases")}

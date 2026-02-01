@@ -70,11 +70,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
-  const [merchantQuery, setMerchantQuery] = useState("");
-  const [merchantDropdownOpen, setMerchantDropdownOpen] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
-  const [categoryQuery, setCategoryQuery] = useState("");
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [editing, setEditing] = useState<Recurring | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,6 +159,28 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     }
   }, [locale]);
 
+  const createMerchant = useCallback(
+    async (name: string) => {
+      const trimmedName = name.trim();
+      if (trimmedName.length < 2) return null;
+      setCreatingMerchant(true);
+      try {
+        const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
+          nameCustom: trimmedName,
+        });
+        setMerchants((current) => [response.data, ...current]);
+        return response.data;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t(locale, "recurring_generic_error");
+        setToast(message);
+        return null;
+      } finally {
+        setCreatingMerchant(false);
+      }
+    },
+    [locale]
+  );
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -203,10 +221,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     });
     setModalOpen(false);
     setDayOfMonthOverridden(false);
-    setCategoryQuery("");
-    setCategoryDropdownOpen(false);
-    setMerchantQuery("");
-    setMerchantDropdownOpen(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -416,19 +430,17 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
               <CategoryPicker
                 locale={locale}
                 categories={categories}
-                selectedCategoryId={
-                  formState.categoryId === "uncategorized" ? null : formState.categoryId
-                }
-                query={categoryQuery}
-                dropdownOpen={categoryDropdownOpen}
-                onDropdownOpenChange={setCategoryDropdownOpen}
-                onQueryChange={setCategoryQuery}
-                onSelectCategory={(categoryId) =>
+                value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
+                onChange={(categoryId) =>
                   setFormState((current) => ({
                     ...current,
-                    categoryId: categoryId ?? "uncategorized",
+                    categoryId: categoryId || "uncategorized",
                   }))
                 }
+                allowEmpty
+                emptyLabel={t(locale, "transactions_category_uncategorized")}
+                placeholder={t(locale, "transactions_category_search_placeholder")}
+                showManageLink
               />
             </label>
             <label className="form-control w-full">
@@ -436,54 +448,20 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
               <MerchantPicker
                 locale={locale}
                 merchants={merchants}
-                merchantsLoading={merchantsLoading}
-                selectedMerchantId={
-                  formState.merchantId === "unassigned" ? null : formState.merchantId
+                value={formState.merchantId === "unassigned" ? "" : formState.merchantId}
+                onChange={(merchantId) =>
+                  setFormState((current) => ({
+                    ...current,
+                    merchantId: merchantId || "unassigned",
+                  }))
                 }
-                selectedMerchantName={undefined}
-                query={merchantQuery}
-                dropdownOpen={merchantDropdownOpen}
-                creatingMerchant={creatingMerchant}
-                onDropdownOpenChange={setMerchantDropdownOpen}
-                onQueryChange={(value) => {
-                  setMerchantQuery(value);
-                  setFormState((current) => ({
-                    ...current,
-                    merchantId: "unassigned",
-                  }));
-                }}
-                onSelectMerchant={(merchant) => {
-                  setFormState((current) => ({
-                    ...current,
-                    merchantId: merchant._id,
-                  }));
-                  setMerchantDropdownOpen(false);
-                  setMerchantQuery("");
-                }}
-                onCreateMerchant={async () => {
-                  const query = merchantQuery.trim();
-                  if (query.length < 2) return;
-                  setCreatingMerchant(true);
-                  try {
-                    const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
-                      nameCustom: query,
-                    });
-                    setMerchants((current) => [response.data, ...current]);
-                    setFormState((current) => ({
-                      ...current,
-                      merchantId: response.data._id,
-                    }));
-                    setMerchantQuery("");
-                    setMerchantDropdownOpen(false);
-                  } catch (err) {
-                    const message =
-                      err instanceof Error ? err.message : t(locale, "recurring_generic_error");
-                    setToast(message);
-                  } finally {
-                    setCreatingMerchant(false);
-                  }
-                }}
+                placeholder={t(locale, "transactions_merchant_placeholder")}
+                allowCreate
+                creating={creatingMerchant}
+                onCreateMerchant={createMerchant}
                 onLoadMerchants={() => void loadMerchants()}
+                loading={merchantsLoading}
+                showManageLink
               />
             </label>
             <label className="form-control w-full">

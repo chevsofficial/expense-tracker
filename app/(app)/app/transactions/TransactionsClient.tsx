@@ -16,6 +16,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
+import { formatMonthLabel } from "@/src/i18n/formatMonthLabel";
 import { t } from "@/src/i18n/t";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import type { Locale } from "@/src/i18n/messages";
@@ -47,8 +48,6 @@ type Category = {
 type Merchant = {
   _id: string;
   name: string;
-  defaultCategoryId?: string | null;
-  defaultKind?: TransactionKind | null;
   isArchived?: boolean;
 };
 
@@ -70,17 +69,6 @@ type TransactionForm = {
   merchantNameSnapshot: string;
   note: string;
   receiptUrls: string[];
-};
-
-type QuickAddForm = {
-  date: string;
-  amount: string;
-  currency: string;
-  kind: TransactionKind;
-  categoryId: string;
-  merchantId: string | null;
-  merchantNameSnapshot: string;
-  note: string;
 };
 
 type UploadOk = { data: { url: string } };
@@ -134,12 +122,8 @@ export function TransactionsClient({
   const initializedFromQuery = useRef(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryQuery, setCategoryQuery] = useState("");
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
-  const [merchantQuery, setMerchantQuery] = useState("");
-  const [merchantDropdownOpen, setMerchantDropdownOpen] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [month, setMonth] = useState(getCurrentMonth());
   const [kindFilter, setKindFilter] = useState<string>("");
@@ -181,23 +165,6 @@ export function TransactionsClient({
     note: "",
     receiptUrls: [],
   }));
-  const [userTouchedCategory, setUserTouchedCategory] = useState(false);
-  const [userTouchedKind, setUserTouchedKind] = useState(false);
-
-  const [quickAddState, setQuickAddState] = useState<QuickAddForm>(() => ({
-    date: getTodayInput(),
-    amount: "",
-    currency: resolvedDefaultCurrency,
-    kind: "expense",
-    categoryId: "uncategorized",
-    merchantId: null,
-    merchantNameSnapshot: "",
-    note: "",
-  }));
-  const [quickCategoryQuery, setQuickCategoryQuery] = useState("");
-  const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
-  const [quickMerchantQuery, setQuickMerchantQuery] = useState("");
-  const [quickMerchantOpen, setQuickMerchantOpen] = useState(false);
 
   const categoryName = useCallback(
     (category?: Category | null) =>
@@ -343,15 +310,6 @@ export function TransactionsClient({
     void loadTransactions();
   }, [loadTransactions]);
 
-  useEffect(() => {
-    if (!modalOpen) {
-      setMerchantDropdownOpen(false);
-      setMerchantQuery("");
-      setCategoryDropdownOpen(false);
-      setCategoryQuery("");
-    }
-  }, [modalOpen]);
-
   const openAddModal = () => {
     setEditingTransaction(null);
     setFormState({
@@ -365,10 +323,6 @@ export function TransactionsClient({
       note: "",
       receiptUrls: [],
     });
-    setUserTouchedCategory(false);
-    setUserTouchedKind(false);
-    setMerchantQuery("");
-    setMerchantDropdownOpen(false);
     setModalOpen(true);
   };
 
@@ -389,10 +343,6 @@ export function TransactionsClient({
       note: transaction.note ?? "",
       receiptUrls: transaction.receiptUrls ?? [],
     });
-    setUserTouchedCategory(false);
-    setUserTouchedKind(false);
-    setMerchantQuery("");
-    setMerchantDropdownOpen(false);
     setModalOpen(true);
   };
 
@@ -438,182 +388,42 @@ export function TransactionsClient({
     }));
   };
 
-  const applyMerchantDefaults = (merchant: Merchant | undefined, source: "modal" | "quick") => {
-    if (!merchant) return;
-    if (source === "modal") {
-      setFormState((current) => {
-        const next = { ...current };
-        if (!userTouchedCategory && merchant.defaultCategoryId) {
-          next.categoryId = merchant.defaultCategoryId;
-        }
-        if (!userTouchedKind && merchant.defaultKind) {
-          next.kind = merchant.defaultKind;
-        }
-        return next;
-      });
-      return;
-    }
-    setQuickAddState((current) => {
-      const next = { ...current };
-      if (merchant.defaultCategoryId) {
-        next.categoryId = merchant.defaultCategoryId;
+  const createMerchant = useCallback(
+    async (name: string) => {
+      const trimmedName = name.trim();
+      if (trimmedName.length < 2) return null;
+      setCreatingMerchant(true);
+      try {
+        const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
+          nameCustom: trimmedName,
+        });
+        setMerchants((current) => [response.data, ...current]);
+        return response.data;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+        setToast(message);
+        return null;
+      } finally {
+        setCreatingMerchant(false);
       }
-      if (merchant.defaultKind) {
-        next.kind = merchant.defaultKind;
-      }
-      return next;
-    });
-  };
+    },
+    [locale]
+  );
 
-  const handleSelectMerchant = (merchant: Merchant) => {
+  const handleFormMerchantChange = (merchantId: string) => {
+    const merchant = merchants.find((item) => item._id === merchantId);
     setFormState((current) => ({
       ...current,
-      merchantId: merchant._id,
-      merchantNameSnapshot: merchant.name,
+      merchantId: merchantId || null,
+      merchantNameSnapshot: merchant?.name ?? "",
     }));
-    applyMerchantDefaults(merchant, "modal");
-    setMerchantDropdownOpen(false);
-    setMerchantQuery("");
   };
 
-  const handleSelectCategory = (categoryId: string | null) => {
+  const handleFormCategoryChange = (categoryId: string) => {
     setFormState((current) => ({
       ...current,
-      categoryId: categoryId ?? "uncategorized",
+      categoryId: categoryId || "uncategorized",
     }));
-    setUserTouchedCategory(true);
-    setCategoryDropdownOpen(false);
-    setCategoryQuery("");
-  };
-
-  const createMerchant = async (
-    query: string,
-    onSelect: (merchant: Merchant) => void,
-    onReset: () => void
-  ) => {
-    const trimmedQuery = query.trim();
-    if (trimmedQuery.length < 2) return;
-    setCreatingMerchant(true);
-    try {
-      const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
-        nameCustom: trimmedQuery,
-      });
-      setMerchants((current) => [response.data, ...current]);
-      onSelect(response.data);
-      onReset();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
-      setToast(message);
-    } finally {
-      setCreatingMerchant(false);
-    }
-  };
-
-  const handleCreateMerchant = async () => {
-    await createMerchant(
-      merchantQuery,
-      (merchant) => {
-        setFormState((current) => ({
-          ...current,
-          merchantId: merchant._id,
-          merchantNameSnapshot: merchant.name,
-        }));
-      },
-      () => {
-        setMerchantQuery("");
-        setMerchantDropdownOpen(false);
-      }
-    );
-  };
-
-  const handleQuickCreateMerchant = async () => {
-    await createMerchant(
-      quickMerchantQuery,
-      (merchant) => {
-        setQuickAddState((current) => ({
-          ...current,
-          merchantId: merchant._id,
-          merchantNameSnapshot: merchant.name,
-        }));
-        applyMerchantDefaults(merchant, "quick");
-      },
-      () => {
-        setQuickMerchantQuery("");
-        setQuickMerchantOpen(false);
-      }
-    );
-  };
-
-  const handleQuickSelectMerchant = (merchant: Merchant) => {
-    setQuickAddState((current) => ({
-      ...current,
-      merchantId: merchant._id,
-      merchantNameSnapshot: merchant.name,
-    }));
-    applyMerchantDefaults(merchant, "quick");
-    setQuickMerchantOpen(false);
-    setQuickMerchantQuery("");
-  };
-
-  const handleQuickSelectCategory = (categoryId: string | null) => {
-    setQuickAddState((current) => ({
-      ...current,
-      categoryId: categoryId ?? "uncategorized",
-    }));
-    setQuickCategoryOpen(false);
-    setQuickCategoryQuery("");
-  };
-
-  const handleQuickSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const amountValue = Number(quickAddState.amount);
-    if (!Number.isFinite(amountValue) || amountValue <= 0) {
-      setToast(t(locale, "transactions_amount_invalid"));
-      return;
-    }
-
-    const trimmedMerchantQuery = quickMerchantQuery.trim();
-    if (trimmedMerchantQuery && !quickAddState.merchantId) {
-      setToast(t(locale, "transactions_merchant_required"));
-      return;
-    }
-
-    const payload: Record<string, unknown> = {
-      date: quickAddState.date,
-      amount: amountValue,
-      currency: quickAddState.currency,
-      kind: quickAddState.kind,
-      categoryId: quickAddState.categoryId === "uncategorized" ? null : quickAddState.categoryId,
-      merchantId: quickAddState.merchantId,
-      merchantNameSnapshot: quickAddState.merchantId
-        ? quickAddState.merchantNameSnapshot.trim() || null
-        : null,
-    };
-
-    if (quickAddState.note.trim()) payload.note = quickAddState.note.trim();
-
-    setIsSubmitting(true);
-    try {
-      await postJSON<ApiItemResponse<Transaction>>("/api/transactions", payload);
-      setQuickAddState({
-        date: getTodayInput(),
-        amount: "",
-        currency: resolvedDefaultCurrency,
-        kind: "expense",
-        categoryId: "uncategorized",
-        merchantId: null,
-        merchantNameSnapshot: "",
-        note: "",
-      });
-      setQuickCategoryQuery("");
-      setQuickMerchantQuery("");
-      await loadTransactions();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
-      setToast(message);
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -624,11 +434,6 @@ export function TransactionsClient({
       return;
     }
 
-    const trimmedMerchantQuery = merchantQuery.trim();
-    if (trimmedMerchantQuery && !formState.merchantId) {
-      setToast(t(locale, "transactions_merchant_required"));
-      return;
-    }
     const trimmedMerchantName = formState.merchantNameSnapshot.trim();
 
     const payload: Record<string, unknown> = {
@@ -696,12 +501,7 @@ export function TransactionsClient({
     }
   };
 
-  const formattedMonth = useMemo(() => {
-    const [year, monthValue] = month.split("-");
-    const date = new Date(Number(year), Number(monthValue) - 1, 1);
-    if (Number.isNaN(date.getTime())) return month;
-    return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
-  }, [locale, month]);
+  const formattedMonth = useMemo(() => formatMonthLabel(locale, month), [locale, month]);
 
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
@@ -964,35 +764,36 @@ export function TransactionsClient({
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_category")}
               </span>
-              <select
-                className="select select-bordered select-sm"
+              <CategoryPicker
+                locale={locale}
+                categories={categories}
                 value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value)}
-              >
-                <option value="">{t(locale, "transactions_filter_any")}</option>
-                {categories.map((category) => (
-                  <option key={category._id} value={category._id}>
-                    {categoryName(category)}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoryFilter}
+                allowEmpty
+                emptyLabel={t(locale, "transactions_filter_any")}
+                placeholder={t(locale, "transactions_filter_any")}
+                showManageLink
+              />
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_merchant")}
               </span>
-              <select
-                className="select select-bordered select-sm"
+              <MerchantPicker
+                locale={locale}
+                merchants={merchants}
                 value={merchantFilter}
-                onChange={(event) => setMerchantFilter(event.target.value)}
-              >
-                <option value="">{t(locale, "transactions_filter_any")}</option>
-                {merchants.map((merchant) => (
-                  <option key={merchant._id} value={merchant._id}>
-                    {merchant.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setMerchantFilter}
+                placeholder={t(locale, "transactions_filter_any")}
+                allowEmpty
+                emptyLabel={t(locale, "transactions_filter_any")}
+                allowCreate
+                creating={creatingMerchant}
+                onCreateMerchant={createMerchant}
+                onLoadMerchants={() => void loadMerchants()}
+                loading={merchantsLoading}
+                showManageLink
+              />
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
@@ -1036,132 +837,6 @@ export function TransactionsClient({
               {t(locale, "transactions_show_archived")}
             </label>
           </div>
-        </div>
-      </div>
-
-      <div className="card bg-base-100 shadow">
-        <div className="card-body space-y-4">
-          <h2 className="text-sm font-semibold uppercase opacity-60">
-            {t(locale, "transactions_quick_add")}
-          </h2>
-          <form className="grid gap-4 lg:grid-cols-6" onSubmit={handleQuickSubmit}>
-            <TextField
-              id="quick-date"
-              label={t(locale, "transactions_date")}
-              type="date"
-              value={quickAddState.date}
-              onChange={(event) =>
-                setQuickAddState((current) => ({ ...current, date: event.target.value }))
-              }
-            />
-            <TextField
-              id="quick-amount"
-              label={t(locale, "transactions_amount")}
-              type="number"
-              step="0.01"
-              value={quickAddState.amount}
-              onChange={(event) =>
-                setQuickAddState((current) => ({ ...current, amount: event.target.value }))
-              }
-            />
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_currency")}
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={quickAddState.currency}
-                onChange={(event) =>
-                  setQuickAddState((current) => ({ ...current, currency: event.target.value }))
-                }
-              >
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_kind")}
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={quickAddState.kind}
-                onChange={(event) =>
-                  setQuickAddState((current) => ({
-                    ...current,
-                    kind: event.target.value as TransactionKind,
-                  }))
-                }
-              >
-                <option value="expense">{t(locale, "category_kind_expense")}</option>
-                <option value="income">{t(locale, "category_kind_income")}</option>
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_category")}
-              </span>
-              <CategoryPicker
-                locale={locale}
-                categories={categories}
-                selectedCategoryId={
-                  quickAddState.categoryId === "uncategorized" ? null : quickAddState.categoryId
-                }
-                query={quickCategoryQuery}
-                dropdownOpen={quickCategoryOpen}
-                onDropdownOpenChange={setQuickCategoryOpen}
-                onQueryChange={setQuickCategoryQuery}
-                onSelectCategory={handleQuickSelectCategory}
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_merchant")}
-              </span>
-              <MerchantPicker
-                locale={locale}
-                merchants={merchants}
-                merchantsLoading={merchantsLoading}
-                selectedMerchantId={quickAddState.merchantId}
-                selectedMerchantName={quickAddState.merchantNameSnapshot}
-                query={quickMerchantQuery}
-                dropdownOpen={quickMerchantOpen}
-                creatingMerchant={creatingMerchant}
-                onDropdownOpenChange={setQuickMerchantOpen}
-                onQueryChange={(value) => {
-                  setQuickMerchantQuery(value);
-                  setQuickAddState((current) => ({
-                    ...current,
-                    merchantId: null,
-                    merchantNameSnapshot: "",
-                  }));
-                }}
-                onSelectMerchant={handleQuickSelectMerchant}
-                onCreateMerchant={handleQuickCreateMerchant}
-                onLoadMerchants={() => void loadMerchants()}
-              />
-            </label>
-            <label className="form-control w-full lg:col-span-4">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_note")}
-              </span>
-              <input
-                className="input input-bordered input-sm"
-                value={quickAddState.note}
-                onChange={(event) =>
-                  setQuickAddState((current) => ({ ...current, note: event.target.value }))
-                }
-              />
-            </label>
-            <div className="flex items-end">
-              <SubmitButton isLoading={isSubmitting} className="btn-sm">
-                {t(locale, "transactions_quick_add_save")}
-              </SubmitButton>
-            </div>
-          </form>
         </div>
       </div>
 
@@ -1272,7 +947,6 @@ export function TransactionsClient({
                     ...formState,
                     kind: event.target.value as TransactionKind,
                   });
-                  setUserTouchedKind(true);
                 }}
               >
                 <option value="expense">{t(locale, "category_kind_expense")}</option>
@@ -1286,14 +960,12 @@ export function TransactionsClient({
               <CategoryPicker
                 locale={locale}
                 categories={categories}
-                selectedCategoryId={
-                  formState.categoryId === "uncategorized" ? null : formState.categoryId
-                }
-                query={categoryQuery}
-                dropdownOpen={categoryDropdownOpen}
-                onDropdownOpenChange={setCategoryDropdownOpen}
-                onQueryChange={setCategoryQuery}
-                onSelectCategory={handleSelectCategory}
+                value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
+                onChange={handleFormCategoryChange}
+                allowEmpty
+                emptyLabel={t(locale, "transactions_category_uncategorized")}
+                placeholder={t(locale, "transactions_category_search_placeholder")}
+                showManageLink
               />
             </label>
             <label className="form-control w-full">
@@ -1303,24 +975,15 @@ export function TransactionsClient({
               <MerchantPicker
                 locale={locale}
                 merchants={merchants}
-                merchantsLoading={merchantsLoading}
-                selectedMerchantId={formState.merchantId}
-                selectedMerchantName={formState.merchantNameSnapshot}
-                query={merchantQuery}
-                dropdownOpen={merchantDropdownOpen}
-                creatingMerchant={creatingMerchant}
-                onDropdownOpenChange={setMerchantDropdownOpen}
-                onQueryChange={(value) => {
-                  setMerchantQuery(value);
-                  setFormState((current) => ({
-                    ...current,
-                    merchantId: null,
-                    merchantNameSnapshot: "",
-                  }));
-                }}
-                onSelectMerchant={handleSelectMerchant}
-                onCreateMerchant={handleCreateMerchant}
+                value={formState.merchantId ?? ""}
+                onChange={handleFormMerchantChange}
+                placeholder={t(locale, "transactions_merchant_placeholder")}
+                allowCreate
+                creating={creatingMerchant}
+                onCreateMerchant={createMerchant}
                 onLoadMerchants={() => void loadMerchants()}
+                loading={merchantsLoading}
+                showManageLink
               />
             </label>
             <label className="form-control w-full md:col-span-2">

@@ -1,15 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { MerchantModel, normalizeMerchantNameKey } from "@/src/models/Merchant";
-import { CategoryModel } from "@/src/models/Category";
-import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
+import { errorResponse, requireAuthContext } from "@/src/server/api";
 
 const createSchema = z
   .object({
     nameCustom: z.string().trim().min(1).optional(),
     name: z.string().trim().min(1).optional(),
-    defaultCategoryId: z.string().nullable().optional(),
-    defaultKind: z.enum(["income", "expense"]).nullable().optional(),
     aliases: z.array(z.string()).optional(),
   })
   .refine((data) => Boolean(data.nameCustom || data.name), {
@@ -61,31 +58,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let defaultCategoryId = null;
-    if (parsed.data.defaultCategoryId !== undefined) {
-      if (parsed.data.defaultCategoryId === null) {
-        defaultCategoryId = null;
-      } else {
-        const objectId = parseObjectId(parsed.data.defaultCategoryId);
-        if (!objectId) {
-          return errorResponse("Invalid default category id", 400);
-        }
-        const category = await CategoryModel.findOne({
-          _id: objectId,
-          workspaceId: auth.workspace.id,
-        });
-        if (!category) {
-          return errorResponse("Category not found", 404);
-        }
-        defaultCategoryId = objectId;
-      }
-    }
-
     const merchant = await MerchantModel.create({
       workspaceId: auth.workspace.id,
       name: parsed.data.nameCustom ?? parsed.data.name ?? "",
-      defaultCategoryId,
-      defaultKind: parsed.data.defaultKind ?? null,
       aliases: normalizeAliases(parsed.data.aliases),
       isArchived: false,
     });
