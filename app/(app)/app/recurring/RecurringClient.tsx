@@ -288,10 +288,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
       startDate,
     });
     setDayOfMonthOverridden(Number(dayOfMonth) !== startDay);
-    setCategoryQuery("");
-    setCategoryDropdownOpen(false);
-    setMerchantQuery("");
-    setMerchantDropdownOpen(false);
     setModalOpen(true);
   };
 
