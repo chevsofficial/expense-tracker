@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { MerchantModel } from "@/src/models/Merchant";
-import { CategoryModel } from "@/src/models/Category";
 import { TransactionModel } from "@/src/models/Transaction";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
@@ -9,8 +8,6 @@ const updateSchema = z
   .object({
     nameCustom: z.string().trim().min(1).optional(),
     name: z.string().trim().min(1).optional(),
-    defaultCategoryId: z.string().nullable().optional(),
-    defaultKind: z.enum(["income", "expense"]).nullable().optional(),
     aliases: z.array(z.string()).optional(),
     isArchived: z.boolean().optional(),
   })
@@ -48,27 +45,6 @@ export async function PUT(
   const updatePayload: Record<string, unknown> = {};
   if (parsed.data.nameCustom ?? parsed.data.name) {
     updatePayload.name = parsed.data.nameCustom ?? parsed.data.name;
-  }
-  if (parsed.data.defaultCategoryId !== undefined) {
-    if (parsed.data.defaultCategoryId === null) {
-      updatePayload.defaultCategoryId = null;
-    } else {
-      const categoryObjectId = parseObjectId(parsed.data.defaultCategoryId);
-      if (!categoryObjectId) {
-        return errorResponse("Invalid default category id", 400);
-      }
-      const category = await CategoryModel.findOne({
-        _id: categoryObjectId,
-        workspaceId: auth.workspace.id,
-      });
-      if (!category) {
-        return errorResponse("Category not found", 404);
-      }
-      updatePayload.defaultCategoryId = categoryObjectId;
-    }
-  }
-  if (parsed.data.defaultKind !== undefined) {
-    updatePayload.defaultKind = parsed.data.defaultKind ?? null;
   }
   if (parsed.data.aliases !== undefined) {
     updatePayload.aliases = normalizeAliases(parsed.data.aliases);

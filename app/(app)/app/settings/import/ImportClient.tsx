@@ -28,7 +28,7 @@ const entityFields: Record<string, string[]> = {
     "note",
     "receiptUrl",
   ],
-  merchants: ["name", "defaultCategory", "defaultKind", "aliases"],
+  merchants: ["name", "aliases"],
   categories: ["name", "group", "kind", "isArchived"],
 };
 

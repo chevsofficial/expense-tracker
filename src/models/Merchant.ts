@@ -5,8 +5,6 @@ export type MerchantDoc = {
   workspaceId: mongoose.Types.ObjectId;
   name: string;
   nameKey: string;
-  defaultCategoryId?: mongoose.Types.ObjectId | null;
-  defaultKind?: "income" | "expense" | null;
   aliases?: string[];
   isArchived: boolean;
   createdAt: Date;
@@ -31,12 +29,6 @@ const MerchantSchema = new mongoose.Schema<MerchantDoc>(
     },
     name: { type: String, required: true, trim: true },
     nameKey: { type: String, required: true, trim: true, lowercase: true },
-    defaultCategoryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
-    },
-    defaultKind: { type: String, enum: ["income", "expense"], default: null },
     aliases: { type: [String], default: [] },
     isArchived: { type: Boolean, default: false },
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -18,12 +18,13 @@ export type CategoryPickerCategory = {
 type CategoryPickerProps = {
   locale: Locale;
   categories: CategoryPickerCategory[];
-  selectedCategoryId: string | null;
-  query: string;
-  dropdownOpen: boolean;
-  onDropdownOpenChange: (open: boolean) => void;
-  onQueryChange: (value: string) => void;
-  onSelectCategory: (categoryId: string | null) => void;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
+  showManageLink?: boolean;
 };
 
 const getCategoryName = (locale: Locale, category?: CategoryPickerCategory | null) =>
@@ -32,14 +33,17 @@ const getCategoryName = (locale: Locale, category?: CategoryPickerCategory | nul
 export function CategoryPicker({
   locale,
   categories,
-  selectedCategoryId,
-  query,
-  dropdownOpen,
-  onDropdownOpenChange,
-  onQueryChange,
-  onSelectCategory,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  allowEmpty,
+  emptyLabel,
+  showManageLink = true,
 }: CategoryPickerProps) {
   const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -50,11 +54,11 @@ export function CategoryPicker({
   }, [categories, locale]);
 
   const selectedCategoryLabel = useMemo(() => {
-    if (!selectedCategoryId) {
-      return t(locale, "transactions_category_uncategorized");
+    if (!value) {
+      return emptyLabel ?? t(locale, "transactions_category_uncategorized");
     }
-    return categoryMap.get(selectedCategoryId) ?? "";
-  }, [categoryMap, locale, selectedCategoryId]);
+    return categoryMap.get(value) ?? "";
+  }, [categoryMap, emptyLabel, locale, value]);
 
   const categoryMatches = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -66,11 +70,19 @@ export function CategoryPicker({
   }, [categories, locale, query]);
 
   const incomeCategoryMatches = useMemo(
-    () => categoryMatches.filter((category) => category.kind === "income" && !category.isArchived),
+    () =>
+      categoryMatches.filter(
+        (category) =>
+          (category.kind === "income" || category.kind === "both") && !category.isArchived
+      ),
     [categoryMatches]
   );
   const expenseCategoryMatches = useMemo(
-    () => categoryMatches.filter((category) => category.kind === "expense" && !category.isArchived),
+    () =>
+      categoryMatches.filter(
+        (category) =>
+          (category.kind === "expense" || category.kind === "both") && !category.isArchived
+      ),
     [categoryMatches]
   );
 
@@ -80,8 +92,8 @@ export function CategoryPicker({
       tabIndex={0}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          onDropdownOpenChange(false);
-          onQueryChange("");
+          setDropdownOpen(false);
+          setQuery("");
         }
       }}
     >
@@ -89,12 +101,14 @@ export function CategoryPicker({
         type="button"
         className="input input-bordered flex w-full items-center justify-between text-left"
         onClick={() => {
-          onDropdownOpenChange(true);
-          onQueryChange("");
+          if (disabled) return;
+          setDropdownOpen(true);
+          setQuery("");
         }}
+        disabled={disabled}
       >
         <span className={selectedCategoryLabel ? "" : "opacity-60"}>
-          {selectedCategoryLabel || t(locale, "transactions_category_search_placeholder")}
+          {selectedCategoryLabel || placeholder || t(locale, "transactions_category_search_placeholder")}
         </span>
         <span className="text-xs opacity-60">▾</span>
       </button>
@@ -104,18 +118,25 @@ export function CategoryPicker({
             className="input input-sm input-bordered w-full"
             placeholder={t(locale, "transactions_category_search_placeholder")}
             value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
+            disabled={disabled}
           />
         </li>
-        <li>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm w-full justify-start"
-            onClick={() => onSelectCategory(null)}
-          >
-            {t(locale, "transactions_category_uncategorized")}
-          </button>
-        </li>
+        {allowEmpty ? (
+          <li>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm w-full justify-start"
+              onClick={() => {
+                onChange("");
+                setDropdownOpen(false);
+                setQuery("");
+              }}
+            >
+              {emptyLabel ?? t(locale, "transactions_category_uncategorized")}
+            </button>
+          </li>
+        ) : null}
         {incomeCategoryMatches.length ? (
           <li className="mt-1">
             <div className="px-2 py-1 font-bold opacity-80">
@@ -128,7 +149,11 @@ export function CategoryPicker({
             <button
               type="button"
               className="btn btn-ghost btn-sm w-full justify-start"
-              onClick={() => onSelectCategory(category._id)}
+              onClick={() => {
+                onChange(category._id);
+                setDropdownOpen(false);
+                setQuery("");
+              }}
             >
               {getCategoryName(locale, category)}
             </button>
@@ -146,25 +171,31 @@ export function CategoryPicker({
             <button
               type="button"
               className="btn btn-ghost btn-sm w-full justify-start"
-              onClick={() => onSelectCategory(category._id)}
+              onClick={() => {
+                onChange(category._id);
+                setDropdownOpen(false);
+                setQuery("");
+              }}
             >
               {getCategoryName(locale, category)}
             </button>
           </li>
         ))}
-        <li className="mt-2 border-t border-base-200 pt-2">
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs w-full justify-start"
-            onClick={() => {
-              onDropdownOpenChange(false);
-              onQueryChange("");
-              router.push("/app/settings/categories");
-            }}
-          >
-            {t(locale, "transactions_category_manage")}
-          </button>
-        </li>
+        {showManageLink ? (
+          <li className="mt-2 border-t border-base-200 pt-2">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs w-full justify-start"
+              onClick={() => {
+                setDropdownOpen(false);
+                setQuery("");
+                router.push("/app/settings/categories");
+              }}
+            >
+              {t(locale, "transactions_category_manage")}
+            </button>
+          </li>
+        ) : null}
       </ul>
     </div>
   );

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { MerchantModel } from "@/src/models/Merchant";
-import { CategoryModel } from "@/src/models/Category";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 
 const csvEscape = (value: string) => {
@@ -16,23 +15,12 @@ export async function GET() {
   if ("response" in auth) return auth.response;
 
   try {
-    const [merchants, categories] = await Promise.all([
-      MerchantModel.find({ workspaceId: auth.workspace.id }).sort({ nameKey: 1 }).lean(),
-      CategoryModel.find({ workspaceId: auth.workspace.id }).lean(),
-    ]);
-    const categoryMap = new Map(
-      categories.map((category) => [category._id.toString(), category.nameCustom ?? category.nameKey])
-    );
+    const merchants = await MerchantModel.find({ workspaceId: auth.workspace.id })
+      .sort({ nameKey: 1 })
+      .lean();
 
-    const headers = ["name", "defaultCategory", "defaultKind", "aliases"];
-    const rows = merchants.map((merchant) => [
-      merchant.name,
-      merchant.defaultCategoryId
-        ? categoryMap.get(merchant.defaultCategoryId.toString()) ?? ""
-        : "",
-      merchant.defaultKind ?? "",
-      merchant.aliases?.join("|") ?? "",
-    ]);
+    const headers = ["name", "aliases"];
+    const rows = merchants.map((merchant) => [merchant.name, merchant.aliases?.join("|") ?? ""]);
 
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
     return new NextResponse(csv, {
