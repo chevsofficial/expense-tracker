@@ -2,47 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getJSON } from "@/src/lib/apiClient";
-import { formatCurrency } from "@/src/lib/format";
+import { getJSON, putJSON } from "@/src/lib/apiClient";
 import { formatMonthLabel } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
-import { MonthPicker } from "@/components/shared/MonthPicker";
-import { StatsCards } from "@/components/dashboard/StatsCards";
-import { TopList } from "@/components/dashboard/TopList";
 import type { Locale } from "@/src/i18n/messages";
-
-type TotalsByCurrency = {
-  currency: string;
-  incomeMinor: number;
-  expenseMinor: number;
-  netMinor: number;
-  transactionCount: number;
-};
-
-type TopMerchant = {
-  merchantId: string | null;
-  merchantName: string;
-  currency: string;
-  expenseMinor: number;
-  count: number;
-};
-
-type TopCategory = {
-  categoryId: string | null;
-  categoryName: string;
-  currency: string;
-  expenseMinor: number;
-  count: number;
-};
-
-type DashboardData = {
-  month: string;
-  totalsByCurrency: TotalsByCurrency[];
-  topMerchants: TopMerchant[];
-  topCategories: TopCategory[];
-};
-
-type ApiItemResponse<T> = { data: T };
+import { MonthPicker } from "@/components/shared/MonthPicker";
+import { WidgetGrid } from "@/components/dashboard/WidgetGrid";
+import { WidgetPickerModal } from "@/components/dashboard/WidgetPickerModal";
+import type { DashboardWidget } from "@/src/dashboard/widgetTypes";
+import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
+import { dashboardWidgetRegistry } from "@/src/dashboard/widgetRegistry";
+import type { Layout } from "react-grid-layout";
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -50,13 +20,64 @@ const getCurrentMonth = () => {
   return `${now.getFullYear()}-${month}`;
 };
 
+type ApiItemResponse<T> = { data: T };
+
+type DashboardConfigResponse = {
+  widgets: DashboardWidget[];
+  version: number;
+};
+
+const createWidgetId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+
+const buildDefaultWidgets = (): DashboardWidget[] => [
+  {
+    id: createWidgetId(),
+    type: "total_income",
+    titleKey: "dashboard_widget_total_income",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 2,
+    view: "card",
+  },
+  {
+    id: createWidgetId(),
+    type: "total_expense",
+    titleKey: "dashboard_widget_total_expenses",
+    x: 4,
+    y: 0,
+    w: 4,
+    h: 2,
+    view: "card",
+  },
+  {
+    id: createWidgetId(),
+    type: "net_cash_flow",
+    titleKey: "dashboard_widget_net_cash_flow",
+    x: 8,
+    y: 0,
+    w: 4,
+    h: 2,
+    view: "card",
+  },
+];
+
 export function DashboardClient({ locale }: { locale: Locale }) {
   const searchParams = useSearchParams();
   const initializedFromQuery = useRef(false);
+  const initialLoadDone = useRef(false);
+  const lastLoadedMonth = useRef<string | null>(null);
   const [month, setMonth] = useState(getCurrentMonth());
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
+  const [data, setData] = useState<DashboardDataResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     if (initializedFromQuery.current) return;
@@ -67,13 +88,34 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     initializedFromQuery.current = true;
   }, [searchParams]);
 
-  const loadDashboard = useCallback(async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getJSON<ApiItemResponse<DashboardData>>(
-        `/api/dashboard?month=${month}`
+      const [configResponse, dataResponse] = await Promise.all([
+        getJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config"),
+        getJSON<ApiItemResponse<DashboardDataResponse>>(`/api/dashboard/data?month=${month}`),
+      ]);
+      setWidgets(configResponse.data.widgets);
+      setData(dataResponse.data);
+      lastLoadedMonth.current = month;
+      initialLoadDone.current = true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
+      setToast(message);
+    } finally {
+      initialLoadDone.current = true;
+      setLoading(false);
+    }
+  }, [locale, month]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getJSON<ApiItemResponse<DashboardDataResponse>>(
+        `/api/dashboard/data?month=${month}`
       );
       setData(response.data);
+      lastLoadedMonth.current = month;
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
       setToast(message);
@@ -83,11 +125,89 @@ export function DashboardClient({ locale }: { locale: Locale }) {
   }, [locale, month]);
 
   useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+    if (!initializedFromQuery.current || initialLoadDone.current) return;
+    void loadInitial();
+  }, [loadInitial, month]);
 
-  const topMerchants = useMemo(() => data?.topMerchants ?? [], [data]);
-  const topCategories = useMemo(() => data?.topCategories ?? [], [data]);
+  useEffect(() => {
+    if (!initializedFromQuery.current || !initialLoadDone.current) return;
+    if (lastLoadedMonth.current === month) return;
+    void loadData();
+  }, [loadData, month]);
+
+  const existingTypes = useMemo(() => new Set(widgets.map((widget) => widget.type)), [widgets]);
+
+  const handleLayoutChange = useCallback((layout: Layout[]) => {
+    setWidgets((prev) =>
+      prev.map((widget) => {
+        const updated = layout.find((item) => item.i === widget.id);
+        if (!updated) return widget;
+        return { ...widget, x: updated.x, y: updated.y, w: updated.w, h: updated.h };
+      })
+    );
+  }, []);
+
+  const handleViewChange = useCallback((id: string, view: DashboardWidget["view"]) => {
+    setWidgets((prev) => prev.map((widget) => (widget.id === id ? { ...widget, view } : widget)));
+  }, []);
+
+  const handleRemove = useCallback((id: string) => {
+    setWidgets((prev) => prev.filter((widget) => widget.id !== id));
+  }, []);
+
+  const handleAddWidget = useCallback(
+    (definition: (typeof dashboardWidgetRegistry)[number]) => {
+      const maxY = widgets.reduce((max, widget) => Math.max(max, widget.y + widget.h), 0);
+      const widget: DashboardWidget = {
+        id: createWidgetId(),
+        type: definition.type,
+        titleKey: definition.titleKey,
+        x: 0,
+        y: maxY,
+        w: definition.defaultSize.w,
+        h: definition.defaultSize.h,
+        view: definition.defaultView,
+        kind: definition.kind,
+        limit: definition.supportedViews.includes("bar") || definition.supportedViews.includes("pie") ? 5 : undefined,
+      };
+      setWidgets((prev) => [...prev, widget]);
+      setPickerOpen(false);
+    },
+    [widgets]
+  );
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    try {
+      await putJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config", {
+        widgets,
+      });
+      setToast(t(locale, "dashboard_save_layout"));
+      setEditMode(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "dashboard_save_layout");
+      setToast(message);
+    } finally {
+      setSaving(false);
+    }
+  }, [locale, widgets]);
+
+  const handleReset = useCallback(async () => {
+    const defaults = buildDefaultWidgets();
+    setWidgets(defaults);
+    setSaving(true);
+    try {
+      await putJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config", {
+        widgets: defaults,
+      });
+      setToast(t(locale, "dashboard_reset_default"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "dashboard_reset_default");
+      setToast(message);
+    } finally {
+      setSaving(false);
+    }
+  }, [locale]);
 
   return (
     <div className="space-y-6">
@@ -96,17 +216,39 @@ export function DashboardClient({ locale }: { locale: Locale }) {
           <h1 className="text-3xl font-bold">{t(locale, "dashboard_title")}</h1>
           <p className="mt-2 opacity-70">{t(locale, "dashboard_subtitle")}</p>
         </div>
-        <MonthPicker
-          locale={locale}
-          month={month}
-          label={t(locale, "dashboard_month")}
-          helperText={formatMonthLabel(month, locale)}
-          onChange={setMonth}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <MonthPicker
+            locale={locale}
+            month={month}
+            label={t(locale, "dashboard_month")}
+            helperText={formatMonthLabel(month, locale)}
+            onChange={setMonth}
+          />
+          <button
+            type="button"
+            className={`btn ${editMode ? "btn-secondary" : "btn-outline"}`}
+            onClick={() => setEditMode((prev) => !prev)}
+          >
+            {t(locale, "dashboard_customize")}
+          </button>
+          {editMode ? (
+            <>
+              <button type="button" className="btn" onClick={() => setPickerOpen(true)}>
+                {t(locale, "dashboard_add_widget")}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? t(locale, "dashboard_save_layout") : t(locale, "dashboard_save_layout")}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={handleReset} disabled={saving}>
+                {t(locale, "dashboard_reset_default")}
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {toast ? (
-        <div className="alert alert-error">
+        <div className="alert alert-info">
           <span>{toast}</span>
           <button className="btn btn-sm" onClick={() => setToast(null)}>
             {t(locale, "transactions_dismiss")}
@@ -117,35 +259,24 @@ export function DashboardClient({ locale }: { locale: Locale }) {
       {loading ? (
         <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
       ) : (
-        <>
-          <StatsCards totalsByCurrency={data?.totalsByCurrency ?? []} locale={locale} />
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TopList
-              title={t(locale, "dashboard_top_merchants")}
-              emptyLabel={t(locale, "dashboard_no_merchants")}
-              countLabel={t(locale, "dashboard_transactions")}
-              items={topMerchants.map((merchant) => ({
-                id: `${merchant.merchantId ?? "unassigned"}-${merchant.currency}`,
-                label: merchant.merchantName,
-                value: formatCurrency(merchant.expenseMinor, merchant.currency, locale),
-                count: merchant.count,
-              }))}
-            />
-            <TopList
-              title={t(locale, "dashboard_top_categories")}
-              emptyLabel={t(locale, "dashboard_no_categories")}
-              countLabel={t(locale, "dashboard_transactions")}
-              items={topCategories.map((category) => ({
-                id: `${category.categoryId ?? "uncategorized"}-${category.currency}`,
-                label: category.categoryName,
-                value: formatCurrency(category.expenseMinor, category.currency, locale),
-                count: category.count,
-              }))}
-            />
-          </div>
-        </>
+        <WidgetGrid
+          widgets={widgets}
+          data={data}
+          locale={locale}
+          editMode={editMode}
+          onLayoutChange={handleLayoutChange}
+          onViewChange={handleViewChange}
+          onRemove={handleRemove}
+        />
       )}
+
+      <WidgetPickerModal
+        open={pickerOpen}
+        locale={locale}
+        existingTypes={existingTypes}
+        onClose={() => setPickerOpen(false)}
+        onAdd={handleAddWidget}
+      />
     </div>
   );
 }
