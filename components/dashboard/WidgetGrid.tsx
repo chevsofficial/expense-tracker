@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { Responsive, WidthProvider, type Layout } from "react-grid-layout";
+import dynamic from "next/dynamic";
+import type { Layout } from "react-grid-layout";
 import type { DashboardWidget, DashboardWidgetView } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { getWidgetDefinition } from "@/src/dashboard/widgetRegistry";
@@ -15,7 +16,13 @@ import { BreakdownWidget } from "@/components/dashboard/widgets/BreakdownWidget"
 import { BudgetVsActualWidget } from "@/components/dashboard/widgets/BudgetVsActualWidget";
 import { TransactionCountWidget } from "@/components/dashboard/widgets/TransactionCountWidget";
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const ResponsiveGridLayout = dynamic(
+  async () => {
+    const mod = await import("react-grid-layout");
+    return mod.Responsive;
+  },
+  { ssr: false }
+);
 
 type WidgetGridProps = {
   widgets: DashboardWidget[];
@@ -49,6 +56,7 @@ export function WidgetGrid({
   );
 
   return (
+    // @ts-expect-error - ResponsiveGridLayout is dynamically loaded
     <ResponsiveGridLayout
       className="layout"
       layouts={{ lg: layout }}
@@ -60,7 +68,7 @@ export function WidgetGrid({
       margin={[16, 16]}
       onLayoutChange={onLayoutChange}
       draggableHandle=".widget-drag-handle"
-      measureBeforeMount={false}
+      measureBeforeMount={true}
     >
       {widgets.map((widget) => {
         const definition = getWidgetDefinition(widget.type);
