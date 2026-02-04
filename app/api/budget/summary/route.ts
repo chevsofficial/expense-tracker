@@ -15,6 +15,16 @@ type ActualRow = {
   transactionCount: number;
 };
 
+type BudgetSummaryRow = {
+  categoryId: string | null;
+  categoryName: string;
+  plannedMinor: number;
+  actualMinor: number;
+  remainingMinor: number;
+  progressPct: number;
+  transactionCount: number;
+};
+
 export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
@@ -88,7 +98,7 @@ export async function GET(request: NextRequest) {
   });
 
   const currencySections = Array.from(currencies.values()).map((currency) => {
-    const rows = Array.from(categoryIds).map((categoryId) => {
+    const rows: BudgetSummaryRow[] = Array.from(categoryIds).map((categoryId) => {
       const plannedMinor = plannedMap.get(`${currency}:${categoryId}`) ?? 0;
       const actual = actualMap.get(`${currency}:${categoryId}`);
       const actualMinor = actual?.actualMinor ?? 0;
