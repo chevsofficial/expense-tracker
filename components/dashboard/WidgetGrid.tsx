@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
-import type { Layout } from "react-grid-layout";
+import type { Layout, ResponsiveProps } from "react-grid-layout";
 import type { DashboardWidget, DashboardWidgetView } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { getWidgetDefinition } from "@/src/dashboard/widgetRegistry";
@@ -16,11 +16,8 @@ import { BreakdownWidget } from "@/components/dashboard/widgets/BreakdownWidget"
 import { BudgetVsActualWidget } from "@/components/dashboard/widgets/BudgetVsActualWidget";
 import { TransactionCountWidget } from "@/components/dashboard/widgets/TransactionCountWidget";
 
-const ResponsiveGridLayout = dynamic(
-  async () => {
-    const mod = await import("react-grid-layout");
-    return mod.Responsive;
-  },
+const ResponsiveGridLayout = dynamic<ResponsiveProps>(
+  () => import("react-grid-layout").then((mod) => mod.Responsive),
   { ssr: false }
 );
 
@@ -56,7 +53,6 @@ export function WidgetGrid({
   );
 
   return (
-    // @ts-expect-error - ResponsiveGridLayout is dynamically loaded
     <ResponsiveGridLayout
       className="layout"
       layouts={{ lg: layout }}
