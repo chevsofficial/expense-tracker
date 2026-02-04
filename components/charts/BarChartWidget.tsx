@@ -37,9 +37,13 @@ export function BarChartWidget({ data, xKey, bars, valueFormatter }: BarChartWid
           <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />
           <Tooltip
-            formatter={(value: number) =>
-              valueFormatter ? valueFormatter(value) : value.toLocaleString()
-            }
+            formatter={(value) => {
+              if (value == null) return "";
+              if (typeof value === "number") {
+                return valueFormatter ? valueFormatter(value) : value.toLocaleString();
+              }
+              return value;
+            }}
           />
           <Legend />
           {bars.map((bar) => (
