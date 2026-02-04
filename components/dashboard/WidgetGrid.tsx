@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import type React from "react";
 import type { ComponentType } from "react";
 import dynamic from "next/dynamic";
-import type { Layout, ResponsiveProps } from "react-grid-layout";
+import type { Layout, Layouts, ResponsiveProps } from "react-grid-layout";
 import type { DashboardWidget, DashboardWidgetView } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { getWidgetDefinition } from "@/src/dashboard/widgetRegistry";
@@ -28,7 +29,7 @@ type WidgetGridProps = {
   data: DashboardDataResponse | null;
   locale: Locale;
   editMode: boolean;
-  onLayoutChange: (layout: Layout) => void;
+  onLayoutChange: (layout: Layout[], allLayouts?: Layouts) => void;
   onViewChange: (id: string, view: DashboardWidgetView) => void;
   onRemove: (id: string) => void;
 };
@@ -54,8 +55,8 @@ export function WidgetGrid({
     [widgets]
   );
 
-  const handleLayoutChange = (nextLayout: any) => {
-    onLayoutChange?.(nextLayout);
+  const handleLayoutChange = (nextLayout: Layout[], allLayouts: Layouts) => {
+    onLayoutChange(nextLayout, allLayouts);
   };
 
   return (
@@ -79,7 +80,7 @@ export function WidgetGrid({
         const title = t(locale, definition.titleKey);
         const totalsByCurrency = data?.totalsByCurrency ?? {};
 
-        let content: JSX.Element | null = null;
+        let content: React.ReactElement | null = null;
 
         switch (widget.type) {
           case "total_income":
