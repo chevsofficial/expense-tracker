@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import type { ComponentType } from "react";
 import dynamic from "next/dynamic";
 import type { Layout, ResponsiveProps } from "react-grid-layout";
 import type { DashboardWidget, DashboardWidgetView } from "@/src/dashboard/widgetTypes";
@@ -20,6 +21,7 @@ const ResponsiveGridLayout = dynamic<ResponsiveProps>(
   () => import("react-grid-layout").then((mod) => mod.Responsive),
   { ssr: false }
 );
+const Grid = ResponsiveGridLayout as unknown as ComponentType<any>;
 
 type WidgetGridProps = {
   widgets: DashboardWidget[];
@@ -52,8 +54,12 @@ export function WidgetGrid({
     [widgets]
   );
 
+  const handleLayoutChange = (nextLayout: any) => {
+    onLayoutChange?.(nextLayout);
+  };
+
   return (
-    <ResponsiveGridLayout
+    <Grid
       className="layout"
       layouts={{ lg: layout }}
       breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -62,7 +68,7 @@ export function WidgetGrid({
       isDraggable={editMode}
       isResizable={editMode}
       margin={[16, 16]}
-      onLayoutChange={onLayoutChange}
+      onLayoutChange={handleLayoutChange}
       draggableHandle=".widget-drag-handle"
       measureBeforeMount={true}
     >
@@ -311,6 +317,6 @@ export function WidgetGrid({
           </div>
         );
       })}
-    </ResponsiveGridLayout>
+    </Grid>
   );
 }
