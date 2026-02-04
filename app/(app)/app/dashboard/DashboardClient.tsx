@@ -137,7 +137,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
 
   const existingTypes = useMemo(() => new Set(widgets.map((widget) => widget.type)), [widgets]);
 
-  const handleLayoutChange = useCallback((layout: Layout[]) => {
+  const handleLayoutChange = useCallback((layout: Layout) => {
     setWidgets((prev) =>
       prev.map((widget) => {
         const updated = layout.find((item) => item.i === widget.id);

@@ -29,7 +29,7 @@ type WidgetGridProps = {
   data: DashboardDataResponse | null;
   locale: Locale;
   editMode: boolean;
-  onLayoutChange: (layout: Layout[]) => void;
+  onLayoutChange: (layout: Layout) => void;
   onViewChange: (id: string, view: DashboardWidgetView) => void;
   onRemove: (id: string) => void;
 };
