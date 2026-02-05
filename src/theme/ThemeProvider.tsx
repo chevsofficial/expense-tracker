@@ -14,10 +14,6 @@ type ThemeContextValue = {
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function applyTheme(theme: SpendaryTheme) {
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
 function readStoredTheme(): SpendaryTheme | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -28,29 +24,33 @@ function readStoredTheme(): SpendaryTheme | null {
   }
 }
 
+function applyTheme(theme: SpendaryTheme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<SpendaryTheme>("spendaryLight");
+  const [theme, setThemeState] = useState<SpendaryTheme>(() => {
+    if (typeof window === "undefined") return "spendaryLight";
+    const stored = readStoredTheme();
+    return stored ?? "spendaryLight";
+  });
 
   useEffect(() => {
-    const stored = readStoredTheme();
-    const initial = stored ?? "spendaryLight";
-    setThemeState(initial);
-    applyTheme(initial);
-  }, []);
-
-  const setTheme = useCallback((next: SpendaryTheme) => {
-    setThemeState(next);
-    applyTheme(next);
+    applyTheme(theme);
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(STORAGE_KEY, theme);
     } catch {
       // ignore
     }
+  }, [theme]);
+
+  const setTheme = useCallback((next: SpendaryTheme) => {
+    setThemeState(next);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "spendaryLight" ? "spendaryDark" : "spendaryLight");
-  }, [setTheme, theme]);
+    setThemeState((prev) => (prev === "spendaryLight" ? "spendaryDark" : "spendaryLight"));
+  }, []);
 
   const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
 
