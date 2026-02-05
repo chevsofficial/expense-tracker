@@ -3,7 +3,6 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 
 export type SpendaryTheme = "spendaryLight" | "spendaryDark";
-
 const STORAGE_KEY = "spendary-theme";
 
 type ThemeContextValue = {
@@ -14,25 +13,23 @@ type ThemeContextValue = {
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function applyTheme(theme: SpendaryTheme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
 function readStoredTheme(): SpendaryTheme | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === "spendaryLight" || raw === "spendaryDark") return raw;
-    return null;
+    return raw === "spendaryLight" || raw === "spendaryDark" ? raw : null;
   } catch {
     return null;
   }
 }
 
-function applyTheme(theme: SpendaryTheme) {
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<SpendaryTheme>(() => {
     if (typeof window === "undefined") return "spendaryLight";
-    const stored = readStoredTheme();
-    return stored ?? "spendaryLight";
+    return readStoredTheme() ?? "spendaryLight";
   });
 
   useEffect(() => {
@@ -53,6 +50,5 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
-
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
