@@ -17,7 +17,7 @@ type RecurringActionsProps = {
 export function RecurringActions({ isArchived, onEdit, onArchive, onRestore, onDelete, labels }: RecurringActionsProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      <button className="btn btn-xs" type="button" onClick={onEdit}>
+      <button className="btn btn-outline btn-xs" type="button" onClick={onEdit}>
         {labels.edit}
       </button>
       {isArchived ? (
@@ -29,7 +29,7 @@ export function RecurringActions({ isArchived, onEdit, onArchive, onRestore, onD
           {labels.archive}
         </button>
       )}
-      <button className="btn btn-ghost btn-xs" type="button" onClick={onDelete}>
+      <button className="btn btn-ghost btn-xs text-error" type="button" onClick={onDelete}>
         {labels.delete}
       </button>
     </div>

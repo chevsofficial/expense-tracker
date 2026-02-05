@@ -20,7 +20,7 @@ export default async function AppLayout({
   const locale = await getLocale();
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="min-h-screen bg-base-100 text-base-content">
       <AppTopNav
         appName={t(locale, "app_name")}
         dashboardLabel={t(locale, "nav_dashboard")}

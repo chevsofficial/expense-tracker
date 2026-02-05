@@ -86,7 +86,7 @@ export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: stri
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{t(locale, "budget_title")}</h1>
+          <h1 className="text-2xl font-semibold text-neutral">{t(locale, "budget_title")}</h1>
           <p className="text-sm opacity-70">{formatMonthLabel(month, locale)}</p>
         </div>
         <MonthPicker
@@ -101,7 +101,7 @@ export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: stri
       {toast ? (
         <div className="alert alert-error">
           <span>{toast}</span>
-          <button className="btn btn-sm" onClick={() => setToast(null)}>
+          <button className="btn btn-outline btn-sm" onClick={() => setToast(null)}>
             {t(locale, "transactions_dismiss")}
           </button>
         </div>

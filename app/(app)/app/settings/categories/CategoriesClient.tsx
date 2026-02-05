@@ -393,7 +393,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t(locale, "categories_title_page")}</h1>
+          <h1 className="text-3xl font-bold text-neutral">{t(locale, "categories_title_page")}</h1>
           <p className="mt-2 opacity-70">{t(locale, "categories_subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -621,7 +621,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="table">
-                  <thead>
+                  <thead className="bg-base-200 text-base-content">
                     <tr>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
@@ -678,7 +678,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="table">
-                      <thead>
+                      <thead className="bg-base-200 text-base-content">
                         <tr>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>

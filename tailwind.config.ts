@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import daisyui from "daisyui";
 
 const config: Config = {
   content: [
@@ -9,8 +10,51 @@ const config: Config = {
   theme: {
     extend: {},
   },
-  // IMPORTANT: daisyUI v5 is configured in CSS via @plugin now.
-  plugins: [],
+  plugins: [daisyui],
+  daisyui: {
+    themes: [
+      {
+        spendaryLight: {
+          primary: "#6DBE45",
+          "primary-content": "#0b1b12",
+          secondary: "#9AD96A",
+          "secondary-content": "#0b1b12",
+          accent: "#F4C430",
+          "accent-content": "#1f2937",
+          neutral: "#2F6F2E",
+          "neutral-content": "#F7F6F2",
+          "base-100": "#F7F6F2",
+          "base-200": "#ffffff",
+          "base-300": "#eae7dc",
+          "base-content": "#1f2937",
+          info: "#60a5fa",
+          success: "#6DBE45",
+          warning: "#F4C430",
+          error: "#ef4444",
+        },
+      },
+      {
+        spendaryDark: {
+          primary: "#6DBE45",
+          "primary-content": "#0b1b12",
+          secondary: "#9AD96A",
+          "secondary-content": "#0b1b12",
+          accent: "#F4C430",
+          "accent-content": "#111827",
+          neutral: "#2F6F2E",
+          "neutral-content": "#F7F6F2",
+          "base-100": "#0f1a12",
+          "base-200": "#132116",
+          "base-300": "#1a2a1c",
+          "base-content": "#F7F6F2",
+          info: "#60a5fa",
+          success: "#6DBE45",
+          warning: "#F4C430",
+          error: "#f87171",
+        },
+      },
+    ],
+  },
 };
 
 export default config;

@@ -35,7 +35,7 @@ export function WidgetPickerModal({
               </div>
               <button
                 type="button"
-                className="btn btn-sm"
+                className="btn btn-outline btn-sm"
                 onClick={() => onAdd(widget)}
                 disabled={disabled}
               >

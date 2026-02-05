@@ -5,7 +5,7 @@ export default async function CategoriesPage() {
   const locale = await getLocale();
 
   return (
-    <main className="p-6">
+    <main className="p-6 bg-base-100 text-base-content">
       <CategoriesClient locale={locale} />
     </main>
   );

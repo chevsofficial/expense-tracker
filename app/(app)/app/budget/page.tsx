@@ -8,7 +8,7 @@ export default async function BudgetPage() {
   const defaultCurrency = "response" in auth ? "MXN" : auth.workspace.defaultCurrency;
 
   return (
-    <main className="p-6">
+    <main className="p-6 bg-base-100 text-base-content">
       <BudgetClient locale={locale} defaultCurrency={defaultCurrency} />
     </main>
   );

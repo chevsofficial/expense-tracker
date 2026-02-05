@@ -32,7 +32,7 @@ export function TransactionCountWidget({
     return (
       <div className="overflow-x-auto">
         <table className="table table-sm">
-          <thead>
+          <thead className="bg-base-200 text-base-content">
             <tr>
               <th>{t(locale, "dashboard_table_currency")}</th>
               <th>{t(locale, "dashboard_table_count")}</th>

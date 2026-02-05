@@ -8,7 +8,7 @@ export default async function TransactionsPage() {
   const defaultCurrency = "response" in auth ? "MXN" : auth.workspace.defaultCurrency;
 
   return (
-    <main className="p-6">
+    <main className="p-6 bg-base-100 text-base-content">
       <TransactionsClient locale={locale} defaultCurrency={defaultCurrency} />
     </main>
   );
