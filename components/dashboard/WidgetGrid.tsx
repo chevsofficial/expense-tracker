@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import type React from "react";
 import type { ComponentType } from "react";
 import dynamic from "next/dynamic";
-import type { Layout, ResponsiveProps } from "react-grid-layout";
+import type { ResponsiveProps } from "react-grid-layout";
 import type { DashboardWidget, DashboardWidgetView } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { getWidgetDefinition } from "@/src/dashboard/widgetRegistry";
@@ -28,12 +28,22 @@ const ResponsiveGridLayout = dynamic<ResponsiveProps>(
 type GridProps = Record<string, unknown>;
 const Grid = ResponsiveGridLayout as unknown as ComponentType<GridProps>;
 
+export type GridLayoutItem = {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export type GridLayout = GridLayoutItem[];
+
 type WidgetGridProps = {
   widgets: DashboardWidget[];
   data: DashboardDataResponse | null;
   locale: Locale;
   editMode: boolean;
-  onLayoutChange: (layout: Layout[]) => void;
+  onLayoutChange: (layout: GridLayout) => void;
   onViewChange: (id: string, view: DashboardWidgetView) => void;
   onRemove: (id: string) => void;
 };
@@ -47,7 +57,7 @@ export function WidgetGrid({
   onViewChange,
   onRemove,
 }: WidgetGridProps) {
-  const layout = useMemo(
+  const layout: GridLayout = useMemo(
     () =>
       widgets.map((widget) => ({
         i: widget.id,
@@ -59,8 +69,8 @@ export function WidgetGrid({
     [widgets]
   );
 
-  const handleLayoutChange = (nextLayout: Layout[]) => {
-    onLayoutChange(nextLayout);
+  const handleLayoutChange = (nextLayout: unknown) => {
+    onLayoutChange(nextLayout as GridLayout);
   };
 
   return (

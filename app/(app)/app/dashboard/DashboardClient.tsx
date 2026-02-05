@@ -8,11 +8,11 @@ import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { MonthPicker } from "@/components/shared/MonthPicker";
 import { WidgetGrid } from "@/components/dashboard/WidgetGrid";
+import type { GridLayout } from "@/components/dashboard/WidgetGrid";
 import { WidgetPickerModal } from "@/components/dashboard/WidgetPickerModal";
 import type { DashboardWidget } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { dashboardWidgetRegistry } from "@/src/dashboard/widgetRegistry";
-import type { Layout } from "react-grid-layout";
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -137,7 +137,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
 
   const existingTypes = useMemo(() => new Set(widgets.map((widget) => widget.type)), [widgets]);
 
-  const handleLayoutChange = useCallback((layout: Layout[]) => {
+  const handleLayoutChange = useCallback((layout: GridLayout) => {
     setWidgets((prev) =>
       prev.map((widget) => {
         const updated = layout.find((item) => item.i === widget.id);
