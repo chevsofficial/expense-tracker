@@ -17,10 +17,15 @@ type TotalsRow = {
   count: number;
 };
 
-type BreakdownRow = {
-  _id: { currency: string; kind: "expense" | "income"; refId: string | null };
-  total: number;
+type CategoryBreakdownRow = {
+  kind: "expense" | "income";
+  currency: string;
+  amountMinor: number;
   count: number;
+  categoryId: string | null;
+  categoryNameKey?: string | null;
+  categoryNameCustom?: string | null;
+  groupId: string | null;
 };
 
 type MerchantRow = {
@@ -94,31 +99,48 @@ export async function GET(request: NextRequest) {
     totalsByCurrency[row._id.currency] = entry;
   });
 
-  const categoryRows = await TransactionModel.aggregate<BreakdownRow>([
+  const categoriesCollection = CategoryModel.collection.name;
+
+  const categoryRows = await TransactionModel.aggregate<CategoryBreakdownRow>([
     { $match: match },
     {
       $group: {
-        _id: { currency: "$currency", kind: "$kind", refId: "$categoryId" },
-        total: { $sum: "$amountMinor" },
+        _id: { currency: "$currency", kind: "$kind", categoryId: "$categoryId" },
+        amountMinor: { $sum: "$amountMinor" },
         count: { $sum: 1 },
       },
     },
-    { $sort: { total: -1 } },
+    {
+      $lookup: {
+        from: categoriesCollection,
+        localField: "_id.categoryId",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        _id: 0,
+        kind: "$_id.kind",
+        currency: "$_id.currency",
+        amountMinor: 1,
+        count: 1,
+        categoryId: {
+          $cond: [{ $ifNull: ["$_id.categoryId", false] }, { $toString: "$_id.categoryId" }, null],
+        },
+        categoryNameKey: "$category.nameKey",
+        categoryNameCustom: "$category.nameCustom",
+        groupId: {
+          $cond: [{ $ifNull: ["$category.groupId", false] }, { $toString: "$category.groupId" }, null],
+        },
+      },
+    },
+    { $sort: { amountMinor: -1 } },
   ]);
 
-  const categoryIds = categoryRows
-    .map((row) => row._id.refId)
-    .filter((id): id is string => Boolean(id));
-  const categories = await CategoryModel.find({
-    _id: { $in: categoryIds },
-    workspaceId: auth.workspace._id,
-  }).select("_id nameKey nameCustom groupId");
-  const categoryMap = new Map(
-    categories.map((category) => [category._id.toString(), category])
-  );
-
-  const groupIds = categories
-    .map((category) => category.groupId?.toString())
+  const groupIds = categoryRows
+    .map((row) => row.groupId)
     .filter((id): id is string => Boolean(id));
   const groups = await CategoryGroupModel.find({
     _id: { $in: groupIds },
@@ -129,14 +151,16 @@ export async function GET(request: NextRequest) {
   const byCategory = {
     income: [] as Array<{
       categoryId: string | null;
-      categoryName: string;
+      categoryNameKey?: string | null;
+      categoryNameCustom?: string | null;
       currency: string;
       amountMinor: number;
       count: number;
     }>,
     expense: [] as Array<{
       categoryId: string | null;
-      categoryName: string;
+      categoryNameKey?: string | null;
+      categoryNameCustom?: string | null;
       currency: string;
       amountMinor: number;
       count: number;
@@ -166,33 +190,29 @@ export async function GET(request: NextRequest) {
   };
 
   categoryRows.forEach((row) => {
-    const categoryId = row._id.refId;
-    const category = categoryId ? categoryMap.get(categoryId) : null;
-    const categoryName =
-      category?.nameCustom?.trim() || category?.nameKey || "Uncategorized";
-
-    byCategory[row._id.kind].push({
-      categoryId,
-      categoryName: categoryId ? categoryName : "Uncategorized",
-      currency: row._id.currency,
-      amountMinor: row.total,
+    byCategory[row.kind].push({
+      categoryId: row.categoryId,
+      categoryNameKey: row.categoryNameKey ?? null,
+      categoryNameCustom: row.categoryNameCustom ?? null,
+      currency: row.currency,
+      amountMinor: row.amountMinor,
       count: row.count,
     });
 
-    const groupId = category?.groupId?.toString() ?? null;
+    const groupId = row.groupId ?? null;
     const group = groupId ? groupMap.get(groupId) : null;
     const groupName = group?.nameCustom?.trim() || group?.nameKey || "Ungrouped";
-    const key = `${groupId ?? "ungrouped"}-${row._id.currency}`;
-    const bucketMap = groupBuckets[row._id.kind];
+    const key = `${groupId ?? "ungrouped"}-${row.currency}`;
+    const bucketMap = groupBuckets[row.kind];
     const bucket = bucketMap.get(key) ?? {
       groupId,
       groupName,
-      currency: row._id.currency,
+      currency: row.currency,
       amountMinor: 0,
       count: 0,
     };
 
-    bucket.amountMinor += row.total;
+    bucket.amountMinor += row.amountMinor;
     bucket.count += row.count;
     bucketMap.set(key, bucket);
   });

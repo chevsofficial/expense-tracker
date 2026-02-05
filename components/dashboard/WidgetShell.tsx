@@ -25,8 +25,8 @@ export function WidgetShell({
   children,
 }: WidgetShellProps) {
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body gap-4">
+    <div className="card h-full bg-base-100 shadow">
+      <div className="card-body gap-4 h-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className={`text-base font-semibold ${editMode ? "widget-drag-handle cursor-move" : ""}`}>
             {title}

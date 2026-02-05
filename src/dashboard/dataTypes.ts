@@ -17,7 +17,8 @@ export type BreakdownEntry = {
 
 export type CategoryBreakdownEntry = BreakdownEntry & {
   categoryId: string | null;
-  categoryName: string;
+  categoryNameKey?: string | null;
+  categoryNameCustom?: string | null;
 };
 
 export type GroupBreakdownEntry = BreakdownEntry & {
