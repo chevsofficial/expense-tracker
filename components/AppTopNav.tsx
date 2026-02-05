@@ -43,6 +43,11 @@ export function AppTopNav({
             </Link>
           </li>
           <li>
+            <Link href="/app/settings" className={linkClass("/app/settings")}>
+              Settings
+            </Link>
+          </li>
+          <li>
             <Link href="/app/settings/categories" className={linkClass("/app/settings/categories")}>
               {categoriesLabel}
             </Link>

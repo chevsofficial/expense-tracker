@@ -1,9 +1,11 @@
 import type { Config } from "tailwindcss";
 import daisyui from "daisyui";
 
+type DaisyUIThemeObject = Record<string, Record<string, string>>;
+
 type DaisyUIConfig = {
-  themes?: any;
-  [key: string]: any;
+  themes?: DaisyUIThemeObject[] | string[];
+  darkTheme?: string;
 };
 
 type ConfigWithDaisyUI = Config & { daisyui?: DaisyUIConfig };
@@ -61,6 +63,7 @@ const config: ConfigWithDaisyUI = {
         },
       },
     ],
+    darkTheme: "spendaryDark",
   },
 };
 
