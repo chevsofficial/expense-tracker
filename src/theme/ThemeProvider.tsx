@@ -1,34 +1,58 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 
 export type SpendaryTheme = "spendaryLight" | "spendaryDark";
 
-const ThemeContext = createContext<{
+const STORAGE_KEY = "spendary-theme";
+
+type ThemeContextValue = {
   theme: SpendaryTheme;
   setTheme: (theme: SpendaryTheme) => void;
-} | null>(null);
+  toggleTheme: () => void;
+};
+
+export const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function applyTheme(theme: SpendaryTheme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function readStoredTheme(): SpendaryTheme | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === "spendaryLight" || raw === "spendaryDark") return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<SpendaryTheme>("spendaryLight");
+  const [theme, setThemeState] = useState<SpendaryTheme>("spendaryLight");
 
   useEffect(() => {
-    const stored = localStorage.getItem("spendary-theme") as SpendaryTheme | null;
-    if (stored === "spendaryLight" || stored === "spendaryDark") {
-      setTheme(stored);
+    const stored = readStoredTheme();
+    const initial = stored ?? "spendaryLight";
+    setThemeState(initial);
+    applyTheme(initial);
+  }, []);
+
+  const setTheme = useCallback((next: SpendaryTheme) => {
+    setThemeState(next);
+    applyTheme(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // ignore
     }
   }, []);
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("spendary-theme", theme);
-  }, [theme]);
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === "spendaryLight" ? "spendaryDark" : "spendaryLight");
+  }, [setTheme, theme]);
 
-  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
-}
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
 
-export function useSpendaryTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useSpendaryTheme must be used within ThemeProvider");
-  return ctx;
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

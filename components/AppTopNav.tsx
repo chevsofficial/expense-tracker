@@ -31,6 +31,42 @@ export function AppTopNav({
   return (
     <div className="navbar bg-primary text-primary-content">
       <div className="navbar-start">
+        <div className="dropdown sm:hidden">
+          <div tabIndex={0} role="button" className="btn btn-ghost">
+            ☰
+          </div>
+          <ul
+            tabIndex={0}
+            className="menu dropdown-content mt-3 w-52 rounded-box bg-primary text-primary-content shadow"
+          >
+            <li>
+              <Link href="/app/dashboard">{dashboardLabel}</Link>
+            </li>
+            <li>
+              <Link href="/app/settings">Settings</Link>
+            </li>
+            <li>
+              <Link href="/app/settings/categories">{categoriesLabel}</Link>
+            </li>
+            <li>
+              <Link href="/app/settings/merchants">{merchantsLabel}</Link>
+            </li>
+            {importLabel ? (
+              <li>
+                <Link href="/app/settings/import">{importLabel}</Link>
+              </li>
+            ) : null}
+            <li>
+              <Link href="/app/transactions">{transactionsLabel}</Link>
+            </li>
+            <li>
+              <Link href="/app/budget">{budgetLabel}</Link>
+            </li>
+            <li>
+              <Link href="/app/recurring">{recurringLabel}</Link>
+            </li>
+          </ul>
+        </div>
         <Link href="/app/dashboard" className="btn btn-ghost text-xl text-primary-content">
           {appName}
         </Link>
