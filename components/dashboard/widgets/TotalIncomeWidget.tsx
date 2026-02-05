@@ -9,9 +9,16 @@ type TotalIncomeWidgetProps = {
   locale: Locale;
   totalsByCurrency: DashboardTotalsByCurrency;
   currency?: string;
+  showCount?: boolean;
 };
 
-export function TotalIncomeWidget({ view, locale, totalsByCurrency, currency }: TotalIncomeWidgetProps) {
+export function TotalIncomeWidget({
+  view,
+  locale,
+  totalsByCurrency,
+  currency,
+  showCount = false,
+}: TotalIncomeWidgetProps) {
   const rows = Object.entries(totalsByCurrency).map(([code, totals]) => ({
     currency: code,
     amountMinor: totals.incomeMinor,
@@ -31,7 +38,7 @@ export function TotalIncomeWidget({ view, locale, totalsByCurrency, currency }: 
             <tr>
               <th>{t(locale, "dashboard_table_currency")}</th>
               <th>{t(locale, "dashboard_table_amount")}</th>
-              <th>{t(locale, "dashboard_table_count")}</th>
+              {showCount ? <th>{t(locale, "dashboard_table_count")}</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -39,7 +46,7 @@ export function TotalIncomeWidget({ view, locale, totalsByCurrency, currency }: 
               <tr key={row.currency}>
                 <td>{row.currency}</td>
                 <td>{formatCurrency(row.amountMinor, row.currency, locale)}</td>
-                <td>{row.count}</td>
+                {showCount ? <td>{row.count}</td> : null}
               </tr>
             ))}
           </tbody>
@@ -56,9 +63,11 @@ export function TotalIncomeWidget({ view, locale, totalsByCurrency, currency }: 
           <p className="text-2xl font-semibold">
             {formatCurrency(row.amountMinor, row.currency, locale)}
           </p>
-          <p className="text-xs opacity-60">
-            {row.count} {t(locale, "dashboard_transactions")}
-          </p>
+          {showCount ? (
+            <p className="text-xs opacity-60">
+              {row.count} {t(locale, "dashboard_transactions")}
+            </p>
+          ) : null}
         </div>
       ))}
     </div>
