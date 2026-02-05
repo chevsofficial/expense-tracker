@@ -1,7 +1,14 @@
 import type { Config } from "tailwindcss";
 import daisyui from "daisyui";
 
-const config = {
+type DaisyUIConfig = {
+  themes?: any;
+  [key: string]: any;
+};
+
+type ConfigWithDaisyUI = Config & { daisyui?: DaisyUIConfig };
+
+const config: ConfigWithDaisyUI = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -55,6 +62,6 @@ const config = {
       },
     ],
   },
-} satisfies Config;
+};
 
 export default config;
