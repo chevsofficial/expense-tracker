@@ -6,6 +6,11 @@ type DaisyUIThemeObject = Record<string, Record<string, string>>;
 type DaisyUIConfig = {
   themes?: DaisyUIThemeObject[] | string[];
   darkTheme?: string;
+  themeRoot?: string;
+  base?: boolean;
+  styled?: boolean;
+  utils?: boolean;
+  logs?: boolean;
 };
 
 type ConfigWithDaisyUI = Config & { daisyui?: DaisyUIConfig };
@@ -21,6 +26,7 @@ const config: ConfigWithDaisyUI = {
   },
   plugins: [daisyui],
   daisyui: {
+    darkTheme: "spendaryDark",
     themes: [
       {
         spendaryLight: {
@@ -63,7 +69,11 @@ const config: ConfigWithDaisyUI = {
         },
       },
     ],
-    darkTheme: "spendaryDark",
+    themeRoot: "html",
+    base: true,
+    styled: true,
+    utils: true,
+    logs: false,
   },
 };
 
