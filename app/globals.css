@@ -1,7 +1,80 @@
 @import "tailwindcss";
 @import "react-grid-layout/css/styles.css";
 @import "react-resizable/css/styles.css";
-@plugin "daisyui";
+
+/* Enable daisyUI and explicitly choose which themes are available */
+@plugin "daisyui" {
+  themes: spendaryLight --default, spendaryDark --prefersdark;
+}
+
+/* Define Spendary Light */
+@plugin "daisyui/theme" {
+  name: "spendaryLight";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-primary: #6DBE45;
+  --color-primary-content: #0b1b12;
+
+  --color-secondary: #9AD96A;
+  --color-secondary-content: #0b1b12;
+
+  --color-accent: #F4C430;
+  --color-accent-content: #1f2937;
+
+  --color-neutral: #2F6F2E;
+  --color-neutral-content: #F7F6F2;
+
+  --color-base-100: #F7F6F2;
+  --color-base-200: #ffffff;
+  --color-base-300: #eae7dc;
+  --color-base-content: #1f2937;
+
+  --color-info: #60a5fa;
+  --color-success: #6DBE45;
+  --color-warning: #F4C430;
+  --color-error: #ef4444;
+
+  /* optional: tune shape/feel */
+  --radius-box: 1rem;
+  --radius-field: 0.75rem;
+  --radius-selector: 0.75rem;
+}
+
+/* Define Spendary Dark */
+@plugin "daisyui/theme" {
+  name: "spendaryDark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-primary: #6DBE45;
+  --color-primary-content: #0b1b12;
+
+  --color-secondary: #9AD96A;
+  --color-secondary-content: #0b1b12;
+
+  --color-accent: #F4C430;
+  --color-accent-content: #111827;
+
+  --color-neutral: #2F6F2E;
+  --color-neutral-content: #F7F6F2;
+
+  --color-base-100: #0f1a12;
+  --color-base-200: #132116;
+  --color-base-300: #1a2a1c;
+  --color-base-content: #F7F6F2;
+
+  --color-info: #60a5fa;
+  --color-success: #6DBE45;
+  --color-warning: #F4C430;
+  --color-error: #f87171;
+
+  --radius-box: 1rem;
+  --radius-field: 0.75rem;
+  --radius-selector: 0.75rem;
+}
 
 html,
 body {
