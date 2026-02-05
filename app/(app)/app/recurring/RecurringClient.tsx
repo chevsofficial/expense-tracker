@@ -372,7 +372,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{t(locale, "recurring_title")}</h1>
+        <h1 className="text-2xl font-semibold text-neutral">{t(locale, "recurring_title")}</h1>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -392,7 +392,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
       {toast ? (
         <div className="alert alert-error">
           <span>{toast}</span>
-          <button className="btn btn-sm" onClick={() => setToast(null)}>
+          <button className="btn btn-outline btn-sm" onClick={() => setToast(null)}>
             {t(locale, "transactions_dismiss")}
           </button>
         </div>

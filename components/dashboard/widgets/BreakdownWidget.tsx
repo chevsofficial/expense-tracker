@@ -42,7 +42,7 @@ export function BreakdownWidget({
     return (
       <div className="overflow-x-auto">
         <table className="table table-sm">
-          <thead>
+          <thead className="bg-base-200 text-base-content">
             <tr>
               <th>{t(locale, nameHeaderKey)}</th>
               {showCurrency ? <th>{t(locale, "dashboard_table_currency")}</th> : null}

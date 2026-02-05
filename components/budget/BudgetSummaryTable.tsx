@@ -31,7 +31,7 @@ export function BudgetSummaryTable({ rows, locale, currency, labels }: BudgetSum
   return (
     <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
       <table className="table">
-        <thead>
+        <thead className="bg-base-200 text-base-content">
           <tr>
             <th>{labels.category}</th>
             <th>{labels.planned}</th>

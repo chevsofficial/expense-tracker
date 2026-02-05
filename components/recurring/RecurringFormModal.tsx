@@ -190,7 +190,7 @@ export function RecurringFormModal({
         />
 
         <div className="flex justify-end gap-2">
-          <button className="btn btn-ghost" type="button" onClick={onClose}>
+          <button className="btn btn-outline" type="button" onClick={onClose}>
             {t(locale, "recurring_cancel")}
           </button>
           <button className="btn btn-primary" type="submit">

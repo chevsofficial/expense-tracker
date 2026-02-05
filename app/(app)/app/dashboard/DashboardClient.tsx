@@ -221,7 +221,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{t(locale, "dashboard_title")}</h1>
+          <h1 className="text-3xl font-bold text-neutral">{t(locale, "dashboard_title")}</h1>
           <p className="mt-2 opacity-70">{t(locale, "dashboard_subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -239,15 +239,15 @@ export function DashboardClient({ locale }: { locale: Locale }) {
           >
             {t(locale, "dashboard_customize")}
           </button>
-          {editMode ? (
+            {editMode ? (
             <>
-              <button type="button" className="btn" onClick={() => setPickerOpen(true)}>
+              <button type="button" className="btn btn-outline" onClick={() => setPickerOpen(true)}>
                 {t(locale, "dashboard_add_widget")}
               </button>
               <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? t(locale, "dashboard_save_layout") : t(locale, "dashboard_save_layout")}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={handleReset} disabled={saving}>
+              <button type="button" className="btn btn-outline" onClick={handleReset} disabled={saving}>
                 {t(locale, "dashboard_reset_default")}
               </button>
             </>
@@ -258,7 +258,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
       {toast ? (
         <div className="alert alert-info">
           <span>{toast}</span>
-          <button className="btn btn-sm" onClick={() => setToast(null)}>
+          <button className="btn btn-outline btn-sm" onClick={() => setToast(null)}>
             {t(locale, "transactions_dismiss")}
           </button>
         </div>

@@ -164,7 +164,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{t(locale, "merchants_title")}</h1>
+          <h1 className="text-2xl font-semibold text-neutral">{t(locale, "merchants_title")}</h1>
           <p className="text-sm opacity-70">{t(locale, "merchants_subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -202,7 +202,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
             {activeMerchants.length ? (
               <div className="mt-3 overflow-x-auto">
                 <table className="table">
-                  <thead>
+                  <thead className="bg-base-200 text-base-content">
                     <tr>
                       <th>{t(locale, "merchants_name")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
@@ -261,8 +261,8 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
               </h2>
               {archivedMerchants.length ? (
                 <div className="mt-3 overflow-x-auto">
-                  <table className="table">
-                    <thead>
+                    <table className="table">
+                      <thead className="bg-base-200 text-base-content">
                       <tr>
                         <th>{t(locale, "merchants_name")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>

@@ -14,14 +14,14 @@ export function LanguageToggle({ locale }: { locale: Locale }) {
   return (
     <div className="join">
       <button
-        className={`btn btn-sm join-item ${locale === "en" ? "btn-active" : ""}`}
+        className={`btn btn-sm join-item ${locale === "en" ? "btn-primary" : "btn-outline"}`}
         onClick={() => setLocale("en")}
         type="button"
       >
         EN
       </button>
       <button
-        className={`btn btn-sm join-item ${locale === "es" ? "btn-active" : ""}`}
+        className={`btn btn-sm join-item ${locale === "es" ? "btn-primary" : "btn-outline"}`}
         onClick={() => setLocale("es")}
         type="button"
       >
