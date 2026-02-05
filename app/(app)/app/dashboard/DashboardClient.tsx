@@ -13,6 +13,7 @@ import { WidgetPickerModal } from "@/components/dashboard/WidgetPickerModal";
 import type { DashboardWidget } from "@/src/dashboard/widgetTypes";
 import type { DashboardDataResponse } from "@/src/dashboard/dataTypes";
 import { dashboardWidgetRegistry } from "@/src/dashboard/widgetRegistry";
+import { normalizeWidgets } from "@/src/dashboard/normalizeWidgets";
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -95,7 +96,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
         getJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config"),
         getJSON<ApiItemResponse<DashboardDataResponse>>(`/api/dashboard/data?month=${month}`),
       ]);
-      setWidgets(configResponse.data.widgets);
+      setWidgets(normalizeWidgets(configResponse.data.widgets));
       setData(dataResponse.data);
       lastLoadedMonth.current = month;
       initialLoadDone.current = true;
@@ -163,38 +164,32 @@ export function DashboardClient({ locale }: { locale: Locale }) {
 
   const handleAddWidget = useCallback(
     (definition: (typeof dashboardWidgetRegistry)[number]) => {
-      const maxY = widgets.reduce((max, widget) => Math.max(max, widget.y + widget.h), 0);
       const widget: DashboardWidget = {
         id: createWidgetId(),
         type: definition.type,
         titleKey: definition.titleKey,
         x: 0,
-        y: maxY,
+        y: 0,
         w: definition.defaultSize.w,
         h: definition.defaultSize.h,
         view: definition.defaultView,
         kind: definition.kind,
         limit: definition.supportedViews.includes("bar") || definition.supportedViews.includes("pie") ? 5 : undefined,
       };
-      setWidgets((prev) => [...prev, widget]);
+      setWidgets((prev) => normalizeWidgets([...prev, widget]));
       setPickerOpen(false);
     },
-    [widgets]
+    [setPickerOpen]
   );
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      const normalized = widgets.map((widget) => ({
-        ...widget,
-        x: Number.isFinite(widget.x) ? widget.x : 0,
-        y: Number.isFinite(widget.y) ? widget.y : 0,
-        w: Number.isFinite(widget.w) ? widget.w : 4,
-        h: Number.isFinite(widget.h) ? widget.h : 2,
-      }));
+      const sanitized = normalizeWidgets(widgets);
       await putJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config", {
-        widgets: normalized,
+        widgets: sanitized,
       });
+      setWidgets(sanitized);
       setToast(t(locale, "dashboard_save_layout"));
       setEditMode(false);
     } catch (err) {
@@ -272,15 +267,17 @@ export function DashboardClient({ locale }: { locale: Locale }) {
       {loading ? (
         <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
       ) : (
-        <WidgetGrid
-          widgets={widgets}
-          data={data}
-          locale={locale}
-          editMode={editMode}
-          onLayoutChange={handleLayoutChange}
-          onViewChange={handleViewChange}
-          onRemove={handleRemove}
-        />
+        <div className="w-full max-w-6xl mx-auto overflow-hidden">
+          <WidgetGrid
+            widgets={widgets}
+            data={data}
+            locale={locale}
+            editMode={editMode}
+            onLayoutChange={handleLayoutChange}
+            onViewChange={handleViewChange}
+            onRemove={handleRemove}
+          />
+        </div>
       )}
 
       <WidgetPickerModal
