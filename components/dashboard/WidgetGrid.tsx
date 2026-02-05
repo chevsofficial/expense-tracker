@@ -75,7 +75,7 @@ export function WidgetGrid({
 
   return (
     <div className="w-full">
-      <div className="mx-auto max-w-6xl rounded-lg border border-base-300 bg-base-100 p-3 overflow-hidden">
+      <div className="rounded-lg border border-base-300 bg-base-100 p-3">
         <Grid
           className="layout"
           layouts={{ lg: layout }}
@@ -83,10 +83,9 @@ export function WidgetGrid({
           cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
           rowHeight={80}
           margin={[16, 16]}
-          containerPadding={[0, 0]}
+          containerPadding={[16, 16]}
           isBounded={true}
           preventCollision={true}
-          allowOverlap={false}
           compactType="vertical"
           verticalCompact={true}
           isDraggable={editMode}
@@ -321,7 +320,7 @@ export function WidgetGrid({
         }
 
             return (
-              <div key={widget.id} className="h-full min-h-0">
+              <div key={widget.id} className="h-full w-full min-h-0">
                 <WidgetShell
                   title={title}
                   locale={locale}
@@ -331,11 +330,13 @@ export function WidgetGrid({
                   onViewChange={(view) => onViewChange(widget.id, view)}
                   onRemove={() => onRemove(widget.id)}
                 >
-                  {data ? (
-                    content
-                  ) : (
-                    <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
-                  )}
+                  <div className="h-full w-full overflow-auto">
+                    {data ? (
+                      content
+                    ) : (
+                      <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
+                    )}
+                  </div>
                 </WidgetShell>
               </div>
             );
