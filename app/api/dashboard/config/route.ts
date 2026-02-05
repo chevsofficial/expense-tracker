@@ -41,19 +41,19 @@ function validateWidgets(widgets: DashboardWidget[]) {
 
     const layoutValues = [widget.x, widget.y, widget.w, widget.h];
     if (!layoutValues.every((value) => Number.isFinite(value))) {
-      return "Invalid widget layout.";
+      return `Invalid widget layout for ${widget.id}.`;
     }
 
     if (widget.x < 0 || widget.y < 0) {
-      return "Widget positions must be positive.";
+      return `Widget positions must be positive for ${widget.id}.`;
     }
 
     if (widget.w <= 0 || widget.h <= 0) {
-      return "Widget sizes must be positive.";
+      return `Widget sizes must be positive for ${widget.id}.`;
     }
 
     if (widget.w > MAX_GRID_COLUMNS || widget.h > MAX_GRID_ROWS) {
-      return "Widget sizes exceed grid bounds.";
+      return `Widget sizes exceed grid bounds for ${widget.id}.`;
     }
   }
 

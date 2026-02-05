@@ -1,5 +1,8 @@
 "use client";
 
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
 import { useMemo } from "react";
 import type React from "react";
 import type { ComponentType } from "react";
@@ -30,7 +33,7 @@ type WidgetGridProps = {
   data: DashboardDataResponse | null;
   locale: Locale;
   editMode: boolean;
-  onLayoutChange: (layout: Layout) => void;
+  onLayoutChange: (layout: Layout[]) => void;
   onViewChange: (id: string, view: DashboardWidgetView) => void;
   onRemove: (id: string) => void;
 };
@@ -56,34 +59,42 @@ export function WidgetGrid({
     [widgets]
   );
 
-  const handleLayoutChange = (nextLayout: Layout) => {
+  const handleLayoutChange = (nextLayout: Layout[]) => {
     onLayoutChange(nextLayout);
   };
 
   return (
-    <Grid
-      className="layout"
-      layouts={{ lg: layout }}
-      breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-      cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-      rowHeight={80}
-      isDraggable={editMode}
-      isResizable={editMode}
-      margin={[16, 16]}
-      onLayoutChange={handleLayoutChange}
-      draggableHandle=".widget-drag-handle"
-      measureBeforeMount={true}
-    >
-      {widgets.map((widget) => {
-        const definition = getWidgetDefinition(widget.type);
-        if (!definition) return null;
+    <div className="w-full">
+      <div className="mx-auto max-w-6xl rounded-lg border border-base-300 bg-base-100 p-3 overflow-hidden">
+        <Grid
+          className="layout"
+          layouts={{ lg: layout }}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          rowHeight={80}
+          margin={[16, 16]}
+          containerPadding={[0, 0]}
+          isBounded={true}
+          preventCollision={true}
+          allowOverlap={false}
+          compactType="vertical"
+          verticalCompact={true}
+          isDraggable={editMode}
+          isResizable={editMode}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".widget-drag-handle"
+          measureBeforeMount={true}
+        >
+          {widgets.map((widget) => {
+            const definition = getWidgetDefinition(widget.type);
+            if (!definition) return null;
 
-        const title = t(locale, definition.titleKey);
-        const totalsByCurrency = data?.totalsByCurrency ?? {};
+            const title = t(locale, definition.titleKey);
+            const totalsByCurrency = data?.totalsByCurrency ?? {};
 
-        let content: React.ReactElement | null = null;
+            let content: React.ReactElement | null = null;
 
-        switch (widget.type) {
+            switch (widget.type) {
           case "total_income":
             content = (
               <TotalIncomeWidget
@@ -121,7 +132,9 @@ export function WidgetGrid({
                 locale={locale}
                 rows={(data?.byCategory.income ?? []).map((row) => ({
                   id: row.categoryId,
-                  name: row.categoryName,
+                  name:
+                    row.categoryNameCustom?.trim() ||
+                    (row.categoryNameKey ? t(locale, row.categoryNameKey) : "Uncategorized"),
                   currency: row.currency,
                   amountMinor: row.amountMinor,
                   count: row.count,
@@ -139,7 +152,9 @@ export function WidgetGrid({
                 locale={locale}
                 rows={(data?.byCategory.expense ?? []).map((row) => ({
                   id: row.categoryId,
-                  name: row.categoryName,
+                  name:
+                    row.categoryNameCustom?.trim() ||
+                    (row.categoryNameKey ? t(locale, row.categoryNameKey) : "Uncategorized"),
                   currency: row.currency,
                   amountMinor: row.amountMinor,
                   count: row.count,
@@ -295,30 +310,28 @@ export function WidgetGrid({
             content = null;
         }
 
-        return (
-          <div
-            key={widget.id}
-            data-grid={{ i: widget.id, x: widget.x, y: widget.y, w: widget.w, h: widget.h }}
-            className="h-full"
-          >
-            <WidgetShell
-              title={title}
-              locale={locale}
-              view={widget.view}
-              supportedViews={definition.supportedViews}
-              editMode={editMode}
-              onViewChange={(view) => onViewChange(widget.id, view)}
-              onRemove={() => onRemove(widget.id)}
-            >
-              {data ? (
-                content
-              ) : (
-                <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
-              )}
-            </WidgetShell>
-          </div>
-        );
-      })}
-    </Grid>
+            return (
+              <div key={widget.id} className="h-full min-h-0">
+                <WidgetShell
+                  title={title}
+                  locale={locale}
+                  view={widget.view}
+                  supportedViews={definition.supportedViews}
+                  editMode={editMode}
+                  onViewChange={(view) => onViewChange(widget.id, view)}
+                  onRemove={() => onRemove(widget.id)}
+                >
+                  {data ? (
+                    content
+                  ) : (
+                    <p className="text-sm opacity-60">{t(locale, "dashboard_loading")}</p>
+                  )}
+                </WidgetShell>
+              </div>
+            );
+          })}
+        </Grid>
+      </div>
+    </div>
   );
 }

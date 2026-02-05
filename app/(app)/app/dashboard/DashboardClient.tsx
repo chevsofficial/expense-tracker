@@ -137,12 +137,18 @@ export function DashboardClient({ locale }: { locale: Locale }) {
 
   const existingTypes = useMemo(() => new Set(widgets.map((widget) => widget.type)), [widgets]);
 
-  const handleLayoutChange = useCallback((layout: Layout) => {
+  const handleLayoutChange = useCallback((layout: Layout[]) => {
     setWidgets((prev) =>
       prev.map((widget) => {
         const updated = layout.find((item) => item.i === widget.id);
         if (!updated) return widget;
-        return { ...widget, x: updated.x, y: updated.y, w: updated.w, h: updated.h };
+        return {
+          ...widget,
+          x: Math.max(0, Math.floor(updated.x)),
+          y: Math.max(0, Math.floor(updated.y)),
+          w: Math.max(1, Math.floor(updated.w)),
+          h: Math.max(1, Math.floor(updated.h)),
+        };
       })
     );
   }, []);
@@ -179,8 +185,15 @@ export function DashboardClient({ locale }: { locale: Locale }) {
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
+      const normalized = widgets.map((widget) => ({
+        ...widget,
+        x: Number.isFinite(widget.x) ? widget.x : 0,
+        y: Number.isFinite(widget.y) ? widget.y : 0,
+        w: Number.isFinite(widget.w) ? widget.w : 4,
+        h: Number.isFinite(widget.h) ? widget.h : 2,
+      }));
       await putJSON<ApiItemResponse<DashboardConfigResponse>>("/api/dashboard/config", {
-        widgets,
+        widgets: normalized,
       });
       setToast(t(locale, "dashboard_save_layout"));
       setEditMode(false);
