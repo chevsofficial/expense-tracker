@@ -1,30 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
-import { CategoryModel } from "@/src/models/Category";
-import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { buildTxFilter } from "@/src/server/dashboard/buildTxFilter";
+import { getBudgetSummary } from "@/src/server/budget/getBudgetSummary";
+import { currentMonth } from "@/src/server/month";
 import { isYmd, ymdToUtcDate } from "@/src/utils/dateOnly";
 
 const querySchema = z.object({
   start: z.string().refine(isYmd, "Invalid start date"),
   end: z.string().refine(isYmd, "Invalid end date"),
-  accountIds: z.string().optional(),
-  categoryIds: z.string().optional(),
+  accountId: z.string().optional(),
+  categoryId: z.string().optional(),
+  merchantId: z.string().optional(),
   currency: z.enum(SUPPORTED_CURRENCIES).optional(),
 });
 
 const addDays = (date: Date, days: number) =>
   new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
 
-const parseIdList = (value?: string) => {
-  if (!value) return [];
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+const parseOptionalId = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 };
 
 const summarizeTotals = (rows: Array<{ _id: { currency: string; kind: "income" | "expense" }; total: number }>) => {
@@ -69,13 +67,15 @@ export async function GET(request: NextRequest) {
   }
   const endExclusive = addDays(endDateInclusive, 1);
 
-  const accountIds = parseIdList(parsed.data.accountIds);
-  const categoryIds = parseIdList(parsed.data.categoryIds);
+  const accountId = parseOptionalId(parsed.data.accountId);
+  const categoryId = parseOptionalId(parsed.data.categoryId);
+  const merchantId = parseOptionalId(parsed.data.merchantId);
 
   const rangeFilter = buildTxFilter({
     workspaceId: auth.workspace.id,
-    accountIds,
-    categoryIds,
+    accountIds: accountId ? [accountId] : undefined,
+    categoryIds: categoryId ? [categoryId] : undefined,
+    merchantIds: merchantId ? [merchantId] : undefined,
     currency: parsed.data.currency,
     start: startDate,
     end: endExclusive,
@@ -103,8 +103,9 @@ export async function GET(request: NextRequest) {
     {
       $match: buildTxFilter({
         workspaceId: auth.workspace.id,
-        accountIds,
-        categoryIds,
+        accountIds: accountId ? [accountId] : undefined,
+        categoryIds: categoryId ? [categoryId] : undefined,
+        merchantIds: merchantId ? [merchantId] : undefined,
         currency: parsed.data.currency,
         end: endExclusive,
       }),
@@ -126,8 +127,9 @@ export async function GET(request: NextRequest) {
     {
       $match: buildTxFilter({
         workspaceId: auth.workspace.id,
-        accountIds,
-        categoryIds,
+        accountIds: accountId ? [accountId] : undefined,
+        categoryIds: categoryId ? [categoryId] : undefined,
+        merchantIds: merchantId ? [merchantId] : undefined,
         currency: parsed.data.currency,
         end: startDate,
       }),
@@ -158,6 +160,8 @@ export async function GET(request: NextRequest) {
       _id: { categoryId: string | null; currency: string };
       total: number;
       count: number;
+      workspaceId: string;
+      category?: { nameKey?: string; nameCustom?: string; emoji?: string | null };
     }>([
       { $match: { ...rangeFilter, kind } },
       {
@@ -165,31 +169,40 @@ export async function GET(request: NextRequest) {
           _id: { categoryId: "$categoryId", currency: "$currency" },
           total: { $sum: "$amountMinor" },
           count: { $sum: 1 },
+          workspaceId: { $first: "$workspaceId" },
         },
       },
       { $sort: { total: -1 } },
       { $limit: 5 },
+      {
+        $lookup: {
+          from: "categories",
+          let: { cid: "$_id.categoryId", wid: "$workspaceId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ["$_id", "$$cid"] }, { $eq: ["$workspaceId", "$$wid"] }],
+                },
+              },
+            },
+            { $project: { nameKey: 1, nameCustom: 1, emoji: 1 } },
+          ],
+          as: "category",
+        },
+      },
+      { $addFields: { category: { $first: "$category" } } },
     ]);
 
-    const categoryIds = rows
-      .map((row) => row._id.categoryId)
-      .filter((id): id is string => Boolean(id));
-
-    const categories = await CategoryModel.find({
-      _id: { $in: categoryIds },
-      workspaceId: auth.workspace.id,
-    }).select("_id nameKey nameCustom emoji");
-
-    const categoryMap = new Map(categories.map((category) => [category._id.toString(), category]));
-
     return rows.map((row) => {
-      const category = row._id.categoryId ? categoryMap.get(row._id.categoryId) : null;
-      const categoryName =
-        category?.nameCustom?.trim() || category?.nameKey || "Uncategorized";
+      const hasCategory = Boolean(row._id.categoryId);
+      const categoryName = hasCategory
+        ? row.category?.nameCustom?.trim() || row.category?.nameKey || "Unknown category"
+        : "Uncategorized";
       return {
-        categoryId: row._id.categoryId,
-        categoryName,
-        emoji: category?.emoji ?? null,
+        id: row._id.categoryId ? row._id.categoryId.toString() : null,
+        name: categoryName,
+        emoji: row.category?.emoji ?? null,
         currency: row._id.currency,
         amountMinor: row.total,
         count: row.count,
@@ -202,6 +215,8 @@ export async function GET(request: NextRequest) {
       _id: { merchantId: string | null; currency: string };
       total: number;
       count: number;
+      workspaceId: string;
+      merchant?: { name?: string };
     }>([
       { $match: { ...rangeFilter, kind } },
       {
@@ -209,28 +224,37 @@ export async function GET(request: NextRequest) {
           _id: { merchantId: "$merchantId", currency: "$currency" },
           total: { $sum: "$amountMinor" },
           count: { $sum: 1 },
+          workspaceId: { $first: "$workspaceId" },
         },
       },
       { $sort: { total: -1 } },
       { $limit: 5 },
+      {
+        $lookup: {
+          from: "merchants",
+          let: { mid: "$_id.merchantId", wid: "$workspaceId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ["$_id", "$$mid"] }, { $eq: ["$workspaceId", "$$wid"] }],
+                },
+              },
+            },
+            { $project: { name: 1 } },
+          ],
+          as: "merchant",
+        },
+      },
+      { $addFields: { merchant: { $first: "$merchant" } } },
     ]);
 
-    const merchantIds = rows
-      .map((row) => row._id.merchantId)
-      .filter((id): id is string => Boolean(id));
-
-    const merchants = await MerchantModel.find({
-      _id: { $in: merchantIds },
-      workspaceId: auth.workspace.id,
-    }).select("_id name");
-
-    const merchantMap = new Map(merchants.map((merchant) => [merchant._id.toString(), merchant]));
-
     return rows.map((row) => {
-      const merchant = row._id.merchantId ? merchantMap.get(row._id.merchantId) : null;
+      const hasMerchant = Boolean(row._id.merchantId);
+      const merchantName = hasMerchant ? row.merchant?.name || "Unknown merchant" : "Unassigned";
       return {
-        merchantId: row._id.merchantId,
-        merchantName: merchant?.name ?? "Unassigned",
+        id: row._id.merchantId ? row._id.merchantId.toString() : null,
+        name: merchantName,
         currency: row._id.currency,
         amountMinor: row.total,
         count: row.count,
@@ -250,10 +274,28 @@ export async function GET(request: NextRequest) {
     "currency",
     buildTxFilter({
       workspaceId: auth.workspace.id,
-      accountIds,
-      categoryIds,
+      accountIds: accountId ? [accountId] : undefined,
+      categoryIds: categoryId ? [categoryId] : undefined,
+      merchantIds: merchantId ? [merchantId] : undefined,
     })
   );
+
+  const budgetSummary = await getBudgetSummary({
+    workspace: auth.workspace,
+    month: currentMonth(),
+  });
+  const budgetSection =
+    budgetSummary.currencies.find((section) => section.currency === budgetSummary.budgetCurrency) ??
+    budgetSummary.currencies[0];
+  const budgetTotals = budgetSection?.totals ?? {
+    plannedMinor: 0,
+    actualMinor: 0,
+    remainingMinor: 0,
+  };
+  const budgetProgress =
+    budgetTotals.plannedMinor > 0
+      ? Math.min(budgetTotals.actualMinor / budgetTotals.plannedMinor, 1)
+      : 0;
 
   return NextResponse.json({
     data: {
@@ -264,13 +306,20 @@ export async function GET(request: NextRequest) {
       totalChange: {
         byCurrency: totalChangeByCurrency,
       },
-      topCategories: {
+      byCategory: {
         income: topCategoriesIncome,
         expense: topCategoriesExpense,
       },
-      topMerchants: {
+      byMerchant: {
         income: topMerchantsIncome,
         expense: topMerchantsExpense,
+      },
+      budgetVsActual: {
+        plannedMinor: budgetTotals.plannedMinor,
+        actualMinor: budgetTotals.actualMinor,
+        remainingMinor: budgetTotals.remainingMinor,
+        progressPct: budgetProgress,
+        currency: budgetSection?.currency ?? budgetSummary.budgetCurrency,
       },
       supportedCurrencies,
     },
