@@ -30,6 +30,7 @@ type Transaction = {
   amountMinor: number;
   currency: string;
   kind: TransactionKind;
+  accountId?: string | null;
   categoryId: string | null;
   note?: string;
   merchantId?: string | null;
@@ -52,6 +53,14 @@ type Merchant = {
   isArchived?: boolean;
 };
 
+type Account = {
+  _id: string;
+  name: string;
+  type?: string | null;
+  currency?: string | null;
+  isArchived?: boolean;
+};
+
 type ApiListResponse<T> = { data: T[] };
 
 type ApiItemResponse<T> = { data: T };
@@ -65,6 +74,7 @@ type TransactionForm = {
   amount: string;
   currency: string;
   kind: TransactionKind;
+  accountId: string;
   categoryId: string;
   merchantId: string | null;
   merchantNameSnapshot: string;
@@ -125,12 +135,14 @@ export function TransactionsClient({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [month, setMonth] = useState(getCurrentMonth());
   const [kindFilter, setKindFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [merchantFilter, setMerchantFilter] = useState<string>("");
+  const [accountFilter, setAccountFilter] = useState<string>("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -161,6 +173,7 @@ export function TransactionsClient({
     amount: "",
     currency: resolvedDefaultCurrency,
     kind: "expense",
+    accountId: "unassigned",
     categoryId: "uncategorized",
     merchantId: null,
     merchantNameSnapshot: "",
@@ -189,6 +202,19 @@ export function TransactionsClient({
     });
     return map;
   }, [merchants]);
+
+  const accountMap = useMemo(() => {
+    const map = new Map<string, string>();
+    accounts.forEach((account) => {
+      map.set(account._id, account.name);
+    });
+    return map;
+  }, [accounts]);
+
+  const defaultAccountId = useMemo(
+    () => accounts.find((account) => !account.isArchived)?._id ?? "unassigned",
+    [accounts]
+  );
 
   const formatCurrency = useCallback(
     (amountMinor: number, currency: string) =>
@@ -226,6 +252,18 @@ export function TransactionsClient({
     }
   }, [locale, showArchived]);
 
+  const loadAccounts = useCallback(async () => {
+    try {
+      const response = await getJSON<ApiListResponse<Account>>(
+        "/api/accounts?includeArchived=true"
+      );
+      setAccounts(response.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    }
+  }, [locale]);
+
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -234,6 +272,7 @@ export function TransactionsClient({
       if (kindFilter) params.set("kind", kindFilter);
       if (categoryFilter) params.set("categoryId", categoryFilter);
       if (merchantFilter) params.set("merchantId", merchantFilter);
+      if (accountFilter) params.set("accountId", accountFilter);
       if (currencyFilter) params.set("currency", currencyFilter);
       if (searchFilter) params.set("q", searchFilter);
       params.set("includeArchived", String(showArchived));
@@ -253,6 +292,7 @@ export function TransactionsClient({
     kindFilter,
     categoryFilter,
     merchantFilter,
+    accountFilter,
     currencyFilter,
     searchFilter,
   ]);
@@ -266,11 +306,16 @@ export function TransactionsClient({
   }, [loadMerchants]);
 
   useEffect(() => {
+    void loadAccounts();
+  }, [loadAccounts]);
+
+  useEffect(() => {
     if (initializedFromQuery.current) return;
     const paramMonth = searchParams.get("month");
     const paramKind = searchParams.get("kind");
     const paramCategory = searchParams.get("categoryId");
     const paramMerchant = searchParams.get("merchantId");
+    const paramAccount = searchParams.get("accountId");
     const paramCurrency = searchParams.get("currency");
     const paramQuery = searchParams.get("q");
     const paramArchived = searchParams.get("includeArchived");
@@ -279,6 +324,7 @@ export function TransactionsClient({
     if (paramKind) setKindFilter(paramKind);
     if (paramCategory) setCategoryFilter(paramCategory);
     if (paramMerchant) setMerchantFilter(paramMerchant);
+    if (paramAccount) setAccountFilter(paramAccount);
     if (paramCurrency) setCurrencyFilter(paramCurrency);
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
@@ -293,6 +339,7 @@ export function TransactionsClient({
     if (kindFilter) params.set("kind", kindFilter);
     if (categoryFilter) params.set("categoryId", categoryFilter);
     if (merchantFilter) params.set("merchantId", merchantFilter);
+    if (accountFilter) params.set("accountId", accountFilter);
     if (currencyFilter) params.set("currency", currencyFilter);
     if (searchFilter) params.set("q", searchFilter);
     params.set("includeArchived", String(showArchived));
@@ -302,6 +349,7 @@ export function TransactionsClient({
     kindFilter,
     categoryFilter,
     merchantFilter,
+    accountFilter,
     currencyFilter,
     searchFilter,
     showArchived,
@@ -319,6 +367,7 @@ export function TransactionsClient({
       amount: "",
       currency: resolvedDefaultCurrency,
       kind: "expense",
+      accountId: defaultAccountId,
       categoryId: "uncategorized",
       merchantId: null,
       merchantNameSnapshot: "",
@@ -339,6 +388,7 @@ export function TransactionsClient({
       amount: (transaction.amountMinor / 100).toFixed(2),
       currency: transaction.currency,
       kind: transaction.kind,
+      accountId: transaction.accountId ?? "unassigned",
       categoryId: transaction.categoryId ?? "uncategorized",
       merchantId: transaction.merchantId ?? null,
       merchantNameSnapshot: merchantName,
@@ -443,6 +493,7 @@ export function TransactionsClient({
       amount: amountValue,
       currency: formState.currency,
       kind: formState.kind,
+      accountId: formState.accountId === "unassigned" ? null : formState.accountId,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
       merchantId: formState.merchantId,
       merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
@@ -600,6 +651,7 @@ export function TransactionsClient({
             <th>{t(locale, "transactions_merchant")}</th>
             <th>{t(locale, "transactions_note")}</th>
             <th>{t(locale, "transactions_category")}</th>
+            <th>{t(locale, "transactions_account")}</th>
             <th>{t(locale, "transactions_kind")}</th>
             <th>{t(locale, "transactions_amount")}</th>
             <th>{t(locale, "transactions_receipt")}</th>
@@ -609,7 +661,7 @@ export function TransactionsClient({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={9} className="py-6 text-center text-sm opacity-70">
+              <td colSpan={10} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")
                   : t(locale, "transactions_empty")}
@@ -624,6 +676,9 @@ export function TransactionsClient({
             const categoryLabel = transaction.categoryId
               ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
               : t(locale, "transactions_uncategorized");
+            const accountLabel = transaction.accountId
+              ? accountMap.get(transaction.accountId) ?? t(locale, "transactions_account_unassigned")
+              : t(locale, "transactions_account_unassigned");
             const kindLabel =
               transaction.kind === "income"
                 ? t(locale, "category_kind_income")
@@ -650,6 +705,7 @@ export function TransactionsClient({
                 <td>{merchantLabel}</td>
                 <td>{transaction.note ?? "-"}</td>
                 <td>{categoryLabel}</td>
+                <td>{accountLabel}</td>
                 <td>
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
@@ -736,7 +792,7 @@ export function TransactionsClient({
 
       <div className="card bg-base-100 shadow">
         <div className="card-body space-y-6">
-          <div className="grid gap-4 lg:grid-cols-7">
+          <div className="grid gap-4 lg:grid-cols-8">
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_month")}
@@ -797,6 +853,25 @@ export function TransactionsClient({
                 loading={merchantsLoading}
                 showManageLink
               />
+            </label>
+            <label className="form-control w-full">
+              <span className="label-text mb-1 text-sm font-medium">
+                {t(locale, "transactions_account")}
+              </span>
+              <select
+                className="select select-bordered select-sm"
+                value={accountFilter}
+                onChange={(event) => setAccountFilter(event.target.value)}
+              >
+                <option value="">{t(locale, "transactions_filter_any")}</option>
+                {accounts
+                  .filter((account) => !account.isArchived)
+                  .map((account) => (
+                    <option key={account._id} value={account._id}>
+                      {account.name}
+                    </option>
+                  ))}
+              </select>
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
@@ -954,6 +1029,30 @@ export function TransactionsClient({
               >
                 <option value="expense">{t(locale, "category_kind_expense")}</option>
                 <option value="income">{t(locale, "category_kind_income")}</option>
+              </select>
+            </label>
+            <label className="form-control w-full">
+              <span className="label-text mb-1 text-sm font-medium">
+                {t(locale, "transactions_account")}
+              </span>
+              <select
+                className="select select-bordered"
+                value={formState.accountId}
+                onChange={(event) =>
+                  setFormState({
+                    ...formState,
+                    accountId: event.target.value,
+                  })
+                }
+              >
+                <option value="unassigned">{t(locale, "transactions_account_unassigned")}</option>
+                {accounts
+                  .filter((account) => !account.isArchived)
+                  .map((account) => (
+                    <option key={account._id} value={account._id}>
+                      {account.name}
+                    </option>
+                  ))}
               </select>
             </label>
             <label className="form-control w-full">

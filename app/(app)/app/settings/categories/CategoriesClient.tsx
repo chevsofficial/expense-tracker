@@ -21,6 +21,7 @@ type Category = {
   _id: string;
   nameKey?: string;
   nameCustom?: string;
+  emoji?: string | null;
   groupId: string;
   kind?: CategoryKind | "both";
   isArchived?: boolean;
@@ -61,12 +62,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryEmoji, setNewCategoryEmoji] = useState("");
   const [newCategoryKind, setNewCategoryKind] = useState<CategoryKind>("expense");
   const [newCategoryGroupId, setNewCategoryGroupId] = useState<string>("");
 
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
   const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryEmoji, setEditCategoryEmoji] = useState("");
   const [editCategoryKind, setEditCategoryKind] = useState<CategoryKind>("expense");
   const [editCategoryGroupId, setEditCategoryGroupId] = useState<string>("");
 
@@ -111,6 +114,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
   const getDisplayName = (item: { nameCustom?: string; nameKey?: string }) =>
     item.nameCustom?.trim() || item.nameKey || t(locale, "category_fallback_name");
+
+  const getCategoryLabel = (category: Category) =>
+    `${category.emoji ? `${category.emoji} ` : ""}${getDisplayName(category)}`;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -250,11 +256,13 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     try {
       await postJSON<ApiItemResponse<Category>>("/api/categories", {
         nameCustom: newCategoryName.trim(),
+        emoji: newCategoryEmoji.trim() ? newCategoryEmoji.trim() : null,
         kind: newCategoryKind,
         groupId: newCategoryGroupId,
       });
       setAddCategoryOpen(false);
       setNewCategoryName("");
+      setNewCategoryEmoji("");
       setNewCategoryKind("expense");
       await loadData();
     } catch (err) {
@@ -272,12 +280,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     try {
       await putJSON<ApiItemResponse<Category>>(`/api/categories/${categoryToEdit._id}`, {
         nameCustom: editCategoryName.trim(),
+        emoji: editCategoryEmoji.trim() ? editCategoryEmoji.trim() : null,
         groupId: editCategoryGroupId,
         kind: editCategoryKind,
       });
       setEditCategoryOpen(false);
       setCategoryToEdit(null);
       setEditCategoryName("");
+      setEditCategoryEmoji("");
       await loadData();
     } catch (err) {
       handleError(err);
@@ -338,6 +348,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   const openEditCategoryModal = (category: Category) => {
     setCategoryToEdit(category);
     setEditCategoryName(getDisplayName(category));
+    setEditCategoryEmoji(category.emoji ?? "");
     setEditCategoryKind(normalizeKind(category.kind));
     setEditCategoryGroupId(category.groupId);
     setEditCategoryOpen(true);
@@ -386,6 +397,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       selectedGroupId && !selectedGroup?.isArchived ? selectedGroupId : activeGroups[0]?._id;
     if (!selectedActiveGroup) return;
     setNewCategoryGroupId(selectedActiveGroup);
+    setNewCategoryEmoji("");
     setAddCategoryOpen(true);
   };
 
@@ -631,7 +643,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   <tbody>
                     {activeCategoriesForGroup.map((category) => (
                       <tr key={category._id}>
-                        <td className="font-medium">{getDisplayName(category)}</td>
+                        <td className="font-medium">{getCategoryLabel(category)}</td>
                         <td>
                           <span className="badge badge-outline">
                             {kindLabels[normalizeKind(category.kind)]}
@@ -688,7 +700,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       <tbody>
                         {archivedCategoriesForGroup.map((category) => (
                           <tr key={category._id}>
-                            <td className="font-medium">{getDisplayName(category)}</td>
+                            <td className="font-medium">{getCategoryLabel(category)}</td>
                             <td>
                               <span className="badge badge-outline">
                                 {kindLabels[normalizeKind(category.kind)]}
@@ -837,6 +849,13 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             onChange={(event) => setNewCategoryName(event.target.value)}
             placeholder={t(locale, "categories_category_placeholder")}
           />
+          <TextField
+            id="new-category-emoji"
+            label={t(locale, "categories_emoji_label")}
+            value={newCategoryEmoji}
+            onChange={(event) => setNewCategoryEmoji(event.target.value)}
+            placeholder={t(locale, "categories_emoji_placeholder")}
+          />
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
               {t(locale, "categories_group_label")}
@@ -895,6 +914,13 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             label={t(locale, "categories_category_name")}
             value={editCategoryName}
             onChange={(event) => setEditCategoryName(event.target.value)}
+          />
+          <TextField
+            id="edit-category-emoji"
+            label={t(locale, "categories_emoji_label")}
+            value={editCategoryEmoji}
+            onChange={(event) => setEditCategoryEmoji(event.target.value)}
+            placeholder={t(locale, "categories_emoji_placeholder")}
           />
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
