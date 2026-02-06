@@ -1,11 +1,10 @@
-import mongoose from "mongoose";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
-import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
+import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { buildTxFilter } from "@/src/server/dashboard/buildTxFilter";
 import { isYmd, ymdToUtcDate } from "@/src/utils/dateOnly";
 
@@ -70,21 +69,8 @@ export async function GET(request: NextRequest) {
   }
   const endExclusive = addDays(endDateInclusive, 1);
 
-  const accountIdsRaw = parseIdList(parsed.data.accountIds);
-  const accountIds = accountIdsRaw
-    .map((id) => parseObjectId(id))
-    .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
-  if (accountIdsRaw.length !== accountIds.length) {
-    return errorResponse("Invalid account id", 400);
-  }
-
-  const categoryIdsRaw = parseIdList(parsed.data.categoryIds);
-  const categoryIds = categoryIdsRaw
-    .map((id) => parseObjectId(id))
-    .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
-  if (categoryIdsRaw.length !== categoryIds.length) {
-    return errorResponse("Invalid category id", 400);
-  }
+  const accountIds = parseIdList(parsed.data.accountIds);
+  const categoryIds = parseIdList(parsed.data.categoryIds);
 
   const rangeFilter = buildTxFilter({
     workspaceId: auth.workspace.id,

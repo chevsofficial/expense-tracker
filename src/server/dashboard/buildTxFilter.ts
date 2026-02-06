@@ -1,44 +1,50 @@
 import mongoose from "mongoose";
+import { parseObjectId } from "@/src/server/api";
 
 type BuildTxFilterInput = {
-  workspaceId: mongoose.Types.ObjectId;
-  accountIds?: mongoose.Types.ObjectId[];
-  categoryIds?: mongoose.Types.ObjectId[];
+  workspaceId: string;
+  accountIds?: string[];
+  categoryIds?: string[];
   currency?: string;
   start?: Date;
   end?: Date;
+  includeArchived?: boolean;
 };
 
-export function buildTxFilter({
-  workspaceId,
-  accountIds,
-  categoryIds,
-  currency,
-  start,
-  end,
-}: BuildTxFilterInput) {
+export function buildTxFilter(input: BuildTxFilterInput) {
+  const workspaceObjectId = parseObjectId(input.workspaceId);
+  if (!workspaceObjectId) {
+    throw new Error("Invalid workspace id");
+  }
+
   const filter: Record<string, unknown> = {
-    workspaceId,
-    isArchived: false,
+    workspaceId: workspaceObjectId,
+    ...(input.includeArchived ? {} : { isArchived: false }),
     isPending: { $ne: true },
   };
 
-  if (accountIds && accountIds.length > 0) {
-    filter.accountId = { $in: accountIds };
+  if (input.accountIds?.length) {
+    const accountObjectIds = input.accountIds
+      .map(parseObjectId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
+    filter.accountId = { $in: accountObjectIds };
   }
 
-  if (categoryIds && categoryIds.length > 0) {
-    filter.categoryId = { $in: categoryIds };
+  if (input.categoryIds?.length) {
+    const categoryObjectIds = input.categoryIds
+      .map(parseObjectId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
+    filter.categoryId = { $in: categoryObjectIds };
   }
 
-  if (currency) {
-    filter.currency = currency;
+  if (input.currency) {
+    filter.currency = input.currency;
   }
 
-  if (start || end) {
+  if (input.start || input.end) {
     filter.date = {
-      ...(start ? { $gte: start } : {}),
-      ...(end ? { $lt: end } : {}),
+      ...(input.start ? { $gte: input.start } : {}),
+      ...(input.end ? { $lt: input.end } : {}),
     };
   }
 
