@@ -8,15 +8,9 @@ import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 
-const ACCOUNT_TYPES = ["cash", "bank", "investment", "credit", "other"] as const;
-
-type AccountType = (typeof ACCOUNT_TYPES)[number];
-
 type Account = {
   _id: string;
   name: string;
-  type?: AccountType | null;
-  currency?: string | null;
   isArchived?: boolean;
 };
 
@@ -36,8 +30,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState<AccountType | "">("");
-  const [editCurrency, setEditCurrency] = useState("");
 
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [accountToArchive, setAccountToArchive] = useState<Account | null>(null);
@@ -75,16 +67,12 @@ export function AccountsClient({ locale }: { locale: Locale }) {
   const openAdd = () => {
     setEditingAccount(null);
     setEditName("");
-    setEditType("cash");
-    setEditCurrency("");
     setEditOpen(true);
   };
 
   const openEdit = (account: Account) => {
     setEditingAccount(account);
     setEditName(account.name);
-    setEditType(account.type ?? "");
-    setEditCurrency(account.currency ?? "");
     setEditOpen(true);
   };
 
@@ -95,8 +83,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
     try {
       const payload = {
         name: editName.trim(),
-        type: editType || null,
-        currency: editCurrency.trim() || null,
       };
       if (editingAccount) {
         await putJSON<ApiItemResponse<Account>>(`/api/accounts/${editingAccount._id}`, payload);
@@ -161,11 +147,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
     }
   };
 
-  const typeLabel = (type?: AccountType | null) => {
-    if (!type) return t(locale, "accounts_type_unset");
-    return t(locale, `accounts_type_${type}`);
-  };
-
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -213,8 +194,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                   <thead className="bg-base-200 text-base-content">
                     <tr>
                       <th>{t(locale, "accounts_name")}</th>
-                      <th>{t(locale, "accounts_type")}</th>
-                      <th>{t(locale, "accounts_currency")}</th>
                       <th className="text-right">{t(locale, "accounts_actions")}</th>
                     </tr>
                   </thead>
@@ -222,10 +201,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                     {activeAccounts.map((account) => (
                       <tr key={account._id}>
                         <td className="font-medium">{account.name}</td>
-                        <td>
-                          <span className="badge badge-outline">{typeLabel(account.type)}</span>
-                        </td>
-                        <td>{account.currency ?? t(locale, "accounts_currency_any")}</td>
                         <td className="text-right">
                           <div className="flex justify-end gap-2">
                             <button
@@ -275,8 +250,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                     <thead className="bg-base-200 text-base-content">
                       <tr>
                         <th>{t(locale, "accounts_name")}</th>
-                        <th>{t(locale, "accounts_type")}</th>
-                        <th>{t(locale, "accounts_currency")}</th>
                         <th className="text-right">{t(locale, "accounts_actions")}</th>
                       </tr>
                     </thead>
@@ -284,10 +257,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                       {archivedAccounts.map((account) => (
                         <tr key={account._id}>
                           <td className="font-medium">{account.name}</td>
-                          <td>
-                            <span className="badge badge-outline">{typeLabel(account.type)}</span>
-                          </td>
-                          <td>{account.currency ?? t(locale, "accounts_currency_any")}</td>
                           <td className="text-right">
                             <div className="flex justify-end gap-2">
                               <button
@@ -330,30 +299,6 @@ export function AccountsClient({ locale }: { locale: Locale }) {
             value={editName}
             onChange={(event) => setEditName(event.target.value)}
             placeholder={t(locale, "accounts_name_placeholder")}
-          />
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
-              {t(locale, "accounts_type")}
-            </span>
-            <select
-              className="select select-bordered"
-              value={editType}
-              onChange={(event) => setEditType(event.target.value as AccountType | "")}
-            >
-              <option value="">{t(locale, "accounts_type_unset")}</option>
-              {ACCOUNT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {t(locale, `accounts_type_${type}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <TextField
-            id="account-currency"
-            label={t(locale, "accounts_currency")}
-            value={editCurrency}
-            onChange={(event) => setEditCurrency(event.target.value)}
-            placeholder={t(locale, "accounts_currency_placeholder")}
           />
           <div className="flex justify-end gap-2">
             <button type="button" className="btn btn-ghost" onClick={() => setEditOpen(false)}>

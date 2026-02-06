@@ -5,21 +5,20 @@ import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { toYmdUtc } from "@/src/utils/dateOnly";
-import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
+import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
+import { BudgetVsActualSummaryCard } from "@/components/dashboard/BudgetVsActualSummaryCard";
+import { CategoryBreakdownWidget } from "@/components/dashboard/widgets/CategoryBreakdownWidget";
+import { MerchantBreakdownWidget } from "@/components/dashboard/widgets/MerchantBreakdownWidget";
 import { TotalBalanceCard } from "@/components/dashboard/widgets/TotalBalanceCard";
 import { TotalChangeCard } from "@/components/dashboard/widgets/TotalChangeCard";
 import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard";
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
-import { TopCategoriesWidget } from "@/components/dashboard/widgets/TopCategoriesWidget";
-import { TopMerchantsWidget } from "@/components/dashboard/widgets/TopMerchantsWidget";
 import { NextTwoWeeksRecurring } from "@/components/dashboard/widgets/NextTwoWeeksRecurring";
 
 type Account = {
   _id: string;
   name: string;
-  type?: string | null;
-  currency?: string | null;
   isArchived?: boolean;
 };
 
@@ -28,6 +27,12 @@ type Category = {
   nameKey?: string;
   nameCustom?: string;
   emoji?: string | null;
+  isArchived?: boolean;
+};
+
+type Merchant = {
+  _id: string;
+  name: string;
   isArchived?: boolean;
 };
 
@@ -40,39 +45,46 @@ type SummaryResponse = {
     };
     totalBalanceAsOfEnd: { byCurrency: Record<string, number> };
     totalChange: { byCurrency: Record<string, number> };
-    topCategories: {
+    byCategory: {
       income: Array<{
-        categoryId: string | null;
-        categoryName: string;
+        id: string | null;
+        name: string;
         emoji?: string | null;
         currency: string;
         amountMinor: number;
         count: number;
       }>;
       expense: Array<{
-        categoryId: string | null;
-        categoryName: string;
+        id: string | null;
+        name: string;
         emoji?: string | null;
         currency: string;
         amountMinor: number;
         count: number;
       }>;
     };
-    topMerchants: {
+    byMerchant: {
       income: Array<{
-        merchantId: string | null;
-        merchantName: string;
+        id: string | null;
+        name: string;
         currency: string;
         amountMinor: number;
         count: number;
       }>;
       expense: Array<{
-        merchantId: string | null;
-        merchantName: string;
+        id: string | null;
+        name: string;
         currency: string;
         amountMinor: number;
         count: number;
       }>;
+    };
+    budgetVsActual: {
+      plannedMinor: number;
+      actualMinor: number;
+      remainingMinor: number;
+      progressPct: number;
+      currency: string;
     };
     supportedCurrencies: string[];
   };
@@ -111,6 +123,7 @@ const buildDefaultRange = () => {
 export function DashboardClient({ locale }: { locale: Locale }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [supportedCurrencies, setSupportedCurrencies] = useState<string[]>([]);
   const [summary, setSummary] = useState<SummaryResponse["data"] | null>(null);
   const [recurring, setRecurring] = useState<NextTwoWeeksResponse["data"] | null>(null);
@@ -119,18 +132,21 @@ export function DashboardClient({ locale }: { locale: Locale }) {
   const [error, setError] = useState<string | null>(null);
 
   const [dateRange, setDateRange] = useState(buildDefaultRange);
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("");
 
   const loadFilters = useCallback(async () => {
     try {
-      const [accountsResponse, categoriesResponse] = await Promise.all([
+      const [accountsResponse, categoriesResponse, merchantsResponse] = await Promise.all([
         getJSON<ApiListResponse<Account>>("/api/accounts?includeArchived=false"),
         getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
+        getJSON<ApiListResponse<Merchant>>("/api/merchants?includeArchived=false"),
       ]);
       setAccounts(accountsResponse.data);
       setCategories(categoriesResponse.data);
+      setMerchants(merchantsResponse.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
       setError(message);
@@ -147,12 +163,9 @@ export function DashboardClient({ locale }: { locale: Locale }) {
       const params = new URLSearchParams();
       params.set("start", dateRange.start);
       params.set("end", dateRange.end);
-      if (selectedAccounts.length > 0) {
-        params.set("accountIds", selectedAccounts.join(","));
-      }
-      if (selectedCategories.length > 0) {
-        params.set("categoryIds", selectedCategories.join(","));
-      }
+      if (selectedAccountId) params.set("accountId", selectedAccountId);
+      if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
+      if (selectedMerchantId) params.set("merchantId", selectedMerchantId);
       if (selectedCurrency) {
         params.set("currency", selectedCurrency);
       }
@@ -165,7 +178,15 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.end, dateRange.start, locale, selectedAccounts, selectedCategories, selectedCurrency]);
+  }, [
+    dateRange.end,
+    dateRange.start,
+    locale,
+    selectedAccountId,
+    selectedCategoryId,
+    selectedMerchantId,
+    selectedCurrency,
+  ]);
 
   const loadRecurring = useCallback(async () => {
     setError(null);
@@ -201,8 +222,14 @@ export function DashboardClient({ locale }: { locale: Locale }) {
 
   const hasSummary = Boolean(summary);
 
-  const topCategories = useMemo(() => summary?.topCategories ?? { income: [], expense: [] }, [summary]);
-  const topMerchants = useMemo(() => summary?.topMerchants ?? { income: [], expense: [] }, [summary]);
+  const categoryBreakdown = useMemo(
+    () => summary?.byCategory ?? { income: [], expense: [] },
+    [summary]
+  );
+  const merchantBreakdown = useMemo(
+    () => summary?.byMerchant ?? { income: [], expense: [] },
+    [summary]
+  );
 
   return (
     <section className="space-y-6">
@@ -211,17 +238,20 @@ export function DashboardClient({ locale }: { locale: Locale }) {
         <p className="text-sm opacity-70">{t(locale, "dashboard_subtitle")}</p>
       </div>
 
-      <DashboardFilters
+      <DashboardFilterBar
         locale={locale}
         accounts={accounts}
         categories={categories}
+        merchants={merchants}
         currencies={supportedCurrencies}
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
-        selectedAccounts={selectedAccounts}
-        onAccountsChange={setSelectedAccounts}
-        selectedCategories={selectedCategories}
-        onCategoriesChange={setSelectedCategories}
+        selectedAccountId={selectedAccountId}
+        onAccountChange={setSelectedAccountId}
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={setSelectedCategoryId}
+        selectedMerchantId={selectedMerchantId}
+        onMerchantChange={setSelectedMerchantId}
         selectedCurrency={selectedCurrency}
         onCurrencyChange={setSelectedCurrency}
       />
@@ -248,8 +278,27 @@ export function DashboardClient({ locale }: { locale: Locale }) {
           <TotalChangeCard locale={locale} totals={summary.totalChange.byCurrency} />
           <TotalIncomeCard locale={locale} totals={summary.totals.incomeMinorByCurrency} />
           <TotalExpensesCard locale={locale} totals={summary.totals.expenseMinorByCurrency} />
-          <TopCategoriesWidget locale={locale} data={topCategories} />
-          <TopMerchantsWidget locale={locale} data={topMerchants} />
+          <CategoryBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_income_by_categories")}
+            rows={categoryBreakdown.income}
+          />
+          <CategoryBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_expense_by_categories")}
+            rows={categoryBreakdown.expense}
+          />
+          <MerchantBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_income_by_merchants")}
+            rows={merchantBreakdown.income}
+          />
+          <MerchantBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_expense_by_merchants")}
+            rows={merchantBreakdown.expense}
+          />
+          <BudgetVsActualSummaryCard locale={locale} data={summary.budgetVsActual} />
           <NextTwoWeeksRecurring
             locale={locale}
             data={recurring}

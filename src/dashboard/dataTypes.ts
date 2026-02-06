@@ -16,9 +16,9 @@ export type BreakdownEntry = {
 };
 
 export type CategoryBreakdownEntry = BreakdownEntry & {
-  categoryId: string | null;
-  categoryNameKey?: string | null;
-  categoryNameCustom?: string | null;
+  id: string | null;
+  name: string;
+  emoji?: string | null;
 };
 
 export type GroupBreakdownEntry = BreakdownEntry & {
@@ -27,8 +27,8 @@ export type GroupBreakdownEntry = BreakdownEntry & {
 };
 
 export type MerchantBreakdownEntry = BreakdownEntry & {
-  merchantId: string | null;
-  merchantName: string;
+  id: string | null;
+  name: string;
 };
 
 export type BudgetVsActualEntry = {

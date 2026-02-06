@@ -6,8 +6,6 @@ import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/a
 const updateSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
-    type: z.enum(["cash", "bank", "investment", "credit", "other"]).nullable().optional(),
-    currency: z.string().trim().min(1).nullable().optional(),
     isArchived: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

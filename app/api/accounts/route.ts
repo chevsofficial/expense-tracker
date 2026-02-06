@@ -5,14 +5,12 @@ import { requireAuthContext, errorResponse } from "@/src/server/api";
 
 const createSchema = z.object({
   name: z.string().trim().min(1),
-  type: z.enum(["cash", "bank", "investment", "credit", "other"]).optional(),
-  currency: z.string().trim().min(1).nullable().optional(),
 });
 
 const DEFAULT_ACCOUNTS = [
-  { name: "Cash Wallet", type: "cash" as const },
-  { name: "Bank Account", type: "bank" as const },
-  { name: "Investment Account", type: "investment" as const },
+  { name: "Cash Wallet" },
+  { name: "Bank Account" },
+  { name: "Investment Account" },
 ];
 
 export async function GET(request: NextRequest) {
@@ -27,7 +25,7 @@ export async function GET(request: NextRequest) {
       DEFAULT_ACCOUNTS.map((account) => ({
         workspaceId: auth.workspace.id,
         name: account.name,
-        type: account.type,
+        type: null,
         currency: null,
         isArchived: false,
       }))
@@ -57,8 +55,8 @@ export async function POST(request: NextRequest) {
   const account = await AccountModel.create({
     workspaceId: auth.workspace.id,
     name: parsed.data.name.trim(),
-    type: parsed.data.type ?? null,
-    currency: parsed.data.currency ?? null,
+    type: null,
+    currency: null,
     isArchived: false,
   });
 
