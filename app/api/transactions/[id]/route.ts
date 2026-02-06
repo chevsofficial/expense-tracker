@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
+import { AccountModel } from "@/src/models/Account";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
@@ -21,6 +22,7 @@ const updateSchema = z.object({
   amount: amountSchema.optional(),
   currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   kind: z.enum(["income", "expense"]).optional(),
+  accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchantId: z.string().nullable().optional(),
@@ -68,6 +70,25 @@ export async function PUT(
 
   if (parsed.data.kind !== undefined) {
     update.kind = parsed.data.kind;
+  }
+
+  if (parsed.data.accountId !== undefined) {
+    if (parsed.data.accountId === null) {
+      update.accountId = null;
+    } else {
+      const accountObjectId = parseObjectId(parsed.data.accountId);
+      if (!accountObjectId) {
+        return errorResponse("Invalid account id", 400);
+      }
+      const account = await AccountModel.findOne({
+        _id: accountObjectId,
+        workspaceId: auth.workspace.id,
+      });
+      if (!account) {
+        return errorResponse("Account not found", 404);
+      }
+      update.accountId = accountObjectId;
+    }
   }
 
   if (parsed.data.categoryId !== undefined) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
+import { AccountModel } from "@/src/models/Account";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
@@ -24,6 +25,7 @@ const createSchema = z.object({
   amount: amountSchema,
   currency: currencySchema,
   kind: z.enum(["income", "expense"]),
+  accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchantId: z.string().nullable().optional(),
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
   const kindParam = params.get("kind");
   const categoryParam = params.get("categoryId");
   const merchantParam = params.get("merchantId");
+  const accountParam = params.get("accountId");
   const currencyParam = params.get("currency");
   const searchParam = params.get("q");
   const includeArchived = params.get("includeArchived") === "true";
@@ -93,6 +96,14 @@ export async function GET(request: NextRequest) {
     filter.merchantId = merchantId;
   }
 
+  if (accountParam) {
+    const accountId = parseObjectId(accountParam);
+    if (!accountId) {
+      return errorResponse("Invalid account id", 400);
+    }
+    filter.accountId = accountId;
+  }
+
   if (currencyParam) {
     if (!SUPPORTED_CURRENCIES.includes(currencyParam as (typeof SUPPORTED_CURRENCIES)[number])) {
       return errorResponse("Invalid currency", 400);
@@ -122,8 +133,16 @@ export async function POST(request: NextRequest) {
     return errorResponse(parsed.error.message, 400);
   }
 
-  const { categoryId, amount, date, receiptUrls, merchantId, merchantNameSnapshot, ...rest } =
-    parsed.data;
+  const {
+    accountId,
+    categoryId,
+    amount,
+    date,
+    receiptUrls,
+    merchantId,
+    merchantNameSnapshot,
+    ...rest
+  } = parsed.data;
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
   if (categoryId && !categoryObjectId) {
     return errorResponse("Invalid category id", 400);
@@ -135,6 +154,20 @@ export async function POST(request: NextRequest) {
     });
     if (!category) {
       return errorResponse("Category not found", 404);
+    }
+  }
+
+  const accountObjectId = accountId ? parseObjectId(accountId) : null;
+  if (accountId && !accountObjectId) {
+    return errorResponse("Invalid account id", 400);
+  }
+  if (accountObjectId) {
+    const account = await AccountModel.findOne({
+      _id: accountObjectId,
+      workspaceId: auth.workspace.id,
+    });
+    if (!account) {
+      return errorResponse("Account not found", 404);
     }
   }
 
@@ -164,6 +197,7 @@ export async function POST(request: NextRequest) {
 
   const transaction = await TransactionModel.create({
     workspaceId: auth.workspace.id,
+    accountId: accountObjectId ?? null,
     categoryId: categoryObjectId ?? null,
     amountMinor: toMinorUnits(amount),
     date: normalizeToUtcMidnight(date),

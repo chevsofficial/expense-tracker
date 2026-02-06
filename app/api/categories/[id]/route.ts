@@ -13,6 +13,7 @@ const logError = (message: string, details: Record<string, unknown>) => {
 const updateSchema = z
   .object({
     nameCustom: z.string().trim().min(1).optional(),
+    emoji: z.string().trim().max(8).nullable().optional(),
     groupId: z.string().min(1).optional(),
     kind: z.enum(["income", "expense"]).optional(),
     sortOrder: z.number().int().optional(),

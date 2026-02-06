@@ -7,6 +7,7 @@ import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/a
 const createSchema = z.object({
   groupId: z.string().min(1),
   nameCustom: z.string().trim().min(1),
+  emoji: z.string().trim().max(8).nullable().optional(),
   kind: z.enum(["income", "expense"]).optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     workspaceId: auth.workspace.id,
     groupId,
     nameCustom: parsed.data.nameCustom,
+    emoji: parsed.data.emoji ?? null,
     kind: parsed.data.kind ?? "expense",
     sortOrder: parsed.data.sortOrder ?? 0,
     isDefault: false,

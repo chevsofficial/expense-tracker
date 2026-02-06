@@ -8,6 +8,7 @@ export type CategoryDoc = {
   groupId: mongoose.Types.ObjectId;
   nameKey: string;
   nameCustom?: string;
+  emoji?: string | null;
   kind: CategoryKind;
   sortOrder: number;
   isDefault: boolean;
@@ -32,6 +33,7 @@ const CategorySchema = new mongoose.Schema<CategoryDoc>(
     },
     nameKey: { type: String, required: true, trim: true, lowercase: true },
     nameCustom: { type: String },
+    emoji: { type: String, default: null },
     kind: { type: String, enum: ["income", "expense"], default: "expense", required: true },
     sortOrder: { type: Number, default: 0 },
     isDefault: { type: Boolean, default: false },
