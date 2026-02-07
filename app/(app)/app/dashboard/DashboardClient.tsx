@@ -16,18 +16,11 @@ import { TotalChangeCard } from "@/components/dashboard/widgets/TotalChangeCard"
 import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard";
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
 import { NextTwoWeeksRecurring } from "@/components/dashboard/widgets/NextTwoWeeksRecurring";
+import type { Category } from "@/src/types/category";
 
 type Account = {
   _id: string;
   name: string;
-  isArchived?: boolean;
-};
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
   isArchived?: boolean;
 };
 

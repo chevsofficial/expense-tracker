@@ -12,21 +12,12 @@ import { formatMonthLabel } from "@/src/utils/month";
 import { formatCurrency } from "@/src/lib/format";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import type { Category } from "@/src/types/category";
 
 type BudgetSummary = Budget & { spentMinor?: number };
 
 type ApiListResponse<T> = { data: T[] };
 type ApiItemResponse<T> = { data: T };
-
-type Category = {
-  _id: string;
-  groupId: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  kind?: "expense" | "income";
-  isArchived?: boolean;
-};
 
 type Account = {
   _id: string;

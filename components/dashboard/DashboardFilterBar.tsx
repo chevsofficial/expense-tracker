@@ -3,18 +3,11 @@
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+import type { Category } from "@/src/types/category";
 
 type Account = {
   _id: string;
   name: string;
-  isArchived?: boolean;
-};
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
   isArchived?: boolean;
 };
 

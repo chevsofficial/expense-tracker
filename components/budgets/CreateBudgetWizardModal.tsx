@@ -12,16 +12,7 @@ import { postJSON, putJSON } from "@/src/lib/apiClient";
 import { formatCurrency } from "@/src/lib/format";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
-
-type Category = {
-  _id: string;
-  groupId: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  kind?: "expense" | "income";
-  isArchived?: boolean;
-};
+import type { Category } from "@/src/types/category";
 
 type Account = {
   _id: string;
@@ -178,7 +169,9 @@ export function CreateBudgetWizardModal({
   const expenseCategories = useMemo(
     () =>
       categories.filter(
-        (category) => !category.isArchived && (category.kind ?? "expense") === "expense"
+        (category) =>
+          !category.isArchived &&
+          (category.kind === "expense" || category.kind === "both" || !category.kind)
       ),
     [categories]
   );

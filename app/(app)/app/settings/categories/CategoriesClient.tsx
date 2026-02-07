@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import type { Category, CategoryKind } from "@/src/types/category";
 
 type CategoryGroup = {
   _id: string;
@@ -15,17 +16,7 @@ type CategoryGroup = {
   isArchived?: boolean;
 };
 
-type CategoryKind = "income" | "expense";
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  groupId: string;
-  kind?: CategoryKind | "both";
-  isArchived?: boolean;
-};
+type CategoryFormKind = Exclude<CategoryKind, "both">;
 
 type ApiListResponse<T> = { data: T[] };
 
@@ -33,7 +24,7 @@ type ApiItemResponse<T> = { data: T };
 
 type DeleteResponse = { data: { deleted: boolean } };
 
-const normalizeKind = (kind?: CategoryKind | "both"): CategoryKind =>
+const normalizeKind = (kind?: CategoryKind): CategoryFormKind =>
   kind === "income" ? "income" : "expense";
 
 export function CategoriesClient({ locale }: { locale: Locale }) {
@@ -63,14 +54,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryEmoji, setNewCategoryEmoji] = useState("");
-  const [newCategoryKind, setNewCategoryKind] = useState<CategoryKind>("expense");
+  const [newCategoryKind, setNewCategoryKind] = useState<CategoryFormKind>("expense");
   const [newCategoryGroupId, setNewCategoryGroupId] = useState<string>("");
 
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editCategoryEmoji, setEditCategoryEmoji] = useState("");
-  const [editCategoryKind, setEditCategoryKind] = useState<CategoryKind>("expense");
+  const [editCategoryKind, setEditCategoryKind] = useState<CategoryFormKind>("expense");
   const [editCategoryGroupId, setEditCategoryGroupId] = useState<string>("");
 
   const [archiveCategoryOpen, setArchiveCategoryOpen] = useState(false);
@@ -84,7 +75,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     { value: "income" as const, label: t(locale, "category_kind_income") },
   ];
 
-  const kindLabels: Record<CategoryKind, string> = {
+  const kindLabels: Record<CategoryFormKind, string> = {
     income: t(locale, "category_kind_income"),
     expense: t(locale, "category_kind_expense"),
   };

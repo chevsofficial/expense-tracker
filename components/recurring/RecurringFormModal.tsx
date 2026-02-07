@@ -8,14 +8,7 @@ import { ScheduleFields } from "@/components/recurring/ScheduleFields";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  kind?: "income" | "expense" | "both";
-  isArchived?: boolean;
-};
+import type { Category } from "@/src/types/category";
 
 type Merchant = {
   _id: string;

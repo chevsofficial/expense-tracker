@@ -12,6 +12,7 @@ import { formatDateOnly } from "@/src/utils/dateOnly";
 import { formatMonthLabel, monthRange } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import type { Category } from "@/src/types/category";
 
 type Transaction = {
   _id: string;
@@ -23,15 +24,6 @@ type Transaction = {
   merchantNameSnapshot?: string | null;
   note?: string;
   isArchived?: boolean;
-};
-
-type Category = {
-  _id: string;
-  groupId: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  kind?: "expense" | "income";
 };
 
 type Account = {

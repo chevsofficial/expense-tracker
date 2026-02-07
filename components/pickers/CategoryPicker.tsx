@@ -4,20 +4,11 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
-
-type CategoryKind = "income" | "expense" | "both";
-
-export type CategoryPickerCategory = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  kind?: CategoryKind;
-  isArchived?: boolean;
-};
+import type { Category } from "@/src/types/category";
 
 type CategoryPickerProps = {
   locale: Locale;
-  categories: CategoryPickerCategory[];
+  categories: Category[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -27,7 +18,7 @@ type CategoryPickerProps = {
   showManageLink?: boolean;
 };
 
-const getCategoryName = (locale: Locale, category?: CategoryPickerCategory | null) =>
+const getCategoryName = (locale: Locale, category?: Category | null) =>
   category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name");
 
 export function CategoryPicker({

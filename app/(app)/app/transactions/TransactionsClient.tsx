@@ -23,6 +23,7 @@ import { formatMonthLabel } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import type { Locale } from "@/src/i18n/messages";
+import type { Category } from "@/src/types/category";
 
 type TransactionKind = "income" | "expense";
 
@@ -39,16 +40,6 @@ type Transaction = {
   merchantId?: string | null;
   merchantNameSnapshot?: string | null;
   receiptUrls?: string[];
-  isArchived?: boolean;
-};
-
-type Category = {
-  _id: string;
-  groupId: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  kind?: TransactionKind | "both";
   isArchived?: boolean;
 };
 
