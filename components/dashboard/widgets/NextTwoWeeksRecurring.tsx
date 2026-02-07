@@ -28,11 +28,17 @@ type NextTwoWeeksRecurringProps = {
     items: RecurringItem[];
   } | null;
   loading: boolean;
+  className?: string;
 };
 
-export function NextTwoWeeksRecurring({ locale, data, loading }: NextTwoWeeksRecurringProps) {
+export function NextTwoWeeksRecurring({
+  locale,
+  data,
+  loading,
+  className,
+}: NextTwoWeeksRecurringProps) {
   return (
-    <div className="card bg-base-100 shadow col-span-12">
+    <div className={`card bg-base-100 shadow col-span-12 ${className ?? ""}`}>
       <div className="card-body space-y-4">
         <div>
           <h3 className="text-sm font-semibold uppercase opacity-60">
