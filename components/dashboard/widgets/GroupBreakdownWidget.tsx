@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { PieChartWidget } from "@/components/charts/PieChartWidget";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 
 const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =>
   new Intl.NumberFormat(locale, {
@@ -40,8 +41,8 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
   );
 
   return (
-    <div className="card bg-base-100 shadow col-span-12 lg:col-span-6">
-      <div className="card-body space-y-4">
+    <SurfaceCard className="col-span-12 lg:col-span-6">
+      <SurfaceCardBody className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold uppercase opacity-60">{title}</h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -92,7 +93,7 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
             {rows.map((row) => (
               <div
                 key={`${row.groupId ?? "ungrouped"}-${row.currency}`}
-                className="rounded-lg border border-base-200 p-3"
+                className="rounded-lg border border-base-300 p-3"
               >
                 <p className="text-sm font-semibold">{row.groupName}</p>
                 <p className="text-lg font-semibold">
@@ -135,7 +136,7 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
             })}
           </div>
         ) : null}
-      </div>
-    </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

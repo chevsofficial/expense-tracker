@@ -29,7 +29,7 @@ type BudgetSummaryTableProps = {
 
 export function BudgetSummaryTable({ rows, locale, currency, labels }: BudgetSummaryTableProps) {
   return (
-    <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+    <div className="overflow-x-auto rounded-box">
       <table className="table">
         <thead className="bg-base-200 text-base-content">
           <tr>

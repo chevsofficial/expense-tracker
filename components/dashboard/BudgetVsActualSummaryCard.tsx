@@ -2,6 +2,7 @@
 
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 
 type BudgetVsActualSummaryCardProps = {
   locale: Locale;
@@ -29,8 +30,8 @@ export function BudgetVsActualSummaryCard({
   const progress = Math.round(data.progressPct * 100);
 
   return (
-    <div className={`card bg-base-100 shadow col-span-12 lg:col-span-6 ${className ?? ""}`}>
-      <div className="card-body space-y-4">
+    <SurfaceCard className={`col-span-12 lg:col-span-6 ${className ?? ""}`}>
+      <SurfaceCardBody className="space-y-4">
         <h3 className="text-sm font-semibold uppercase opacity-60">
           {t(locale, "dashboard_widget_budget_vs_actual")}
         </h3>
@@ -67,7 +68,7 @@ export function BudgetVsActualSummaryCard({
           </div>
           <progress className="progress progress-accent w-full" value={progress} max={100} />
         </div>
-      </div>
-    </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

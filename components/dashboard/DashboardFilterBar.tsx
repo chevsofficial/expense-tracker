@@ -2,6 +2,7 @@
 
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 
 type Account = {
   _id: string;
@@ -77,7 +78,8 @@ export function DashboardFilterBar({
   };
 
   return (
-    <div className="card bg-base-200 p-4">
+    <SurfaceCard>
+      <SurfaceCardBody className="space-y-3">
       <div className="mb-3 flex flex-wrap gap-2">
         <label className="form-control w-full sm:w-auto">
           <span className="label-text mb-1 text-sm font-medium">
@@ -183,6 +185,7 @@ export function DashboardFilterBar({
           </select>
         </label>
       </div>
-    </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -179,8 +180,8 @@ export function AccountsClient({ locale }: { locale: Locale }) {
         </div>
       ) : null}
 
-      <div className="card bg-base-100 shadow">
-        <div className="card-body space-y-6">
+      <SurfaceCard>
+        <SurfaceCardBody className="space-y-6">
           {loading ? <p className="text-sm opacity-70">{t(locale, "accounts_loading")}</p> : null}
           <div>
             <h2 className="text-sm font-semibold uppercase opacity-60">
@@ -284,8 +285,8 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               )}
             </div>
           ) : null}
-        </div>
-      </div>
+        </SurfaceCardBody>
+      </SurfaceCard>
 
       <Modal
         open={editOpen}

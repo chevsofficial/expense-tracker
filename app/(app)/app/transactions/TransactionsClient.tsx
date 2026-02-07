@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
@@ -775,6 +776,15 @@ export function TransactionsClient({
           <p className="mt-2 opacity-70">{formattedMonth}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="opacity-70">{t(locale, "transactions_show_archived")}</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary toggle-sm"
+              checked={showArchived}
+              onChange={(event) => setShowArchived(event.target.checked)}
+            />
+          </label>
           <button className="btn btn-primary btn-sm" onClick={openAddModal}>
             {t(locale, "transactions_add")}
           </button>
@@ -790,9 +800,9 @@ export function TransactionsClient({
         </div>
       ) : null}
 
-      <div className="card bg-base-100 shadow">
-        <div className="card-body space-y-6">
-          <div className="grid gap-4 lg:grid-cols-8">
+      <SurfaceCard>
+        <SurfaceCardBody className="space-y-3">
+          <div className="grid grid-cols-1 gap-3">
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_month")}
@@ -805,118 +815,108 @@ export function TransactionsClient({
               />
               <div className="mt-1 text-xs opacity-60">{formattedMonth}</div>
             </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_kind")}
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={kindFilter}
-                onChange={(event) => setKindFilter(event.target.value)}
-              >
-                <option value="">{t(locale, "transactions_filter_any")}</option>
-                <option value="expense">{t(locale, "category_kind_expense")}</option>
-                <option value="income">{t(locale, "category_kind_income")}</option>
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_category")}
-              </span>
-              <CategoryPicker
-                locale={locale}
-                categories={categories}
-                value={categoryFilter}
-                onChange={setCategoryFilter}
-                allowEmpty
-                emptyLabel={t(locale, "transactions_filter_any")}
-                placeholder={t(locale, "transactions_filter_any")}
-                showManageLink
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_merchant")}
-              </span>
-              <MerchantPicker
-                locale={locale}
-                merchants={merchants}
-                value={merchantFilter}
-                onChange={setMerchantFilter}
-                placeholder={t(locale, "transactions_filter_any")}
-                allowEmpty
-                emptyLabel={t(locale, "transactions_filter_any")}
-                allowCreate
-                creating={creatingMerchant}
-                onCreateMerchant={createMerchant}
-                onLoadMerchants={() => void loadMerchants()}
-                loading={merchantsLoading}
-                showManageLink
-              />
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_account")}
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={accountFilter}
-                onChange={(event) => setAccountFilter(event.target.value)}
-              >
-                <option value="">{t(locale, "transactions_filter_any")}</option>
-                {accounts
-                  .filter((account) => !account.isArchived)
-                  .map((account) => (
-                    <option key={account._id} value={account._id}>
-                      {account.name}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4 lg:grid-cols-7">
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_kind")}
+                </span>
+                <select
+                  className="select select-bordered select-sm"
+                  value={kindFilter}
+                  onChange={(event) => setKindFilter(event.target.value)}
+                >
+                  <option value="">{t(locale, "transactions_filter_any")}</option>
+                  <option value="expense">{t(locale, "category_kind_expense")}</option>
+                  <option value="income">{t(locale, "category_kind_income")}</option>
+                </select>
+              </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_category")}
+                </span>
+                <CategoryPicker
+                  locale={locale}
+                  categories={categories}
+                  value={categoryFilter}
+                  onChange={setCategoryFilter}
+                  allowEmpty
+                  emptyLabel={t(locale, "transactions_filter_any")}
+                  placeholder={t(locale, "transactions_filter_any")}
+                  showManageLink
+                />
+              </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_merchant")}
+                </span>
+                <MerchantPicker
+                  locale={locale}
+                  merchants={merchants}
+                  value={merchantFilter}
+                  onChange={setMerchantFilter}
+                  placeholder={t(locale, "transactions_filter_any")}
+                  allowEmpty
+                  emptyLabel={t(locale, "transactions_filter_any")}
+                  allowCreate
+                  creating={creatingMerchant}
+                  onCreateMerchant={createMerchant}
+                  onLoadMerchants={() => void loadMerchants()}
+                  loading={merchantsLoading}
+                  showManageLink
+                />
+              </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_account")}
+                </span>
+                <select
+                  className="select select-bordered select-sm"
+                  value={accountFilter}
+                  onChange={(event) => setAccountFilter(event.target.value)}
+                >
+                  <option value="">{t(locale, "transactions_filter_any")}</option>
+                  {accounts
+                    .filter((account) => !account.isArchived)
+                    .map((account) => (
+                      <option key={account._id} value={account._id}>
+                        {account.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_currency")}
+                </span>
+                <select
+                  className="select select-bordered select-sm"
+                  value={currencyFilter}
+                  onChange={(event) => setCurrencyFilter(event.target.value)}
+                >
+                  <option value="">{t(locale, "transactions_filter_any")}</option>
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
                     </option>
                   ))}
-              </select>
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_currency")}
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={currencyFilter}
-                onChange={(event) => setCurrencyFilter(event.target.value)}
-              >
-                <option value="">{t(locale, "transactions_filter_any")}</option>
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-control w-full lg:col-span-2">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_search")}
-              </span>
-              <input
-                type="text"
-                className="input input-bordered input-sm"
-                value={searchFilter}
-                onChange={(event) => setSearchFilter(event.target.value)}
-                placeholder={t(locale, "transactions_search_placeholder")}
-              />
-            </label>
+                </select>
+              </label>
+              <label className="form-control w-full md:col-span-2 lg:col-span-2">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_search")}
+                </span>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm"
+                  value={searchFilter}
+                  onChange={(event) => setSearchFilter(event.target.value)}
+                  placeholder={t(locale, "transactions_search_placeholder")}
+                />
+              </label>
+            </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="toggle toggle-sm"
-                checked={showArchived}
-                onChange={(event) => setShowArchived(event.target.checked)}
-              />
-              {t(locale, "transactions_show_archived")}
-            </label>
-          </div>
-        </div>
-      </div>
+        </SurfaceCardBody>
+      </SurfaceCard>
 
       {selectedTransactions.length ? (
         <div className="alert flex flex-wrap items-center justify-between gap-3">
@@ -949,29 +949,33 @@ export function TransactionsClient({
         </div>
       ) : null}
 
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          {loading ? <p className="text-sm opacity-70">{t(locale, "transactions_loading")}</p> : null}
-          {showArchived ? (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-sm font-semibold uppercase opacity-60">
-                  {t(locale, "transactions_active_table")}
-                </h2>
-                {renderTransactionsTable(activeTransactions, "active")}
+      <SurfaceCard>
+        <SurfaceCardBody className="p-0">
+          <div className="space-y-6 p-4 md:p-5">
+            {loading ? (
+              <p className="text-sm opacity-70">{t(locale, "transactions_loading")}</p>
+            ) : null}
+            {showArchived ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase opacity-60">
+                    {t(locale, "transactions_active_table")}
+                  </h2>
+                  {renderTransactionsTable(activeTransactions, "active")}
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold uppercase opacity-60">
+                    {t(locale, "transactions_archived_table")}
+                  </h2>
+                  {renderTransactionsTable(archivedTransactions, "archived")}
+                </div>
               </div>
-              <div>
-                <h2 className="text-sm font-semibold uppercase opacity-60">
-                  {t(locale, "transactions_archived_table")}
-                </h2>
-                {renderTransactionsTable(archivedTransactions, "archived")}
-              </div>
-            </div>
-          ) : (
-            renderTransactionsTable(activeTransactions, "active")
-          )}
-        </div>
-      </div>
+            ) : (
+              renderTransactionsTable(activeTransactions, "active")
+            )}
+          </div>
+        </SurfaceCardBody>
+      </SurfaceCard>
 
       <Modal
         open={modalOpen}
