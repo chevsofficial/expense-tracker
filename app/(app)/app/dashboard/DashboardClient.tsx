@@ -330,17 +330,16 @@ export function DashboardClient({ locale }: { locale: Locale }) {
             rows={merchantBreakdown.expense}
           />
           <div className="col-span-12 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <BudgetVsActualSummaryCard
-              locale={locale}
-              data={summary.budgetVsActual}
-              className="col-span-1"
-            />
-            <NextTwoWeeksRecurring
-              locale={locale}
-              data={recurring}
-              loading={recurringLoading}
-              className="col-span-1"
-            />
+            <div className="min-w-0">
+              <BudgetVsActualSummaryCard locale={locale} data={summary.budgetVsActual} />
+            </div>
+            <div className="min-w-0">
+              <NextTwoWeeksRecurring
+                locale={locale}
+                data={recurring}
+                loading={recurringLoading}
+              />
+            </div>
           </div>
         </DashboardGrid>
       ) : null}
