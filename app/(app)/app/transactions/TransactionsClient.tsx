@@ -44,9 +44,18 @@ type Transaction = {
 
 type Category = {
   _id: string;
+  groupId: string;
   nameKey?: string;
   nameCustom?: string;
+  emoji?: string | null;
   kind?: TransactionKind | "both";
+  isArchived?: boolean;
+};
+
+type CategoryGroup = {
+  _id: string;
+  nameKey?: string;
+  nameCustom?: string;
   isArchived?: boolean;
 };
 
@@ -138,6 +147,7 @@ export function TransactionsClient({
   const initializedFromQuery = useRef(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -236,10 +246,12 @@ export function TransactionsClient({
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await getJSON<ApiListResponse<Category>>(
-        "/api/categories?includeArchived=false"
-      );
-      setCategories(response.data);
+      const [categoriesResponse, groupsResponse] = await Promise.all([
+        getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
+        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=false"),
+      ]);
+      setCategories(categoriesResponse.data);
+      setCategoryGroups(groupsResponse.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
       setToast(message);
@@ -1256,6 +1268,7 @@ export function TransactionsClient({
         defaultCurrency={resolvedDefaultCurrency}
         categories={categories}
         accounts={accounts}
+        categoryGroups={categoryGroups}
       />
 
       <Modal

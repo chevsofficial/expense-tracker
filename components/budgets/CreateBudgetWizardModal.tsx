@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { BudgetColorPicker } from "@/components/budgets/BudgetColorPicker";
+import { CategoryMultiSelect } from "@/components/budgets/CategoryMultiSelect";
 import { formatDateOnly } from "@/src/utils/dateOnly";
 import { formatMonthLabel, monthRange } from "@/src/utils/month";
 import { postJSON, putJSON } from "@/src/lib/apiClient";
+import { formatCurrency } from "@/src/lib/format";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 
 type Category = {
   _id: string;
+  groupId: string;
   nameKey?: string;
   nameCustom?: string;
+  emoji?: string | null;
+  kind?: "expense" | "income";
   isArchived?: boolean;
 };
 
@@ -23,20 +29,32 @@ type Account = {
   isArchived?: boolean;
 };
 
+type CategoryGroup = {
+  _id: string;
+  nameKey?: string;
+  nameCustom?: string;
+  isArchived?: boolean;
+};
+
+type CategoryBudget = {
+  categoryId: string;
+  amountMinor: number;
+};
+
 export type Budget = {
   _id: string;
   name: string;
   emoji?: string | null;
   color?: string | null;
-  isDefault: boolean;
   type: "monthly" | "custom";
-  month?: string | null;
-  startDate: string;
-  endDate: string;
+  startMonth?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   categoryIds: string[] | null;
   accountIds: string[] | null;
-  limitAmount: number | null;
-  alerts?: { enabled: boolean; thresholds: number[] };
+  categoryBudgets: CategoryBudget[];
+  totalBudgetMinor: number;
+  pinnedAt?: string | null;
   archivedAt?: string | null;
 };
 
@@ -44,20 +62,16 @@ type BudgetFormState = {
   name: string;
   emoji: string;
   color: string;
-  isDefault: boolean;
   type: "monthly" | "custom";
-  month: string;
+  startMonth: string;
   startDate: string;
   endDate: string;
   categoryIds: string[] | null;
   accountIds: string[] | null;
-  limitAmount: string;
-  alerts: { enabled: boolean; thresholds: number[] };
+  categoryBudgets: Record<string, string>;
 };
 
 type ApiItemResponse<T> = { data: T };
-
-const thresholds = [75, 90, 100];
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -89,6 +103,7 @@ export function CreateBudgetWizardModal({
   defaultCurrency,
   categories,
   accounts,
+  categoryGroups,
   initialBudget,
 }: {
   open: boolean;
@@ -98,6 +113,7 @@ export function CreateBudgetWizardModal({
   defaultCurrency: string;
   categories: Category[];
   accounts: Account[];
+  categoryGroups: CategoryGroup[];
   initialBudget?: Budget | null;
 }) {
   const [step, setStep] = useState(0);
@@ -105,24 +121,23 @@ export function CreateBudgetWizardModal({
   const [error, setError] = useState<string | null>(null);
 
   const initialState = useMemo<BudgetFormState>(() => {
-    const month = initialBudget?.month ?? getCurrentMonth();
-    const range = getMonthStartEnd(month);
+    const currentMonth = getCurrentMonth();
+    const range = getMonthStartEnd(currentMonth);
     return {
       name: initialBudget?.name ?? "",
       emoji: initialBudget?.emoji ?? "",
       color: initialBudget?.color ?? "",
-      isDefault: initialBudget?.isDefault ?? false,
       type: initialBudget?.type ?? "monthly",
-      month,
+      startMonth: initialBudget?.startMonth ?? currentMonth,
       startDate: normalizeBudgetDate(initialBudget?.startDate) || range.start,
       endDate: normalizeBudgetDate(initialBudget?.endDate) || range.end,
       categoryIds: initialBudget?.categoryIds ?? null,
       accountIds: initialBudget?.accountIds ?? null,
-      limitAmount:
-        initialBudget?.limitAmount !== null && initialBudget?.limitAmount !== undefined
-          ? String(initialBudget.limitAmount)
-          : "",
-      alerts: initialBudget?.alerts ?? { enabled: true, thresholds: thresholds.slice() },
+      categoryBudgets:
+        initialBudget?.categoryBudgets?.reduce<Record<string, string>>((acc, entry) => {
+          acc[entry.categoryId] = (entry.amountMinor / 100).toFixed(2);
+          return acc;
+        }, {}) ?? {},
     };
   }, [initialBudget]);
 
@@ -134,16 +149,6 @@ export function CreateBudgetWizardModal({
     setError(null);
     setFormState(initialState);
   }, [open, initialState]);
-
-  useEffect(() => {
-    if (formState.type !== "monthly") return;
-    const range = getMonthStartEnd(formState.month);
-    setFormState((prev) => ({
-      ...prev,
-      startDate: range.start,
-      endDate: range.end,
-    }));
-  }, [formState.type, formState.month]);
 
   const selectedCategories = formState.categoryIds ?? [];
   const selectedAccounts = formState.accountIds ?? [];
@@ -170,21 +175,39 @@ export function CreateBudgetWizardModal({
     setFormState({ ...formState, accountIds: Array.from(next) });
   };
 
-  const handleThresholdToggle = (value: number) => {
-    const next = new Set(formState.alerts.thresholds);
-    if (next.has(value)) {
-      next.delete(value);
-    } else {
-      next.add(value);
-    }
-    setFormState({
-      ...formState,
-      alerts: { ...formState.alerts, thresholds: Array.from(next).sort((a, b) => a - b) },
-    });
-  };
+  const expenseCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => !category.isArchived && (category.kind ?? "expense") === "expense"
+      ),
+    [categories]
+  );
 
-  const handleLimitChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setFormState({ ...formState, limitAmount: event.target.value });
+  const budgetCategoryIds =
+    formState.categoryIds === null
+      ? expenseCategories.map((category) => category._id)
+      : formState.categoryIds;
+
+  const budgetCategories = useMemo(
+    () => expenseCategories.filter((category) => budgetCategoryIds.includes(category._id)),
+    [budgetCategoryIds, expenseCategories]
+  );
+
+  const totalBudgetMinor = useMemo(
+    () =>
+      budgetCategories.reduce((sum, category) => {
+        const raw = formState.categoryBudgets[category._id];
+        const value = raw ? Number.parseFloat(raw) : 0;
+        return sum + (Number.isFinite(value) ? Math.round(value * 100) : 0);
+      }, 0),
+    [budgetCategories, formState.categoryBudgets]
+  );
+
+  const handleBudgetAmountChange = (categoryId: string, value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      categoryBudgets: { ...prev.categoryBudgets, [categoryId]: value },
+    }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -196,15 +219,18 @@ export function CreateBudgetWizardModal({
         name: formState.name.trim(),
         emoji: formState.emoji.trim() || null,
         color: formState.color.trim() || null,
-        isDefault: formState.isDefault,
         type: formState.type,
-        month: formState.type === "monthly" ? formState.month : null,
-        startDate: formState.startDate,
-        endDate: formState.endDate,
+        startMonth: formState.type === "monthly" ? formState.startMonth : undefined,
+        startDate: formState.type === "custom" ? formState.startDate : undefined,
+        endDate: formState.type === "custom" ? formState.endDate : undefined,
         categoryIds: formState.categoryIds,
         accountIds: formState.accountIds,
-        limitAmount: formState.limitAmount ? Number(formState.limitAmount) : null,
-        alerts: formState.alerts,
+        categoryBudgets: budgetCategories.map((category) => ({
+          categoryId: category._id,
+          amount: formState.categoryBudgets[category._id]
+            ? Number.parseFloat(formState.categoryBudgets[category._id])
+            : 0,
+        })),
       };
       const response = initialBudget
         ? await putJSON<ApiItemResponse<Budget>>(`/api/budgets/${initialBudget._id}`, payload)
@@ -236,9 +262,7 @@ export function CreateBudgetWizardModal({
       ? t(locale, "budgets_scope_all_accounts")
       : `${formState.accountIds.length} ${t(locale, "budgets_scope_accounts_selected")}`;
 
-  const limitLabel = formState.limitAmount
-    ? `${formState.limitAmount} ${defaultCurrency}`
-    : t(locale, "budgets_track_only");
+  const totalBudgetLabel = formatCurrency(totalBudgetMinor, defaultCurrency, locale);
 
   return (
     <Modal
@@ -282,26 +306,11 @@ export function CreateBudgetWizardModal({
               onChange={(event) => setFormState({ ...formState, emoji: event.target.value })}
               placeholder="💡"
             />
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">{t(locale, "budgets_color")}</span>
-              <input
-                type="color"
-                className="input input-bordered h-12"
-                value={formState.color || "#2563eb"}
-                onChange={(event) => setFormState({ ...formState, color: event.target.value })}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary"
-                checked={formState.isDefault}
-                onChange={(event) =>
-                  setFormState({ ...formState, isDefault: event.target.checked })
-                }
-              />
-              <span>{t(locale, "budgets_default")}</span>
-            </label>
+            <BudgetColorPicker
+              value={formState.color || "#2563eb"}
+              onChange={(value) => setFormState({ ...formState, color: value })}
+              label={t(locale, "budgets_color")}
+            />
           </div>
         ) : null}
 
@@ -313,7 +322,7 @@ export function CreateBudgetWizardModal({
                   {t(locale, "budgets_type")}
                 </span>
                 <select
-                  className="select select-bordered"
+                  className="select select-bordered bg-base-100 w-full"
                   value={formState.type}
                   onChange={(event) =>
                     setFormState({ ...formState, type: event.target.value as "monthly" | "custom" })
@@ -330,12 +339,14 @@ export function CreateBudgetWizardModal({
                   </span>
                   <input
                     type="month"
-                    className="input input-bordered"
-                    value={formState.month}
-                    onChange={(event) => setFormState({ ...formState, month: event.target.value })}
+                    className="input input-bordered bg-base-100 w-full"
+                    value={formState.startMonth}
+                    onChange={(event) =>
+                      setFormState({ ...formState, startMonth: event.target.value })
+                    }
                   />
                   <span className="mt-1 text-xs opacity-60">
-                    {formatMonthLabel(formState.month, locale)}
+                    {t(locale, "budgets_month_help")} {formatMonthLabel(formState.startMonth, locale)}
                   </span>
                 </label>
               ) : (
@@ -348,6 +359,7 @@ export function CreateBudgetWizardModal({
                     onChange={(event) =>
                       setFormState({ ...formState, startDate: event.target.value })
                     }
+                    inputClassName="bg-base-100"
                   />
                   <TextField
                     id="budget-end-date"
@@ -357,49 +369,27 @@ export function CreateBudgetWizardModal({
                     onChange={(event) =>
                       setFormState({ ...formState, endDate: event.target.value })
                     }
+                    inputClassName="bg-base-100"
                   />
                 </>
               )}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{t(locale, "budgets_scope_categories")}</p>
-                <label className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-primary checkbox-sm"
-                    checked={formState.categoryIds === null}
-                    onChange={(event) =>
-                      setFormState({
-                        ...formState,
-                        categoryIds: event.target.checked ? null : [],
-                      })
-                    }
-                  />
-                  {t(locale, "budgets_scope_all_categories")}
-                </label>
-              </div>
-              {formState.categoryIds === null ? (
-                <p className="text-xs opacity-60">{t(locale, "budgets_scope_all_categories")}</p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  {categories
-                    .filter((category) => !category.isArchived)
-                    .map((category) => (
-                      <label key={category._id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="checkbox checkbox-primary checkbox-sm"
-                          checked={selectedCategories.includes(category._id)}
-                          onChange={() => toggleCategory(category._id)}
-                        />
-                        <span>{category.nameCustom?.trim() || category.nameKey || "Category"}</span>
-                      </label>
-                    ))}
-                </div>
-              )}
-            </div>
+            <CategoryMultiSelect
+              categories={expenseCategories}
+              groups={categoryGroups}
+              selectedIds={selectedCategories}
+              allSelected={formState.categoryIds === null}
+              onToggleAll={(checked) =>
+                setFormState({
+                  ...formState,
+                  categoryIds: checked ? null : [],
+                })
+              }
+              onToggleCategory={toggleCategory}
+              label={t(locale, "budgets_scope_categories")}
+              allLabel={t(locale, "budgets_scope_all_categories")}
+            />
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -426,15 +416,23 @@ export function CreateBudgetWizardModal({
                   {accounts
                     .filter((account) => !account.isArchived)
                     .map((account) => (
-                      <label key={account._id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="checkbox checkbox-primary checkbox-sm"
-                          checked={selectedAccounts.includes(account._id)}
-                          onChange={() => toggleAccount(account._id)}
-                        />
+                      <button
+                        key={account._id}
+                        type="button"
+                        className="flex items-center gap-2 rounded-lg border border-base-200 bg-base-100 px-3 py-2 text-left text-sm"
+                        onClick={() => toggleAccount(account._id)}
+                      >
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border text-xs ${
+                            selectedAccounts.includes(account._id)
+                              ? "border-primary bg-primary text-primary-content"
+                              : "border-base-300 bg-base-100 text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
                         <span>{account.name}</span>
-                      </label>
+                      </button>
                     ))}
                 </div>
               )}
@@ -444,60 +442,38 @@ export function CreateBudgetWizardModal({
 
         {step === 2 ? (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <TextField
-                id="budget-limit"
-                label={t(locale, "budgets_limit")}
-                type="number"
-                step="0.01"
-                value={formState.limitAmount}
-                onChange={handleLimitChange}
-                placeholder={t(locale, "budgets_limit_placeholder")}
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-primary"
-                  checked={!formState.limitAmount}
-                  onChange={(event) =>
-                    setFormState({
-                      ...formState,
-                      limitAmount: event.target.checked ? "" : formState.limitAmount,
-                    })
-                  }
-                />
-                <span>{t(locale, "budgets_track_only")}</span>
-              </label>
-            </div>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-primary"
-                  checked={formState.alerts.enabled}
-                  onChange={(event) =>
-                    setFormState({
-                      ...formState,
-                      alerts: { ...formState.alerts, enabled: event.target.checked },
-                    })
-                  }
-                />
-                <span>{t(locale, "budgets_alerts_enabled")}</span>
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {thresholds.map((value) => (
-                  <label key={value} className="flex items-center gap-2 text-xs">
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-primary checkbox-xs"
-                      checked={formState.alerts.thresholds.includes(value)}
-                      onChange={() => handleThresholdToggle(value)}
-                      disabled={!formState.alerts.enabled}
-                    />
-                    {value}%
-                  </label>
-                ))}
-              </div>
+              {budgetCategories.length ? (
+                <div className="space-y-3">
+                  {budgetCategories.map((category) => (
+                    <label
+                      key={category._id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-200 bg-base-100 px-3 py-2 text-sm"
+                    >
+                      <span>
+                        {category.emoji ? `${category.emoji} ` : ""}
+                        {category.nameCustom?.trim() || category.nameKey || "Category"}
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input input-bordered input-sm w-32 bg-base-100 text-right"
+                        value={formState.categoryBudgets[category._id] ?? ""}
+                        onChange={(event) =>
+                          handleBudgetAmountChange(category._id, event.target.value)
+                        }
+                        placeholder="0.00"
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm opacity-60">{t(locale, "budgets_no_categories_selected")}</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-base-200 bg-base-100 px-3 py-2 text-sm font-semibold">
+              <span>{t(locale, "budgets_total_budget")}</span>
+              <span>{totalBudgetLabel}</span>
             </div>
           </div>
         ) : null}
@@ -515,7 +491,10 @@ export function CreateBudgetWizardModal({
               <p className="text-sm font-semibold">{t(locale, "budgets_review_period")}</p>
               <p className="text-sm opacity-70">
                 {formState.type === "monthly"
-                  ? formatMonthLabel(formState.month, locale)
+                  ? `${t(locale, "budgets_start_month_label")} ${formatMonthLabel(
+                      formState.startMonth,
+                      locale
+                    )}`
                   : `${formatDateOnly(formState.startDate, locale)} → ${formatDateOnly(
                       formState.endDate,
                       locale
@@ -530,15 +509,7 @@ export function CreateBudgetWizardModal({
             </div>
             <div>
               <p className="text-sm font-semibold">{t(locale, "budgets_review_limit")}</p>
-              <p className="text-sm opacity-70">{limitLabel}</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">{t(locale, "budgets_review_alerts")}</p>
-              <p className="text-sm opacity-70">
-                {formState.alerts.enabled
-                  ? formState.alerts.thresholds.join("%, ") + "%"
-                  : t(locale, "budgets_alerts_disabled")}
-              </p>
+              <p className="text-sm opacity-70">{totalBudgetLabel}</p>
             </div>
           </div>
         ) : null}

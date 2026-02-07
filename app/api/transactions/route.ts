@@ -54,8 +54,10 @@ export async function GET(request: NextRequest) {
   const monthParam = params.get("month");
   const kindParam = params.get("kind");
   const categoryParam = params.get("categoryId");
+  const categoryIdsParam = params.get("categoryIds");
   const merchantParam = params.get("merchantId");
   const accountParam = params.get("accountId");
+  const accountIdsParam = params.get("accountIds");
   const budgetParam = params.get("budgetId");
   const currencyParam = params.get("currency");
   const searchParam = params.get("q");
@@ -108,6 +110,20 @@ export async function GET(request: NextRequest) {
     filter.categoryId = categoryId;
   }
 
+  if (categoryIdsParam) {
+    const ids = categoryIdsParam
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const parsedIds = ids
+      .map((value) => parseObjectId(value))
+      .filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (parsedIds.length !== ids.length) {
+      return errorResponse("Invalid category ids", 400);
+    }
+    filter.categoryId = { $in: parsedIds };
+  }
+
   if (merchantParam) {
     const merchantId = parseObjectId(merchantParam);
     if (!merchantId) {
@@ -122,6 +138,20 @@ export async function GET(request: NextRequest) {
       return errorResponse("Invalid account id", 400);
     }
     filter.accountId = accountId;
+  }
+
+  if (accountIdsParam) {
+    const ids = accountIdsParam
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const parsedIds = ids
+      .map((value) => parseObjectId(value))
+      .filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (parsedIds.length !== ids.length) {
+      return errorResponse("Invalid account ids", 400);
+    }
+    filter.accountId = { $in: parsedIds };
   }
 
   if (budgetParam) {
