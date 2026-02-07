@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import mongoose from "mongoose";
 import { z } from "zod";
 import { BudgetModel } from "@/src/models/Budget";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
@@ -21,8 +22,8 @@ const updateSchema = z.object({
   month: z.string().trim().optional().nullable(),
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
-  categoryIds: z.array(z.string()).nullable().optional(),
-  accountIds: z.array(z.string()).nullable().optional(),
+  categoryIds: z.array(z.string().min(1)).nullable().optional(),
+  accountIds: z.array(z.string().min(1)).nullable().optional(),
   limitAmount: z.number().nullable().optional(),
   alerts: alertsSchema.optional(),
   archivedAt: z.string().nullable().optional(),
@@ -30,6 +31,22 @@ const updateSchema = z.object({
 
 function toUtcDate(date: string) {
   return normalizeToUtcMidnight(date);
+}
+
+function parseObjectIdArrayOrNull(
+  values: string[] | null | undefined,
+  label: string
+): mongoose.Types.ObjectId[] | null | undefined {
+  if (values === undefined) return undefined;
+  if (values === null) return null;
+
+  const cleaned = values.filter((value) => typeof value === "string" && value.trim().length > 0);
+  return cleaned.map((id) => {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error(`Invalid ${label} id`);
+    }
+    return new mongoose.Types.ObjectId(id);
+  });
 }
 
 function monthToRange(month: string) {
@@ -94,21 +111,19 @@ export async function PUT(
   }
 
   if (parsed.data.categoryIds !== undefined) {
-    const categoryIds =
-      parsed.data.categoryIds?.map((value) => parseObjectId(value)).filter(Boolean) ?? null;
-    if (parsed.data.categoryIds && categoryIds?.length !== parsed.data.categoryIds.length) {
-      return errorResponse("Invalid category id", 400);
+    try {
+      update.categoryIds = parseObjectIdArrayOrNull(parsed.data.categoryIds, "category");
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid ids", 400);
     }
-    update.categoryIds = categoryIds;
   }
 
   if (parsed.data.accountIds !== undefined) {
-    const accountIds =
-      parsed.data.accountIds?.map((value) => parseObjectId(value)).filter(Boolean) ?? null;
-    if (parsed.data.accountIds && accountIds?.length !== parsed.data.accountIds.length) {
-      return errorResponse("Invalid account id", 400);
+    try {
+      update.accountIds = parseObjectIdArrayOrNull(parsed.data.accountIds, "account");
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid ids", 400);
     }
-    update.accountIds = accountIds;
   }
 
   let resolvedStart = parsed.data.startDate;
