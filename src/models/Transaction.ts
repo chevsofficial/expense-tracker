@@ -7,6 +7,7 @@ export type TransactionDoc = {
   workspaceId: mongoose.Types.ObjectId;
   accountId?: mongoose.Types.ObjectId | null;
   categoryId: mongoose.Types.ObjectId | null;
+  budgetId?: mongoose.Types.ObjectId | null;
   recurringId?: mongoose.Types.ObjectId | null;
   sourceRecurringId?: mongoose.Types.ObjectId | null;
   sourceOccurrenceOn?: string | null;
@@ -29,6 +30,7 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     workspaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", required: true, index: true },
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: "Account", default: null, index: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null, index: true },
+    budgetId: { type: mongoose.Schema.Types.ObjectId, ref: "Budget", default: null, index: true },
     recurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
     sourceRecurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
     sourceOccurrenceOn: { type: String, default: null, index: true },
@@ -49,6 +51,7 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
 TransactionSchema.index({ workspaceId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, categoryId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, accountId: 1, date: 1 });
+TransactionSchema.index({ workspaceId: 1, budgetId: 1, date: 1 });
 TransactionSchema.index(
   { workspaceId: 1, sourceRecurringId: 1, sourceOccurrenceOn: 1 },
   { unique: true, sparse: true }
