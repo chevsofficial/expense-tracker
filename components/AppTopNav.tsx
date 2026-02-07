@@ -6,10 +6,7 @@ import { usePathname } from "next/navigation";
 export function AppTopNav({
   appName,
   dashboardLabel,
-  categoriesLabel,
   accountsLabel,
-  merchantsLabel,
-  importLabel,
   transactionsLabel,
   budgetLabel,
   recurringLabel,
@@ -17,21 +14,25 @@ export function AppTopNav({
 }: {
   appName: string;
   dashboardLabel: string;
-  categoriesLabel: string;
   accountsLabel: string;
-  merchantsLabel: string;
-  importLabel?: string;
   transactionsLabel: string;
   budgetLabel: string;
   recurringLabel: string;
   rightSlot?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const linkClass = (href: string) =>
-    `btn btn-ghost text-primary-content ${pathname === href ? "bg-primary-content/15" : ""}`;
+  const linkClass = (href: string) => {
+    const isActive = href === "/app/settings" ? pathname.startsWith("/app/settings") : pathname === href;
+    return [
+      "btn btn-ghost",
+      "text-base-content",
+      "hover:bg-base-300/60",
+      isActive ? "bg-primary text-primary-content hover:bg-primary" : "",
+    ].join(" ");
+  };
 
   return (
-    <div className="navbar bg-primary text-primary-content">
+    <div className="navbar bg-base-200 text-base-content border-b border-base-300">
       <div className="navbar-start">
         <div className="dropdown sm:hidden">
           <div tabIndex={0} role="button" className="btn btn-ghost">
@@ -39,28 +40,14 @@ export function AppTopNav({
           </div>
           <ul
             tabIndex={0}
-            className="menu dropdown-content mt-3 w-52 rounded-box bg-primary text-primary-content shadow"
+            className="menu dropdown-content mt-3 w-52 rounded-box bg-base-200 text-base-content shadow"
           >
             <li>
               <Link href="/app/dashboard">{dashboardLabel}</Link>
             </li>
             <li>
-              <Link href="/app/settings">Settings</Link>
+              <Link href="/app/accounts">{accountsLabel}</Link>
             </li>
-            <li>
-              <Link href="/app/settings/categories">{categoriesLabel}</Link>
-            </li>
-            <li>
-              <Link href="/app/settings/accounts">{accountsLabel}</Link>
-            </li>
-            <li>
-              <Link href="/app/settings/merchants">{merchantsLabel}</Link>
-            </li>
-            {importLabel ? (
-              <li>
-                <Link href="/app/settings/import">{importLabel}</Link>
-              </li>
-            ) : null}
             <li>
               <Link href="/app/transactions">{transactionsLabel}</Link>
             </li>
@@ -70,9 +57,12 @@ export function AppTopNav({
             <li>
               <Link href="/app/recurring">{recurringLabel}</Link>
             </li>
+            <li>
+              <Link href="/app/settings">Settings</Link>
+            </li>
           </ul>
         </div>
-        <Link href="/app/dashboard" className="btn btn-ghost text-xl text-primary-content">
+        <Link href="/app/dashboard" className="btn btn-ghost text-xl text-base-content">
           {appName}
         </Link>
       </div>
@@ -84,32 +74,10 @@ export function AppTopNav({
             </Link>
           </li>
           <li>
-            <Link href="/app/settings" className={linkClass("/app/settings")}>
-              Settings
-            </Link>
-          </li>
-          <li>
-            <Link href="/app/settings/categories" className={linkClass("/app/settings/categories")}>
-              {categoriesLabel}
-            </Link>
-          </li>
-          <li>
-            <Link href="/app/settings/accounts" className={linkClass("/app/settings/accounts")}>
+            <Link href="/app/accounts" className={linkClass("/app/accounts")}>
               {accountsLabel}
             </Link>
           </li>
-          <li>
-            <Link href="/app/settings/merchants" className={linkClass("/app/settings/merchants")}>
-              {merchantsLabel}
-            </Link>
-          </li>
-          {importLabel ? (
-            <li>
-              <Link href="/app/settings/import" className={linkClass("/app/settings/import")}>
-                {importLabel}
-              </Link>
-            </li>
-          ) : null}
           <li>
             <Link href="/app/transactions" className={linkClass("/app/transactions")}>
               {transactionsLabel}
@@ -123,6 +91,11 @@ export function AppTopNav({
           <li>
             <Link href="/app/recurring" className={linkClass("/app/recurring")}>
               {recurringLabel}
+            </Link>
+          </li>
+          <li>
+            <Link href="/app/settings" className={linkClass("/app/settings")}>
+              Settings
             </Link>
           </li>
         </ul>
