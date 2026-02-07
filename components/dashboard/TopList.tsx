@@ -1,5 +1,7 @@
 "use client";
 
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+
 type TopListItem = {
   id: string;
   label: string;
@@ -16,8 +18,8 @@ type TopListProps = {
 
 export function TopList({ title, emptyLabel, items, countLabel }: TopListProps) {
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
+    <SurfaceCard>
+      <SurfaceCardBody>
         <h2 className="text-lg font-semibold">{title}</h2>
         {items.length ? (
           <ul className="mt-3 space-y-2 text-sm">
@@ -36,7 +38,7 @@ export function TopList({ title, emptyLabel, items, countLabel }: TopListProps) 
         ) : (
           <p className="text-sm opacity-60">{emptyLabel}</p>
         )}
-      </div>
-    </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

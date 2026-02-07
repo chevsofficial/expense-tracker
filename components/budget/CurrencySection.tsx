@@ -1,6 +1,7 @@
 "use client";
 
 import { BudgetSummaryTable } from "@/components/budget/BudgetSummaryTable";
+import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { formatCurrency } from "@/src/lib/format";
 import type { Locale } from "@/src/i18n/messages";
 
@@ -30,18 +31,20 @@ type CurrencySectionProps = {
 
 export function CurrencySection({ currency, rows, totals, locale, labels }: CurrencySectionProps) {
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{currency}</h2>
-          <p className="text-sm opacity-70">
-            {labels.planned}: {formatCurrency(totals.plannedMinor, currency, locale)} · {labels.actual}:{" "}
-            {formatCurrency(totals.actualMinor, currency, locale)} · {labels.remaining}:{" "}
-            {formatCurrency(totals.remainingMinor, currency, locale)}
-          </p>
+    <SurfaceCard>
+      <SurfaceCardBody className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{currency}</h2>
+            <p className="text-sm opacity-70">
+              {labels.planned}: {formatCurrency(totals.plannedMinor, currency, locale)} ·{" "}
+              {labels.actual}: {formatCurrency(totals.actualMinor, currency, locale)} ·{" "}
+              {labels.remaining}: {formatCurrency(totals.remainingMinor, currency, locale)}
+            </p>
+          </div>
         </div>
-      </div>
-      <BudgetSummaryTable rows={rows} locale={locale} currency={currency} labels={labels} />
-    </div>
+        <BudgetSummaryTable rows={rows} locale={locale} currency={currency} labels={labels} />
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }
