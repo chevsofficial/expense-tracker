@@ -1,13 +1,6 @@
 "use client";
 
-type Category = {
-  _id: string;
-  groupId: string;
-  nameKey?: string;
-  nameCustom?: string;
-  emoji?: string | null;
-  isArchived?: boolean;
-};
+import type { Category } from "@/src/types/category";
 
 type CategoryGroup = {
   _id: string;

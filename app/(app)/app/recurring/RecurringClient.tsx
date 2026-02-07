@@ -9,6 +9,7 @@ import { toYmdUtc } from "@/src/utils/dateOnly";
 import { RecurringFormModal } from "@/components/recurring/RecurringFormModal";
 import { RecurringTable } from "@/components/recurring/RecurringTable";
 import type { Locale } from "@/src/i18n/messages";
+import type { Category } from "@/src/types/category";
 
 type Recurring = {
   _id: string;
@@ -26,14 +27,6 @@ type Recurring = {
   startDate: string;
   nextRunOn: string;
   isArchived: boolean;
-};
-
-type Category = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  kind?: "income" | "expense" | "both";
-  isArchived?: boolean;
 };
 
 type Merchant = {
