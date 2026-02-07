@@ -10,6 +10,7 @@ import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 import { BudgetVsActualSummaryCard } from "@/components/dashboard/BudgetVsActualSummaryCard";
 import { CategoryBreakdownWidget } from "@/components/dashboard/widgets/CategoryBreakdownWidget";
 import { MerchantBreakdownWidget } from "@/components/dashboard/widgets/MerchantBreakdownWidget";
+import { GroupBreakdownWidget } from "@/components/dashboard/widgets/GroupBreakdownWidget";
 import { TotalBalanceCard } from "@/components/dashboard/widgets/TotalBalanceCard";
 import { TotalChangeCard } from "@/components/dashboard/widgets/TotalChangeCard";
 import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard";
@@ -74,6 +75,22 @@ type SummaryResponse = {
       expense: Array<{
         id: string | null;
         name: string;
+        currency: string;
+        amountMinor: number;
+        count: number;
+      }>;
+    };
+    byGroup: {
+      income: Array<{
+        groupId: string | null;
+        groupName: string;
+        currency: string;
+        amountMinor: number;
+        count: number;
+      }>;
+      expense: Array<{
+        groupId: string | null;
+        groupName: string;
         currency: string;
         amountMinor: number;
         count: number;
@@ -230,6 +247,10 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     () => summary?.byMerchant ?? { income: [], expense: [] },
     [summary]
   );
+  const groupBreakdown = useMemo(
+    () => summary?.byGroup ?? { income: [], expense: [] },
+    [summary]
+  );
 
   return (
     <section className="space-y-6">
@@ -278,6 +299,16 @@ export function DashboardClient({ locale }: { locale: Locale }) {
           <TotalChangeCard locale={locale} totals={summary.totalChange.byCurrency} />
           <TotalIncomeCard locale={locale} totals={summary.totals.incomeMinorByCurrency} />
           <TotalExpensesCard locale={locale} totals={summary.totals.expenseMinorByCurrency} />
+          <GroupBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_income_by_groups")}
+            rows={groupBreakdown.income}
+          />
+          <GroupBreakdownWidget
+            locale={locale}
+            title={t(locale, "dashboard_widget_expense_by_groups")}
+            rows={groupBreakdown.expense}
+          />
           <CategoryBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_income_by_categories")}
@@ -298,12 +329,19 @@ export function DashboardClient({ locale }: { locale: Locale }) {
             title={t(locale, "dashboard_widget_expense_by_merchants")}
             rows={merchantBreakdown.expense}
           />
-          <BudgetVsActualSummaryCard locale={locale} data={summary.budgetVsActual} />
-          <NextTwoWeeksRecurring
-            locale={locale}
-            data={recurring}
-            loading={recurringLoading}
-          />
+          <div className="col-span-12 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <BudgetVsActualSummaryCard
+              locale={locale}
+              data={summary.budgetVsActual}
+              className="col-span-1"
+            />
+            <NextTwoWeeksRecurring
+              locale={locale}
+              data={recurring}
+              loading={recurringLoading}
+              className="col-span-1"
+            />
+          </div>
         </DashboardGrid>
       ) : null}
     </section>

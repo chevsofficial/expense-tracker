@@ -12,6 +12,7 @@ type BudgetVsActualSummaryCardProps = {
     progressPct: number;
     currency: string;
   };
+  className?: string;
 };
 
 const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =>
@@ -20,11 +21,15 @@ const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =
     currency,
   }).format(amountMinor / 100);
 
-export function BudgetVsActualSummaryCard({ locale, data }: BudgetVsActualSummaryCardProps) {
+export function BudgetVsActualSummaryCard({
+  locale,
+  data,
+  className,
+}: BudgetVsActualSummaryCardProps) {
   const progress = Math.round(data.progressPct * 100);
 
   return (
-    <div className="card bg-base-100 shadow col-span-12 lg:col-span-6">
+    <div className={`card bg-base-100 shadow col-span-12 lg:col-span-6 ${className ?? ""}`}>
       <div className="card-body space-y-4">
         <h3 className="text-sm font-semibold uppercase opacity-60">
           {t(locale, "dashboard_widget_budget_vs_actual")}

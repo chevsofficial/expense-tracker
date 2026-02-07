@@ -14,7 +14,7 @@ export type DashboardMetricType =
   | "expense_tx_count"
   | "budget_vs_actual";
 
-export type DashboardWidgetView = "card" | "table" | "bar" | "pie";
+export type DashboardWidgetView = "card" | "table" | "bar" | "pie" | "percentage";
 
 export type DashboardWidget = {
   id: string;

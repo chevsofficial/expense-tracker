@@ -34,7 +34,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "income_by_categories",
     titleKey: "dashboard_widget_income_by_categories",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "income",
@@ -42,7 +42,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "expense_by_categories",
     titleKey: "dashboard_widget_expense_by_categories",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "expense",
@@ -50,7 +50,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "income_by_groups",
     titleKey: "dashboard_widget_income_by_groups",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "income",
@@ -58,7 +58,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "expense_by_groups",
     titleKey: "dashboard_widget_expense_by_groups",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "expense",
@@ -66,7 +66,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "income_by_merchants",
     titleKey: "dashboard_widget_income_by_merchants",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "income",
@@ -74,7 +74,7 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
   {
     type: "expense_by_merchants",
     titleKey: "dashboard_widget_expense_by_merchants",
-    supportedViews: ["table", "bar", "pie"],
+    supportedViews: ["table", "bar", "pie", "percentage"],
     defaultView: "table",
     defaultSize: { w: 6, h: 4 },
     kind: "expense",

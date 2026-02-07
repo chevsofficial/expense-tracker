@@ -36,15 +36,9 @@ export function PieChartWidget({ data, valueFormatter }: PieChartWidgetProps) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value) => {
-              if (value == null) return "";
-
-              if (typeof value === "number") {
-                return valueFormatter ? valueFormatter(value) : value.toLocaleString();
-              }
-
-              return value;
-            }}
+            formatter={(value) =>
+              valueFormatter ? valueFormatter(Number(value ?? 0)) : String(value ?? 0)
+            }
           />
         </PieChart>
       </ResponsiveContainer>

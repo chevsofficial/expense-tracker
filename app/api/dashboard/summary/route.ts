@@ -173,7 +173,6 @@ export async function GET(request: NextRequest) {
         },
       },
       { $sort: { total: -1 } },
-      { $limit: 5 },
       {
         $lookup: {
           from: "categories",
@@ -228,7 +227,6 @@ export async function GET(request: NextRequest) {
         },
       },
       { $sort: { total: -1 } },
-      { $limit: 5 },
       {
         $lookup: {
           from: "merchants",
@@ -262,13 +260,93 @@ export async function GET(request: NextRequest) {
     });
   };
 
-  const [topCategoriesIncome, topCategoriesExpense, topMerchantsIncome, topMerchantsExpense] =
-    await Promise.all([
-      topCategoriesByKind("income"),
-      topCategoriesByKind("expense"),
-      topMerchantsByKind("income"),
-      topMerchantsByKind("expense"),
+  const topGroupsByKind = async (kind: "income" | "expense") => {
+    const rows = await TransactionModel.aggregate<{
+      _id: { groupId: string | null; currency: string };
+      total: number;
+      count: number;
+      workspaceId: string;
+      group?: { nameKey?: string; nameCustom?: string };
+    }>([
+      { $match: { ...rangeFilter, kind } },
+      {
+        $lookup: {
+          from: "categories",
+          let: { cid: "$categoryId", wid: "$workspaceId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ["$_id", "$$cid"] }, { $eq: ["$workspaceId", "$$wid"] }],
+                },
+              },
+            },
+            { $project: { groupId: 1 } },
+          ],
+          as: "category",
+        },
+      },
+      { $addFields: { category: { $first: "$category" } } },
+      { $addFields: { groupId: { $ifNull: ["$category.groupId", null] } } },
+      {
+        $group: {
+          _id: { groupId: "$groupId", currency: "$currency" },
+          total: { $sum: "$amountMinor" },
+          count: { $sum: 1 },
+          workspaceId: { $first: "$workspaceId" },
+        },
+      },
+      { $sort: { total: -1 } },
+      {
+        $lookup: {
+          from: "categorygroups",
+          let: { gid: "$_id.groupId", wid: "$workspaceId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ["$_id", "$$gid"] }, { $eq: ["$workspaceId", "$$wid"] }],
+                },
+              },
+            },
+            { $project: { nameKey: 1, nameCustom: 1 } },
+          ],
+          as: "group",
+        },
+      },
+      { $addFields: { group: { $first: "$group" } } },
     ]);
+
+    return rows.map((row) => {
+      const hasGroup = Boolean(row._id.groupId);
+      const groupName = hasGroup
+        ? row.group?.nameCustom?.trim() || row.group?.nameKey || "Unknown group"
+        : "Uncategorized";
+      return {
+        groupId: row._id.groupId ? row._id.groupId.toString() : null,
+        groupName,
+        currency: row._id.currency,
+        amountMinor: row.total,
+        count: row.count,
+      };
+    });
+  };
+
+  const [
+    topCategoriesIncome,
+    topCategoriesExpense,
+    topMerchantsIncome,
+    topMerchantsExpense,
+    topGroupsIncome,
+    topGroupsExpense,
+  ] = await Promise.all([
+    topCategoriesByKind("income"),
+    topCategoriesByKind("expense"),
+    topMerchantsByKind("income"),
+    topMerchantsByKind("expense"),
+    topGroupsByKind("income"),
+    topGroupsByKind("expense"),
+  ]);
 
   const supportedCurrencies = await TransactionModel.distinct(
     "currency",
@@ -313,6 +391,10 @@ export async function GET(request: NextRequest) {
       byMerchant: {
         income: topMerchantsIncome,
         expense: topMerchantsExpense,
+      },
+      byGroup: {
+        income: topGroupsIncome,
+        expense: topGroupsExpense,
       },
       budgetVsActual: {
         plannedMinor: budgetTotals.plannedMinor,
