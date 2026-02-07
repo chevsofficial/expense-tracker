@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import mongoose from "mongoose";
 import { z } from "zod";
 import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
@@ -22,14 +23,30 @@ const createSchema = z.object({
   month: z.string().trim().optional().nullable(),
   startDate: dateSchema,
   endDate: dateSchema,
-  categoryIds: z.array(z.string()).nullable().optional(),
-  accountIds: z.array(z.string()).nullable().optional(),
+  categoryIds: z.array(z.string().min(1)).nullable().optional(),
+  accountIds: z.array(z.string().min(1)).nullable().optional(),
   limitAmount: z.number().nullable().optional(),
   alerts: alertsSchema.optional(),
 });
 
 function toUtcDate(date: string) {
   return normalizeToUtcMidnight(date);
+}
+
+function parseObjectIdArrayOrNull(
+  values: string[] | null | undefined,
+  label: string
+): mongoose.Types.ObjectId[] | null | undefined {
+  if (values === undefined) return undefined;
+  if (values === null) return null;
+
+  const cleaned = values.filter((value) => typeof value === "string" && value.trim().length > 0);
+  return cleaned.map((id) => {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error(`Invalid ${label} id`);
+    }
+    return new mongoose.Types.ObjectId(id);
+  });
 }
 
 function monthToRange(month: string) {
@@ -110,16 +127,14 @@ export async function POST(request: NextRequest) {
     return errorResponse(parsed.error.message, 400);
   }
 
-  const categoryIds =
-    parsed.data.categoryIds?.map((id) => parseObjectId(id)).filter(Boolean) ?? null;
-  if (parsed.data.categoryIds && categoryIds?.length !== parsed.data.categoryIds.length) {
-    return errorResponse("Invalid category id", 400);
-  }
+  let categoryIds: mongoose.Types.ObjectId[] | null | undefined;
+  let accountIds: mongoose.Types.ObjectId[] | null | undefined;
 
-  const accountIds =
-    parsed.data.accountIds?.map((id) => parseObjectId(id)).filter(Boolean) ?? null;
-  if (parsed.data.accountIds && accountIds?.length !== parsed.data.accountIds.length) {
-    return errorResponse("Invalid account id", 400);
+  try {
+    categoryIds = parseObjectIdArrayOrNull(parsed.data.categoryIds, "category");
+    accountIds = parseObjectIdArrayOrNull(parsed.data.accountIds, "account");
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "Invalid ids", 400);
   }
 
   let { startDate, endDate } = parsed.data;
@@ -153,8 +168,8 @@ export async function POST(request: NextRequest) {
     month: parsed.data.type === "monthly" ? parsed.data.month ?? null : null,
     startDate: toUtcDate(startDate),
     endDate: toUtcDate(endDate),
-    categoryIds,
-    accountIds,
+    categoryIds: categoryIds ?? null,
+    accountIds: accountIds ?? null,
     limitAmount: parsed.data.limitAmount ?? null,
     alerts: parsed.data.alerts,
     archivedAt: null,
