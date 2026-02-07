@@ -3,9 +3,9 @@ import { getModel } from "./_shared";
 
 export type BudgetType = "monthly" | "custom";
 
-export type BudgetAlertSettings = {
-  enabled: boolean;
-  thresholds: number[];
+export type CategoryBudget = {
+  categoryId: mongoose.Types.ObjectId;
+  amountMinor: number;
 };
 
 export type BudgetDoc = {
@@ -13,24 +13,24 @@ export type BudgetDoc = {
   name: string;
   emoji?: string | null;
   color?: string | null;
-  isDefault: boolean;
   type: BudgetType;
-  month?: string | null;
-  startDate: Date;
-  endDate: Date;
+  startMonth?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
   categoryIds: mongoose.Types.ObjectId[] | null;
   accountIds: mongoose.Types.ObjectId[] | null;
-  limitAmount: number | null;
-  alerts?: BudgetAlertSettings;
+  categoryBudgets: CategoryBudget[];
+  totalBudgetMinor: number;
+  pinnedAt?: Date | null;
   archivedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
-const BudgetAlertSchema = new mongoose.Schema<BudgetAlertSettings>(
+const CategoryBudgetSchema = new mongoose.Schema<CategoryBudget>(
   {
-    enabled: { type: Boolean, default: true },
-    thresholds: { type: [Number], default: [75, 90, 100] },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true },
+    amountMinor: { type: Number, required: true },
   },
   { _id: false }
 );
@@ -41,21 +41,21 @@ const BudgetSchema = new mongoose.Schema<BudgetDoc>(
     name: { type: String, required: true },
     emoji: { type: String, default: null },
     color: { type: String, default: null },
-    isDefault: { type: Boolean, default: false },
     type: { type: String, enum: ["monthly", "custom"], required: true },
-    month: { type: String, default: null },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
+    startMonth: { type: String, default: null },
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null },
     categoryIds: { type: [mongoose.Schema.Types.ObjectId], ref: "Category", default: null },
     accountIds: { type: [mongoose.Schema.Types.ObjectId], ref: "Account", default: null },
-    limitAmount: { type: Number, default: null },
-    alerts: { type: BudgetAlertSchema, default: { enabled: true, thresholds: [75, 90, 100] } },
+    categoryBudgets: { type: [CategoryBudgetSchema], default: [] },
+    totalBudgetMinor: { type: Number, required: true, default: 0 },
+    pinnedAt: { type: Date, default: null },
     archivedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-BudgetSchema.index({ workspaceId: 1, isDefault: 1 });
 BudgetSchema.index({ workspaceId: 1, archivedAt: 1 });
+BudgetSchema.index({ workspaceId: 1, pinnedAt: 1 });
 
 export const BudgetModel = getModel<BudgetDoc>("Budget", BudgetSchema);

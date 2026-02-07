@@ -20,14 +20,24 @@ type ApiItemResponse<T> = { data: T };
 
 type Category = {
   _id: string;
+  groupId: string;
   nameKey?: string;
   nameCustom?: string;
+  emoji?: string | null;
+  kind?: "expense" | "income";
   isArchived?: boolean;
 };
 
 type Account = {
   _id: string;
   name: string;
+  isArchived?: boolean;
+};
+
+type CategoryGroup = {
+  _id: string;
+  nameKey?: string;
+  nameCustom?: string;
   isArchived?: boolean;
 };
 
@@ -42,6 +52,7 @@ export function BudgetsClient({
   const [budgets, setBudgets] = useState<BudgetSummary[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -66,12 +77,14 @@ export function BudgetsClient({
 
   const loadMeta = useCallback(async () => {
     try {
-      const [categoriesResponse, accountsResponse] = await Promise.all([
+      const [categoriesResponse, accountsResponse, groupsResponse] = await Promise.all([
         getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=true"),
         getJSON<ApiListResponse<Account>>("/api/accounts?includeArchived=true"),
+        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=true"),
       ]);
       setCategories(categoriesResponse.data);
       setAccounts(accountsResponse.data);
+      setCategoryGroups(groupsResponse.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budgets_generic_error");
       setToast(message);
@@ -119,23 +132,25 @@ export function BudgetsClient({
   };
 
   const formatPeriod = (budget: BudgetSummary) => {
-    if (budget.type === "monthly" && budget.month) {
-      return formatMonthLabel(budget.month, locale);
+    if (budget.type === "monthly" && budget.startMonth) {
+      return `${t(locale, "budgets_start_month_label")} ${formatMonthLabel(
+        budget.startMonth,
+        locale
+      )}`;
     }
-    return `${formatBudgetDate(budget.startDate)} → ${formatBudgetDate(budget.endDate)}`;
+    return `${formatBudgetDate(budget.startDate ?? "")} → ${formatBudgetDate(
+      budget.endDate ?? ""
+    )}`;
   };
 
   const renderBudgetCard = (budget: BudgetSummary) => {
-    const limitMinor =
-      budget.limitAmount !== null && budget.limitAmount !== undefined
-        ? Math.round(budget.limitAmount * 100)
-        : null;
+    const totalBudgetMinor = budget.totalBudgetMinor ?? 0;
     const spentMinor = budget.spentMinor ?? 0;
-    const remainingMinor = limitMinor !== null ? limitMinor - spentMinor : null;
-    const progress = limitMinor ? Math.min(spentMinor / limitMinor, 1) : 0;
+    const remainingMinor = totalBudgetMinor - spentMinor;
+    const progress = totalBudgetMinor ? Math.min(spentMinor / totalBudgetMinor, 1) : 0;
     return (
-      <SurfaceCard key={budget._id}>
-        <SurfaceCardBody className="space-y-3">
+      <SurfaceCard key={budget._id} className="h-full">
+        <SurfaceCardBody className="flex h-full flex-col justify-between space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-lg font-semibold text-neutral">
@@ -144,8 +159,8 @@ export function BudgetsClient({
               </p>
               <p className="text-xs opacity-60">{formatPeriod(budget)}</p>
             </div>
-            {budget.isDefault ? (
-              <span className="badge badge-primary">{t(locale, "budgets_default_badge")}</span>
+            {budget.pinnedAt ? (
+              <span className="badge badge-outline">{t(locale, "budgets_pinned")}</span>
             ) : null}
           </div>
           <div className="space-y-1">
@@ -155,21 +170,38 @@ export function BudgetsClient({
                 {t(locale, "budgets_spent_label")}
               </span>
             </p>
-            {limitMinor !== null ? (
-              <p className="text-xs opacity-70">
-                {formatCurrency(remainingMinor ?? 0, defaultCurrency, locale)}{" "}
-                {t(locale, "budgets_remaining_label")}
-              </p>
-            ) : (
-              <p className="text-xs opacity-70">{t(locale, "budgets_track_only")}</p>
-            )}
+            <p className="text-xs opacity-70">
+              {formatCurrency(remainingMinor ?? 0, defaultCurrency, locale)}{" "}
+              {t(locale, "budgets_remaining_label")}
+            </p>
           </div>
-          {limitMinor !== null ? <ProgressBar value={progress} /> : null}
+          <ProgressBar value={progress} />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link className="link link-primary text-sm" href={`/app/budgets/${budget._id}`}>
               {t(locale, "budgets_view_details")}
             </Link>
             <div className="flex gap-2">
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await putJSON<ApiItemResponse<Budget>>(`/api/budgets/${budget._id}/pin`, {
+                      pinned: !budget.pinnedAt,
+                    });
+                    await loadBudgets();
+                  } catch (err) {
+                    const message =
+                      err instanceof Error ? err.message : t(locale, "budgets_generic_error");
+                    setToast(message);
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                {budget.pinnedAt ? t(locale, "budgets_unpin") : t(locale, "budgets_pin")}
+              </button>
               <button
                 className="btn btn-ghost btn-xs"
                 onClick={() => {
@@ -185,6 +217,32 @@ export function BudgetsClient({
                 disabled={isSubmitting}
               >
                 {budget.archivedAt ? t(locale, "budgets_unarchive") : t(locale, "budgets_archive")}
+              </button>
+              <button
+                className="btn btn-ghost btn-xs text-error"
+                onClick={async () => {
+                  const confirmed = window.confirm(t(locale, "budgets_delete_confirm"));
+                  if (!confirmed) return;
+                  setIsSubmitting(true);
+                  try {
+                    const response = await fetch(`/api/budgets/${budget._id}?hard=1`, {
+                      method: "DELETE",
+                    });
+                    if (!response.ok) {
+                      throw new Error(t(locale, "budgets_generic_error"));
+                    }
+                    await loadBudgets();
+                  } catch (err) {
+                    const message =
+                      err instanceof Error ? err.message : t(locale, "budgets_generic_error");
+                    setToast(message);
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                {t(locale, "budgets_delete")}
               </button>
             </div>
           </div>
@@ -240,7 +298,7 @@ export function BudgetsClient({
       ) : null}
 
       {activeBudgets.length ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
           {activeBudgets.map((budget) => renderBudgetCard(budget))}
         </div>
       ) : null}
@@ -250,7 +308,7 @@ export function BudgetsClient({
           <summary className="cursor-pointer text-sm font-semibold">
             {t(locale, "budgets_archived_section")}
           </summary>
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
             {archivedBudgets.map((budget) => renderBudgetCard(budget))}
           </div>
         </details>
@@ -267,6 +325,7 @@ export function BudgetsClient({
         defaultCurrency={defaultCurrency}
         categories={categories}
         accounts={accounts}
+        categoryGroups={categoryGroups}
         initialBudget={editingBudget}
       />
     </section>

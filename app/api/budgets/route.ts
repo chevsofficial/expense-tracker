@@ -5,32 +5,40 @@ import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
+import { currentMonth } from "@/src/server/month";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const dateSchema = z.string().refine((value) => isYmd(value), "Invalid date");
 
-const alertsSchema = z.object({
-  enabled: z.boolean(),
-  thresholds: z.array(z.number().positive()),
-});
+const monthSchema = z.string().regex(/^\d{4}-\d{2}$/, "Invalid month");
 
 const createSchema = z.object({
   name: z.string().trim().min(1),
   emoji: z.string().trim().max(8).optional().nullable(),
   color: z.string().trim().max(20).optional().nullable(),
-  isDefault: z.boolean().optional(),
   type: z.enum(["monthly", "custom"]),
-  month: z.string().trim().optional().nullable(),
-  startDate: dateSchema,
-  endDate: dateSchema,
+  startMonth: monthSchema.optional(),
+  startDate: dateSchema.optional(),
+  endDate: dateSchema.optional(),
   categoryIds: z.array(z.string().min(1)).nullable().optional(),
   accountIds: z.array(z.string().min(1)).nullable().optional(),
-  limitAmount: z.number().nullable().optional(),
-  alerts: alertsSchema.optional(),
+  categoryBudgets: z
+    .array(
+      z.object({
+        categoryId: z.string().min(1),
+        amount: z.number().nonnegative().refine(Number.isFinite),
+      })
+    )
+    .default([]),
+  pinned: z.boolean().optional(),
 });
 
 function toUtcDate(date: string) {
   return normalizeToUtcMidnight(date);
+}
+
+function toMinorUnits(amount: number) {
+  return Math.round(amount * 100);
 }
 
 function parseObjectIdArrayOrNull(
@@ -51,36 +59,61 @@ function parseObjectIdArrayOrNull(
 
 function monthToRange(month: string) {
   const { start, end } = monthRange(month);
-  const endDate = new Date(`${end}T00:00:00.000Z`);
-  endDate.setUTCDate(endDate.getUTCDate() - 1);
-  const endYmd = endDate.toISOString().slice(0, 10);
-  return { start, end: endYmd };
+  return { start, end };
 }
 
 async function getBudgetSpend({
   workspaceId,
-  budgetId,
+  categoryIds,
+  accountIds,
   startDate,
   endDate,
 }: {
   workspaceId: string;
-  budgetId: string;
+  categoryIds: mongoose.Types.ObjectId[];
+  accountIds: mongoose.Types.ObjectId[] | null;
   startDate: Date;
   endDate: Date;
 }) {
+  if (!categoryIds.length) return 0;
+  const accountFilter = accountIds ? { accountId: { $in: accountIds } } : {};
   const result = await TransactionModel.aggregate<{ total: number }>([
     {
       $match: {
         workspaceId: parseObjectId(workspaceId),
-        budgetId: parseObjectId(budgetId),
         isArchived: false,
         kind: "expense",
-        date: { $gte: startDate, $lte: endDate },
+        categoryId: { $in: categoryIds },
+        ...accountFilter,
+        date: { $gte: startDate, $lt: endDate },
       },
     },
     { $group: { _id: null, total: { $sum: "$amountMinor" } } },
   ]);
   return result[0]?.total ?? 0;
+}
+
+function isMonthBefore(value: string, baseline: string) {
+  return value < baseline;
+}
+
+function resolveMonthRangeForBudget(
+  budget: { type: "monthly" | "custom"; startMonth?: string | null; startDate?: Date | null; endDate?: Date | null }
+) {
+  if (budget.type === "monthly") {
+    const current = currentMonth();
+    const resolvedMonth =
+      budget.startMonth && isMonthBefore(current, budget.startMonth) ? budget.startMonth : current;
+    return monthToRange(resolvedMonth);
+  }
+  const start = budget.startDate ? budget.startDate.toISOString().slice(0, 10) : null;
+  let end = budget.endDate ? budget.endDate.toISOString().slice(0, 10) : null;
+  if (budget.endDate) {
+    const next = new Date(budget.endDate);
+    next.setUTCDate(next.getUTCDate() + 1);
+    end = next.toISOString().slice(0, 10);
+  }
+  return { start, end };
 }
 
 export async function GET(request: NextRequest) {
@@ -95,20 +128,34 @@ export async function GET(request: NextRequest) {
     workspaceId: auth.workspace.id,
     ...(includeArchived ? {} : { archivedAt: null }),
   })
-    .sort({ createdAt: -1 })
     .lean();
 
+  const sortedBudgets = (() => {
+    const pinned = budgets
+      .filter((budget) => budget.pinnedAt)
+      .sort((a, b) => (a.pinnedAt?.getTime() ?? 0) - (b.pinnedAt?.getTime() ?? 0));
+    const rest = budgets
+      .filter((budget) => !budget.pinnedAt)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return [...pinned, ...rest];
+  })();
+
   if (!includeSummary) {
-    return NextResponse.json({ data: budgets });
+    return NextResponse.json({ data: sortedBudgets });
   }
 
   const budgetsWithSummary = await Promise.all(
-    budgets.map(async (budget) => {
+    sortedBudgets.map(async (budget) => {
+      const range = resolveMonthRangeForBudget(budget);
+      if (!range.start || !range.end) {
+        return { ...budget, spentMinor: 0 };
+      }
       const spentMinor = await getBudgetSpend({
         workspaceId: auth.workspace.id.toString(),
-        budgetId: budget._id.toString(),
-        startDate: budget.startDate,
-        endDate: budget.endDate,
+        categoryIds: budget.categoryBudgets.map((entry) => entry.categoryId),
+        accountIds: budget.accountIds ?? null,
+        startDate: normalizeToUtcMidnight(range.start),
+        endDate: normalizeToUtcMidnight(range.end),
       });
       return { ...budget, spentMinor };
     })
@@ -129,33 +176,34 @@ export async function POST(request: NextRequest) {
 
   let categoryIds: mongoose.Types.ObjectId[] | null | undefined;
   let accountIds: mongoose.Types.ObjectId[] | null | undefined;
+  let categoryBudgets: { categoryId: mongoose.Types.ObjectId; amountMinor: number }[] = [];
 
   try {
     categoryIds = parseObjectIdArrayOrNull(parsed.data.categoryIds, "category");
     accountIds = parseObjectIdArrayOrNull(parsed.data.accountIds, "account");
+    categoryBudgets = parsed.data.categoryBudgets.map((row) => {
+      const oid = parseObjectId(row.categoryId);
+      if (!oid) {
+        throw new Error("Invalid category id");
+      }
+      return { categoryId: oid, amountMinor: toMinorUnits(row.amount) };
+    });
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : "Invalid ids", 400);
   }
 
-  let { startDate, endDate } = parsed.data;
+  const totalBudgetMinor = categoryBudgets.reduce((sum, row) => sum + row.amountMinor, 0);
+
+  const { startDate, endDate, startMonth } = parsed.data;
+
   if (parsed.data.type === "monthly") {
-    if (!parsed.data.month) {
-      return errorResponse("Month is required for monthly budgets", 400);
+    if (!startMonth) {
+      return errorResponse("Start month is required for monthly budgets", 400);
     }
-    const range = monthToRange(parsed.data.month);
-    startDate = range.start;
-    endDate = range.end;
-  }
-
-  if (startDate > endDate) {
+  } else if (!startDate || !endDate) {
+    return errorResponse("Start date and end date are required for custom budgets", 400);
+  } else if (startDate > endDate) {
     return errorResponse("Start date must be before end date", 400);
-  }
-
-  if (parsed.data.isDefault) {
-    await BudgetModel.updateMany(
-      { workspaceId: auth.workspace.id, isDefault: true },
-      { $set: { isDefault: false } }
-    );
   }
 
   const budget = await BudgetModel.create({
@@ -163,15 +211,15 @@ export async function POST(request: NextRequest) {
     name: parsed.data.name.trim(),
     emoji: parsed.data.emoji ?? null,
     color: parsed.data.color ?? null,
-    isDefault: parsed.data.isDefault ?? false,
     type: parsed.data.type,
-    month: parsed.data.type === "monthly" ? parsed.data.month ?? null : null,
-    startDate: toUtcDate(startDate),
-    endDate: toUtcDate(endDate),
+    startMonth: parsed.data.type === "monthly" ? startMonth ?? null : null,
+    startDate: parsed.data.type === "custom" ? toUtcDate(startDate!) : null,
+    endDate: parsed.data.type === "custom" ? toUtcDate(endDate!) : null,
     categoryIds: categoryIds ?? null,
     accountIds: accountIds ?? null,
-    limitAmount: parsed.data.limitAmount ?? null,
-    alerts: parsed.data.alerts,
+    categoryBudgets,
+    totalBudgetMinor,
+    pinnedAt: parsed.data.pinned ? new Date() : null,
     archivedAt: null,
   });
 

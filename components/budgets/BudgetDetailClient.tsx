@@ -9,7 +9,7 @@ import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { formatCurrency } from "@/src/lib/format";
 import { getJSON, putJSON } from "@/src/lib/apiClient";
 import { formatDateOnly } from "@/src/utils/dateOnly";
-import { formatMonthLabel } from "@/src/utils/month";
+import { formatMonthLabel, monthRange } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 
@@ -27,13 +27,23 @@ type Transaction = {
 
 type Category = {
   _id: string;
+  groupId: string;
   nameKey?: string;
   nameCustom?: string;
+  emoji?: string | null;
+  kind?: "expense" | "income";
 };
 
 type Account = {
   _id: string;
   name: string;
+  isArchived?: boolean;
+};
+
+type CategoryGroup = {
+  _id: string;
+  nameKey?: string;
+  nameCustom?: string;
   isArchived?: boolean;
 };
 
@@ -54,11 +64,13 @@ export function BudgetDetailClient({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   const loadBudget = useCallback(async () => {
     setLoading(true);
@@ -75,24 +87,53 @@ export function BudgetDetailClient({
 
   const loadTransactions = useCallback(async () => {
     try {
+      if (!budget) return;
+      if (!budget.categoryBudgets.length) {
+        setTransactions([]);
+        return;
+      }
+      const categoryIds = budget.categoryBudgets.map((entry) => entry.categoryId).join(",");
+      const accountIds = budget.accountIds?.join(",") ?? "";
+      const params = new URLSearchParams({
+        includeArchived: "true",
+        kind: "expense",
+      });
+
+      if (categoryIds) params.set("categoryIds", categoryIds);
+      if (accountIds) params.set("accountIds", accountIds);
+
+      if (budget.type === "monthly") {
+        if (!selectedMonth) return;
+        const range = monthRange(selectedMonth);
+        params.set("startDate", range.start);
+        const endDate = new Date(`${range.end}T00:00:00.000Z`);
+        endDate.setUTCDate(endDate.getUTCDate() - 1);
+        params.set("endDate", endDate.toISOString().slice(0, 10));
+      } else if (budget.startDate && budget.endDate) {
+        params.set("startDate", budget.startDate.slice(0, 10));
+        params.set("endDate", budget.endDate.slice(0, 10));
+      }
+
       const response = await getJSON<ApiItemResponse<{ items: Transaction[] }>>(
-        `/api/transactions?budgetId=${budgetId}&includeArchived=true`
+        `/api/transactions?${params.toString()}`
       );
       setTransactions(response.data.items);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budgets_generic_error");
       setToast(message);
     }
-  }, [budgetId, locale]);
+  }, [budget, locale, selectedMonth]);
 
   const loadMeta = useCallback(async () => {
     try {
-      const [categoriesResponse, accountsResponse] = await Promise.all([
+      const [categoriesResponse, accountsResponse, groupsResponse] = await Promise.all([
         getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=true"),
         getJSON<ApiListResponse<Account>>("/api/accounts?includeArchived=true"),
+        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=true"),
       ]);
       setCategories(categoriesResponse.data);
       setAccounts(accountsResponse.data);
+      setCategoryGroups(groupsResponse.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budgets_generic_error");
       setToast(message);
@@ -101,9 +142,27 @@ export function BudgetDetailClient({
 
   useEffect(() => {
     void loadBudget();
-    void loadTransactions();
     void loadMeta();
-  }, [loadBudget, loadMeta, loadTransactions]);
+  }, [loadBudget, loadMeta]);
+
+  useEffect(() => {
+    if (!budget) return;
+    if (budget.type === "monthly") {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      if (!selectedMonth) {
+        if (budget.startMonth && currentMonth < budget.startMonth) {
+          setSelectedMonth(budget.startMonth);
+        } else {
+          setSelectedMonth(currentMonth);
+        }
+      }
+    }
+  }, [budget, selectedMonth]);
+
+  useEffect(() => {
+    void loadTransactions();
+  }, [loadTransactions]);
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -120,10 +179,19 @@ export function BudgetDetailClient({
 
   const dateRange = useMemo(() => {
     if (!budget) return null;
-    const start = new Date(budget.startDate);
-    const end = new Date(budget.endDate);
-    return { start, end };
-  }, [budget]);
+    if (budget.type === "monthly") {
+      if (!selectedMonth) return null;
+      const range = monthRange(selectedMonth);
+      const start = new Date(`${range.start}T00:00:00.000Z`);
+      const end = new Date(`${range.end}T00:00:00.000Z`);
+      end.setUTCDate(end.getUTCDate() - 1);
+      return { start, end };
+    }
+    if (budget.startDate && budget.endDate) {
+      return { start: new Date(budget.startDate), end: new Date(budget.endDate) };
+    }
+    return null;
+  }, [budget, selectedMonth]);
 
   const isInRange = (transaction: Transaction) => {
     if (!dateRange) return true;
@@ -139,13 +207,9 @@ export function BudgetDetailClient({
       .reduce((sum, transaction) => sum + transaction.amountMinor, 0);
   }, [budget, transactions]);
 
-  const limitMinor =
-    budget?.limitAmount !== null && budget?.limitAmount !== undefined
-      ? Math.round(budget.limitAmount * 100)
-      : null;
-
-  const remainingMinor = limitMinor !== null ? limitMinor - spendMinor : null;
-  const progress = limitMinor ? Math.min(spendMinor / limitMinor, 1) : 0;
+  const totalBudgetMinor = budget?.totalBudgetMinor ?? 0;
+  const remainingMinor = totalBudgetMinor - spendMinor;
+  const progress = totalBudgetMinor ? Math.min(spendMinor / totalBudgetMinor, 1) : 0;
 
   const categoryBreakdown = useMemo(() => {
     const breakdown = new Map<string, number>();
@@ -175,10 +239,15 @@ export function BudgetDetailClient({
   };
 
   const periodLabel =
-    budget?.type === "monthly" && budget.month
-      ? formatMonthLabel(budget.month, locale)
+    budget?.type === "monthly"
+      ? `${t(locale, "budgets_start_month_label")} ${formatMonthLabel(
+          budget.startMonth ?? selectedMonth,
+          locale
+        )}`
       : budget
-        ? `${formatBudgetDate(budget.startDate)} → ${formatBudgetDate(budget.endDate)}`
+        ? `${formatBudgetDate(budget.startDate ?? "")} → ${formatBudgetDate(
+            budget.endDate ?? ""
+          )}`
         : "";
 
   const formatTransactionDate = (value: string) => {
@@ -230,6 +299,23 @@ export function BudgetDetailClient({
             {budget.name}
           </h1>
           <p className="mt-1 opacity-70">{periodLabel}</p>
+          {budget.type === "monthly" ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium opacity-70">
+                  {t(locale, "budgets_month_selector")}
+                </span>
+                <input
+                  type="month"
+                  className="input input-bordered input-sm bg-base-100"
+                  value={selectedMonth}
+                  min={budget.startMonth ?? undefined}
+                  onChange={(event) => setSelectedMonth(event.target.value)}
+                />
+              </label>
+              <span className="text-xs opacity-60">{t(locale, "budgets_month_help")}</span>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
@@ -270,15 +356,11 @@ export function BudgetDetailClient({
             <p className="text-2xl font-bold">
               {formatCurrency(spendMinor, defaultCurrency, locale)}
             </p>
-            {limitMinor !== null ? (
-              <p className="text-xs opacity-60">
-                {formatCurrency(remainingMinor ?? 0, defaultCurrency, locale)}{" "}
-                {t(locale, "budgets_remaining_label")}
-              </p>
-            ) : (
-              <p className="text-xs opacity-60">{t(locale, "budgets_track_only")}</p>
-            )}
-            {limitMinor !== null ? <ProgressBar value={progress} /> : null}
+            <p className="text-xs opacity-60">
+              {formatCurrency(remainingMinor ?? 0, defaultCurrency, locale)}{" "}
+              {t(locale, "budgets_remaining_label")}
+            </p>
+            <ProgressBar value={progress} />
           </SurfaceCardBody>
         </SurfaceCard>
         <SurfaceCard>
@@ -298,11 +380,9 @@ export function BudgetDetailClient({
         </SurfaceCard>
         <SurfaceCard>
           <SurfaceCardBody className="space-y-2">
-            <p className="text-sm font-semibold">{t(locale, "budgets_overview_alerts")}</p>
+            <p className="text-sm font-semibold">{t(locale, "budgets_overview_total")}</p>
             <p className="text-sm opacity-70">
-              {budget.alerts?.enabled
-                ? budget.alerts.thresholds.join("%, ") + "%"
-                : t(locale, "budgets_alerts_disabled")}
+              {formatCurrency(totalBudgetMinor, defaultCurrency, locale)}
             </p>
             <p className="text-sm opacity-70">{t(locale, "budgets_overview_currency")}</p>
             <p className="text-sm font-semibold">{defaultCurrency}</p>
@@ -394,6 +474,7 @@ export function BudgetDetailClient({
         defaultCurrency={defaultCurrency}
         categories={categories}
         accounts={accounts}
+        categoryGroups={categoryGroups}
         initialBudget={budget}
       />
     </section>

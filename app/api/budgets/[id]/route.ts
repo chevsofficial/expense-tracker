@@ -3,29 +3,30 @@ import mongoose from "mongoose";
 import { z } from "zod";
 import { BudgetModel } from "@/src/models/Budget";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
-import { monthRange } from "@/src/utils/month";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
 const dateSchema = z.string().refine((value) => isYmd(value), "Invalid date");
 
-const alertsSchema = z.object({
-  enabled: z.boolean(),
-  thresholds: z.array(z.number().positive()),
-});
+const monthSchema = z.string().regex(/^\d{4}-\d{2}$/, "Invalid month");
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   emoji: z.string().trim().max(8).optional().nullable(),
   color: z.string().trim().max(20).optional().nullable(),
-  isDefault: z.boolean().optional(),
   type: z.enum(["monthly", "custom"]).optional(),
-  month: z.string().trim().optional().nullable(),
+  startMonth: monthSchema.optional().nullable(),
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
   categoryIds: z.array(z.string().min(1)).nullable().optional(),
   accountIds: z.array(z.string().min(1)).nullable().optional(),
-  limitAmount: z.number().nullable().optional(),
-  alerts: alertsSchema.optional(),
+  categoryBudgets: z
+    .array(
+      z.object({
+        categoryId: z.string().min(1),
+        amount: z.number().nonnegative().refine(Number.isFinite),
+      })
+    )
+    .optional(),
   archivedAt: z.string().nullable().optional(),
 });
 
@@ -49,12 +50,8 @@ function parseObjectIdArrayOrNull(
   });
 }
 
-function monthToRange(month: string) {
-  const { start, end } = monthRange(month);
-  const endDate = new Date(`${end}T00:00:00.000Z`);
-  endDate.setUTCDate(endDate.getUTCDate() - 1);
-  const endYmd = endDate.toISOString().slice(0, 10);
-  return { start, end: endYmd };
+function toMinorUnits(amount: number) {
+  return Math.round(amount * 100);
 }
 
 export async function GET(
@@ -103,9 +100,7 @@ export async function PUT(
   if (parsed.data.emoji !== undefined) update.emoji = parsed.data.emoji ?? null;
   if (parsed.data.color !== undefined) update.color = parsed.data.color ?? null;
   if (parsed.data.type !== undefined) update.type = parsed.data.type;
-  if (parsed.data.month !== undefined) update.month = parsed.data.month ?? null;
-  if (parsed.data.limitAmount !== undefined) update.limitAmount = parsed.data.limitAmount ?? null;
-  if (parsed.data.alerts !== undefined) update.alerts = parsed.data.alerts;
+  if (parsed.data.startMonth !== undefined) update.startMonth = parsed.data.startMonth ?? null;
   if (parsed.data.archivedAt !== undefined) {
     update.archivedAt = parsed.data.archivedAt ? new Date(parsed.data.archivedAt) : null;
   }
@@ -126,30 +121,56 @@ export async function PUT(
     }
   }
 
-  let resolvedStart = parsed.data.startDate;
-  let resolvedEnd = parsed.data.endDate;
-
-  if (parsed.data.type === "monthly" || parsed.data.month) {
-    const monthValue = parsed.data.month;
-    if (!monthValue) {
-      return errorResponse("Month is required for monthly budgets", 400);
+  if (parsed.data.categoryBudgets !== undefined) {
+    try {
+      const parsedBudgets = parsed.data.categoryBudgets.map((row) => {
+        const oid = parseObjectId(row.categoryId);
+        if (!oid) {
+          throw new Error("Invalid category id");
+        }
+        return { categoryId: oid, amountMinor: toMinorUnits(row.amount) };
+      });
+      update.categoryBudgets = parsedBudgets;
+      update.totalBudgetMinor = parsedBudgets.reduce((sum, row) => sum + row.amountMinor, 0);
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "Invalid category ids", 400);
     }
-    const range = monthToRange(monthValue);
-    resolvedStart = range.start;
-    resolvedEnd = range.end;
   }
 
-  if (resolvedStart) update.startDate = toUtcDate(resolvedStart);
-  if (resolvedEnd) update.endDate = toUtcDate(resolvedEnd);
+  const updatingMonthly = parsed.data.type === "monthly" || parsed.data.startMonth !== undefined;
+  const updatingCustom =
+    parsed.data.type === "custom" ||
+    parsed.data.startDate !== undefined ||
+    parsed.data.endDate !== undefined;
 
-  if (parsed.data.isDefault) {
-    await BudgetModel.updateMany(
-      { workspaceId: auth.workspace.id, isDefault: true },
-      { $set: { isDefault: false } }
-    );
-    update.isDefault = true;
-  } else if (parsed.data.isDefault === false) {
-    update.isDefault = false;
+  if (updatingMonthly && updatingCustom) {
+    return errorResponse("Provide either monthly or custom budget period updates", 400);
+  }
+
+  if (updatingMonthly) {
+    const startMonth = parsed.data.startMonth ?? null;
+    if (!startMonth) {
+      return errorResponse("Start month is required for monthly budgets", 400);
+    }
+    update.type = "monthly";
+    update.startMonth = startMonth;
+    update.startDate = null;
+    update.endDate = null;
+  }
+
+  if (updatingCustom) {
+    const resolvedStart = parsed.data.startDate;
+    const resolvedEnd = parsed.data.endDate;
+    if (!resolvedStart || !resolvedEnd) {
+      return errorResponse("Start date and end date are required for custom budgets", 400);
+    }
+    if (resolvedStart > resolvedEnd) {
+      return errorResponse("Start date must be before end date", 400);
+    }
+    update.type = "custom";
+    update.startMonth = null;
+    update.startDate = toUtcDate(resolvedStart);
+    update.endDate = toUtcDate(resolvedEnd);
   }
 
   if (Object.keys(update).length === 0) {
@@ -159,6 +180,39 @@ export async function PUT(
   const budget = await BudgetModel.findOneAndUpdate(
     { _id: objectId, workspaceId: auth.workspace.id },
     update,
+    { new: true }
+  );
+
+  if (!budget) {
+    return errorResponse("Budget not found", 404);
+  }
+
+  return NextResponse.json({ data: budget });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuthContext();
+  if ("response" in auth) return auth.response;
+
+  const { id } = await context.params;
+  const objectId = parseObjectId(id);
+  if (!objectId) {
+    return errorResponse("Invalid budget id", 400);
+  }
+
+  const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+
+  if (hardDelete) {
+    await BudgetModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
+    return NextResponse.json({ data: { deleted: true } });
+  }
+
+  const budget = await BudgetModel.findOneAndUpdate(
+    { _id: objectId, workspaceId: auth.workspace.id },
+    { $set: { archivedAt: new Date() } },
     { new: true }
   );
 
