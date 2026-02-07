@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CategoryModel } from "@/src/models/Category";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
 import { BudgetMonthModel } from "@/src/models/BudgetMonth";
+import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
@@ -114,7 +115,7 @@ export async function DELETE(
   const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
 
   if (hardDelete) {
-    const [transactionCount, budgetCount] = await Promise.all([
+    const [transactionCount, budgetMonthCount, budgetCount] = await Promise.all([
       TransactionModel.countDocuments({
         workspaceId: auth.workspace.id,
         categoryId: objectId,
@@ -123,9 +124,14 @@ export async function DELETE(
         workspaceId: auth.workspace.id,
         "plannedLines.categoryId": objectId,
       }),
+      BudgetModel.countDocuments({
+        workspaceId: auth.workspace.id,
+        categoryIds: objectId,
+      }),
     ]);
 
-    if (transactionCount > 0 || budgetCount > 0) {
+    const totalBudgetCount = budgetMonthCount + budgetCount;
+    if (transactionCount > 0 || totalBudgetCount > 0) {
       const message =
         "Cannot permanently delete: category is referenced by historical data. Archive instead.";
       logError(message, {
@@ -133,7 +139,7 @@ export async function DELETE(
         categoryId: id,
         query,
         transactionCount,
-        budgetCount,
+        budgetCount: totalBudgetCount,
       });
       return errorResponse(message, 400);
     }

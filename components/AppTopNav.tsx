@@ -22,7 +22,12 @@ export function AppTopNav({
 }) {
   const pathname = usePathname();
   const linkClass = (href: string) => {
-    const isActive = href === "/app/settings" ? pathname.startsWith("/app/settings") : pathname === href;
+    const isActive =
+      href === "/app/settings"
+        ? pathname.startsWith("/app/settings")
+        : href === "/app/budgets"
+          ? pathname.startsWith("/app/budgets")
+          : pathname === href;
     return [
       "btn btn-ghost",
       "text-base-content",
@@ -52,7 +57,7 @@ export function AppTopNav({
               <Link href="/app/transactions">{transactionsLabel}</Link>
             </li>
             <li>
-              <Link href="/app/budget">{budgetLabel}</Link>
+              <Link href="/app/budgets">{budgetLabel}</Link>
             </li>
             <li>
               <Link href="/app/recurring">{recurringLabel}</Link>
@@ -84,7 +89,7 @@ export function AppTopNav({
             </Link>
           </li>
           <li>
-            <Link href="/app/budget" className={linkClass("/app/budget")}>
+            <Link href="/app/budgets" className={linkClass("/app/budgets")}>
               {budgetLabel}
             </Link>
           </li>

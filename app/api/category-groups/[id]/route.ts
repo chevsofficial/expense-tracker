@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
 import { CategoryModel } from "@/src/models/Category";
 import { BudgetMonthModel } from "@/src/models/BudgetMonth";
+import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
@@ -90,7 +91,7 @@ export async function DELETE(
       const categoryIds = categories.map((category) => category._id);
 
       if (categoryIds.length > 0) {
-        const [transactionCount, budgetCount] = await Promise.all([
+        const [transactionCount, budgetMonthCount, budgetCount] = await Promise.all([
           TransactionModel.countDocuments({
             workspaceId: auth.workspace.id,
             categoryId: { $in: categoryIds },
@@ -99,9 +100,14 @@ export async function DELETE(
             workspaceId: auth.workspace.id,
             "plannedLines.categoryId": { $in: categoryIds },
           }),
+          BudgetModel.countDocuments({
+            workspaceId: auth.workspace.id,
+            categoryIds: { $in: categoryIds },
+          }),
         ]);
 
-        if (transactionCount > 0 || budgetCount > 0) {
+        const totalBudgetCount = budgetMonthCount + budgetCount;
+        if (transactionCount > 0 || totalBudgetCount > 0) {
           const message =
             "Cannot permanently delete group: some categories are referenced by historical data. Archive instead.";
           logError(message, {
@@ -109,7 +115,7 @@ export async function DELETE(
             groupId: id,
             query,
             transactionCount,
-            budgetCount,
+            budgetCount: totalBudgetCount,
           });
           return errorResponse(message, 400);
         }

@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
+import { BudgetModel } from "@/src/models/Budget";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
@@ -27,6 +28,7 @@ const createSchema = z.object({
   kind: z.enum(["income", "expense"]),
   accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
+  budgetId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchantId: z.string().nullable().optional(),
   merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
@@ -54,8 +56,11 @@ export async function GET(request: NextRequest) {
   const categoryParam = params.get("categoryId");
   const merchantParam = params.get("merchantId");
   const accountParam = params.get("accountId");
+  const budgetParam = params.get("budgetId");
   const currencyParam = params.get("currency");
   const searchParam = params.get("q");
+  const startDateParam = params.get("startDate");
+  const endDateParam = params.get("endDate");
   const includeArchived = params.get("includeArchived") === "true";
 
   const filter: Record<string, unknown> = {
@@ -71,6 +76,21 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(`${range.start}T00:00:00.000Z`);
     const endDate = new Date(`${range.end}T00:00:00.000Z`);
     filter.date = { $gte: startDate, $lt: endDate };
+  }
+
+  if (startDateParam || endDateParam) {
+    if (startDateParam && !isYmd(startDateParam)) {
+      return errorResponse("Invalid start date", 400);
+    }
+    if (endDateParam && !isYmd(endDateParam)) {
+      return errorResponse("Invalid end date", 400);
+    }
+    const startDate = startDateParam ? normalizeToUtcMidnight(startDateParam) : undefined;
+    const endDate = endDateParam ? normalizeToUtcMidnight(endDateParam) : undefined;
+    filter.date = {
+      ...(startDate ? { $gte: startDate } : {}),
+      ...(endDate ? { $lte: endDate } : {}),
+    };
   }
 
   if (kindParam) {
@@ -102,6 +122,18 @@ export async function GET(request: NextRequest) {
       return errorResponse("Invalid account id", 400);
     }
     filter.accountId = accountId;
+  }
+
+  if (budgetParam) {
+    if (budgetParam === "none") {
+      filter.budgetId = null;
+    } else {
+      const budgetId = parseObjectId(budgetParam);
+      if (!budgetId) {
+        return errorResponse("Invalid budget id", 400);
+      }
+      filter.budgetId = budgetId;
+    }
   }
 
   if (currencyParam) {
@@ -141,6 +173,7 @@ export async function POST(request: NextRequest) {
     receiptUrls,
     merchantId,
     merchantNameSnapshot,
+    budgetId,
     ...rest
   } = parsed.data;
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
@@ -168,6 +201,20 @@ export async function POST(request: NextRequest) {
     });
     if (!account) {
       return errorResponse("Account not found", 404);
+    }
+  }
+
+  const budgetObjectId = budgetId ? parseObjectId(budgetId) : null;
+  if (budgetId && !budgetObjectId) {
+    return errorResponse("Invalid budget id", 400);
+  }
+  if (budgetObjectId) {
+    const budget = await BudgetModel.findOne({
+      _id: budgetObjectId,
+      workspaceId: auth.workspace.id,
+    });
+    if (!budget) {
+      return errorResponse("Budget not found", 404);
     }
   }
 
@@ -199,6 +246,7 @@ export async function POST(request: NextRequest) {
     workspaceId: auth.workspace.id,
     accountId: accountObjectId ?? null,
     categoryId: categoryObjectId ?? null,
+    budgetId: budgetObjectId ?? null,
     amountMinor: toMinorUnits(amount),
     date: normalizeToUtcMidnight(date),
     merchantId: merchantObjectId,
