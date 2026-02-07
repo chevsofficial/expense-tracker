@@ -272,7 +272,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       await putJSON<ApiItemResponse<Category>>(`/api/categories/${categoryToEdit._id}`, {
         nameCustom: editCategoryName.trim(),
         emoji: editCategoryEmoji.trim() ? editCategoryEmoji.trim() : null,
-        groupId: editCategoryGroupId,
+        groupId: editCategoryGroupId ? editCategoryGroupId : null,
         kind: editCategoryKind,
       });
       setEditCategoryOpen(false);
@@ -341,7 +341,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     setEditCategoryName(getDisplayName(category));
     setEditCategoryEmoji(category.emoji ?? "");
     setEditCategoryKind(normalizeKind(category.kind));
-    setEditCategoryGroupId(category.groupId);
+    setEditCategoryGroupId(category.groupId ?? "");
     setEditCategoryOpen(true);
   };
 
