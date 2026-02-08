@@ -24,7 +24,7 @@ type ApiItemResponse<T> = { data: T };
 
 type DeleteResponse = { data: { deleted: boolean } };
 
-const normalizeKind = (kind?: CategoryKind): CategoryFormKind =>
+const normalizeKind = (kind?: CategoryKind | null): CategoryFormKind =>
   kind === "income" ? "income" : "expense";
 
 export function CategoriesClient({ locale }: { locale: Locale }) {
@@ -870,7 +870,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             <select
               className="select select-bordered w-full"
               value={newCategoryKind}
-              onChange={(event) => setNewCategoryKind(event.target.value as CategoryKind)}
+              onChange={(event) => setNewCategoryKind(event.target.value as CategoryFormKind)}
             >
               {kindOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -936,7 +936,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             <select
               className="select select-bordered w-full"
               value={editCategoryKind}
-              onChange={(event) => setEditCategoryKind(event.target.value as CategoryKind)}
+              onChange={(event) => setEditCategoryKind(event.target.value as CategoryFormKind)}
             >
               {kindOptions.map((option) => (
                 <option key={option.value} value={option.value}>

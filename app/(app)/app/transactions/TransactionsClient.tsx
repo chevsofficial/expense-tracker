@@ -205,6 +205,16 @@ export function TransactionsClient({
     return map;
   }, [categories, categoryName]);
 
+  const selectableCategories = useMemo(
+    () => categories.filter((category) => category.kind === "income" || category.kind === "expense"),
+    [categories]
+  );
+
+  const formCategories = useMemo(
+    () => selectableCategories.filter((category) => category.kind === formState.kind),
+    [formState.kind, selectableCategories]
+  );
+
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
     merchants.forEach((merchant) => {
@@ -891,7 +901,7 @@ export function TransactionsClient({
                 </span>
                 <CategoryPicker
                   locale={locale}
-                  categories={categories}
+                  categories={selectableCategories}
                   value={categoryFilter}
                   onChange={setCategoryFilter}
                   allowEmpty
@@ -1139,7 +1149,7 @@ export function TransactionsClient({
               </span>
               <CategoryPicker
                 locale={locale}
-                categories={categories}
+                categories={formCategories}
                 value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
                 onChange={handleFormCategoryChange}
                 allowEmpty
