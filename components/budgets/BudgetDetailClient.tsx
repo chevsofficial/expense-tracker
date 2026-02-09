@@ -185,11 +185,14 @@ export function BudgetDetailClient({
     return null;
   }, [budget, selectedMonth]);
 
-  const isInRange = (transaction: Transaction) => {
-    if (!dateRange) return true;
-    const date = new Date(transaction.date);
-    return date >= dateRange.start && date <= dateRange.end;
-  };
+  const isInRange = useCallback(
+    (transaction: Transaction) => {
+      if (!dateRange) return true;
+      const date = new Date(transaction.date);
+      return date >= dateRange.start && date <= dateRange.end;
+    },
+    [dateRange]
+  );
 
   const spendMinor = useMemo(() => {
     if (!budget) return 0;
@@ -197,7 +200,7 @@ export function BudgetDetailClient({
       .filter((transaction) => transaction.kind === "expense")
       .filter((transaction) => isInRange(transaction))
       .reduce((sum, transaction) => sum + transaction.amountMinor, 0);
-  }, [budget, transactions]);
+  }, [budget, isInRange, transactions]);
 
   const totalBudgetMinor = budget?.totalBudgetMinor ?? 0;
   const remainingMinor = totalBudgetMinor - spendMinor;
@@ -222,7 +225,7 @@ export function BudgetDetailClient({
         amount,
       }))
       .sort((a, b) => b.amount - a.amount);
-  }, [categoryMap, locale, transactions]);
+  }, [categoryMap, isInRange, locale, transactions]);
 
   const formatBudgetDate = (value: string) => {
     const date = new Date(value);
