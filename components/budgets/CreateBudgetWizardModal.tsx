@@ -78,7 +78,7 @@ const getMonthStartEnd = (month: string) => {
   return { start, end: endYmd };
 };
 
-const normalizeBudgetDate = (value?: string) => {
+const normalizeBudgetDate = (value?: string | null) => {
   if (!value) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
