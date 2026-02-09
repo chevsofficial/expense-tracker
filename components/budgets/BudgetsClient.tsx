@@ -32,6 +32,23 @@ type CategoryGroup = {
   isArchived?: boolean;
 };
 
+function unwrapArray<T>(res: unknown, keys: string[] = []): T[] {
+  if (Array.isArray((res as ApiListResponse<T>)?.data)) return (res as ApiListResponse<T>).data;
+  if (Array.isArray((res as { data?: { items?: T[] } })?.data?.items)) {
+    return (res as { data?: { items?: T[] } }).data?.items ?? [];
+  }
+  if (Array.isArray((res as { items?: T[] })?.items)) return (res as { items?: T[] }).items ?? [];
+  for (const key of keys) {
+    if (Array.isArray((res as { data?: Record<string, T[]> })?.data?.[key])) {
+      return (res as { data?: Record<string, T[]> }).data?.[key] ?? [];
+    }
+    if (Array.isArray((res as Record<string, T[]>)?.[key])) {
+      return (res as Record<string, T[]>)[key] ?? [];
+    }
+  }
+  return [];
+}
+
 export function BudgetsClient({
   locale,
   defaultCurrency,
@@ -54,10 +71,10 @@ export function BudgetsClient({
   const loadBudgets = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getJSON<ApiListResponse<BudgetSummary>>(
+      const response = await getJSON<unknown>(
         "/api/budgets?includeArchived=true&includeSummary=true"
       );
-      setBudgets(response.data);
+      setBudgets(unwrapArray<BudgetSummary>(response, ["budgets"]));
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budgets_generic_error");
       setToast(message);
@@ -69,13 +86,13 @@ export function BudgetsClient({
   const loadMeta = useCallback(async () => {
     try {
       const [categoriesResponse, accountsResponse, groupsResponse] = await Promise.all([
-        getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=true"),
-        getJSON<ApiListResponse<Account>>("/api/accounts?includeArchived=true"),
-        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=true"),
+        getJSON<unknown>("/api/categories?includeArchived=true"),
+        getJSON<unknown>("/api/accounts?includeArchived=true"),
+        getJSON<unknown>("/api/category-groups?includeArchived=true"),
       ]);
-      setCategories(categoriesResponse.data);
-      setAccounts(accountsResponse.data);
-      setCategoryGroups(groupsResponse.data);
+      setCategories(unwrapArray<Category>(categoriesResponse, ["categories"]));
+      setAccounts(unwrapArray<Account>(accountsResponse, ["accounts"]));
+      setCategoryGroups(unwrapArray<CategoryGroup>(groupsResponse, ["groups", "categoryGroups"]));
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "budgets_generic_error");
       setToast(message);
@@ -314,9 +331,9 @@ export function BudgetsClient({
         onSaved={handleSaved}
         locale={locale}
         defaultCurrency={defaultCurrency}
-        categories={categories}
-        accounts={accounts}
-        categoryGroups={categoryGroups}
+        categories={Array.isArray(categories) ? categories : []}
+        accounts={Array.isArray(accounts) ? accounts : []}
+        categoryGroups={Array.isArray(categoryGroups) ? categoryGroups : []}
         initialBudget={editingBudget}
       />
     </section>

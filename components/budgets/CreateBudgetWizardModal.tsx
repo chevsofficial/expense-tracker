@@ -168,7 +168,7 @@ export function CreateBudgetWizardModal({
 
   const expenseCategories = useMemo(
     () =>
-      categories.filter(
+      (categories ?? []).filter(
         (category) =>
           !category.isArchived &&
           (category.kind === "expense" || category.kind === "both" || !category.kind)
@@ -178,11 +178,11 @@ export function CreateBudgetWizardModal({
 
   const budgetCategoryIds =
     formState.categoryIds === null
-      ? expenseCategories.map((category) => category._id)
+      ? (expenseCategories ?? []).map((category) => category._id)
       : formState.categoryIds;
 
   const budgetCategories = useMemo(
-    () => expenseCategories.filter((category) => budgetCategoryIds.includes(category._id)),
+    () => (expenseCategories ?? []).filter((category) => budgetCategoryIds.includes(category._id)),
     [budgetCategoryIds, expenseCategories]
   );
 
@@ -218,7 +218,7 @@ export function CreateBudgetWizardModal({
         endDate: formState.type === "custom" ? formState.endDate : undefined,
         categoryIds: formState.categoryIds,
         accountIds: formState.accountIds,
-        categoryBudgets: budgetCategories.map((category) => ({
+        categoryBudgets: (budgetCategories ?? []).map((category) => ({
           categoryId: category._id,
           amount: formState.categoryBudgets[category._id]
             ? Number.parseFloat(formState.categoryBudgets[category._id])
@@ -369,9 +369,9 @@ export function CreateBudgetWizardModal({
             </div>
 
             <CategoryMultiSelect
-              categories={expenseCategories}
-              groups={categoryGroups}
-              selectedIds={selectedCategories}
+              categories={expenseCategories ?? []}
+              groups={categoryGroups ?? []}
+              selectedIds={selectedCategories ?? []}
               allSelected={formState.categoryIds === null}
               onToggleAll={(checked) =>
                 setFormState({
@@ -406,7 +406,7 @@ export function CreateBudgetWizardModal({
                 <p className="text-xs opacity-60">{t(locale, "budgets_scope_all_accounts")}</p>
               ) : (
                 <div className="grid gap-2 md:grid-cols-2">
-                  {accounts
+                  {(accounts ?? [])
                     .filter((account) => !account.isArchived)
                     .map((account) => (
                       <button
@@ -438,7 +438,7 @@ export function CreateBudgetWizardModal({
             <div className="space-y-2">
               {budgetCategories.length ? (
                 <div className="space-y-3">
-                  {budgetCategories.map((category) => (
+                  {(budgetCategories ?? []).map((category) => (
                     <label
                       key={category._id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-200 bg-base-100 px-3 py-2 text-sm"
