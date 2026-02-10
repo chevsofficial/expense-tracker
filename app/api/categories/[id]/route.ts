@@ -113,9 +113,11 @@ export async function DELETE(
   }
 
   const hardDelete = request.nextUrl.searchParams.get("hard") === "1";
+  const forceDelete = request.nextUrl.searchParams.get("force") === "1";
 
   if (hardDelete) {
-    const [transactionCount, budgetMonthCount, budgetCount] = await Promise.all([
+    const [transactionCount, budgetMonthCount, budgetActiveCount, budgetArchivedCount] =
+      await Promise.all([
       TransactionModel.countDocuments({
         workspaceId: auth.workspace.id,
         categoryId: objectId,
@@ -126,27 +128,118 @@ export async function DELETE(
       }),
       BudgetModel.countDocuments({
         workspaceId: auth.workspace.id,
-        categoryIds: objectId,
+        archivedAt: null,
+        $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
+      }),
+      BudgetModel.countDocuments({
+        workspaceId: auth.workspace.id,
+        archivedAt: { $ne: null },
+        $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
       }),
     ]);
 
-    const totalBudgetCount = budgetMonthCount + budgetCount;
-    if (transactionCount > 0 || totalBudgetCount > 0) {
-      const message =
-        "Cannot permanently delete: category is referenced by historical data. Archive instead.";
+    const hasRefs =
+      transactionCount > 0 ||
+      budgetMonthCount > 0 ||
+      budgetActiveCount > 0 ||
+      budgetArchivedCount > 0;
+
+    if (hasRefs && !forceDelete) {
+      const messageParts: string[] = [];
+      if (transactionCount > 0) {
+        messageParts.push(`referenced by ${transactionCount} transactions`);
+      }
+      if (budgetMonthCount > 0) {
+        messageParts.push(`referenced by ${budgetMonthCount} budget-month planned lines`);
+      }
+      if (budgetActiveCount + budgetArchivedCount > 0) {
+        messageParts.push(
+          `referenced by ${budgetActiveCount} active budgets and ${budgetArchivedCount} archived budgets`
+        );
+      }
+
+      const message = `Category is in use: ${messageParts.join(", ")}.`;
       logError(message, {
         workspaceId: auth.workspace.id,
         categoryId: id,
         query,
         transactionCount,
-        budgetCount: totalBudgetCount,
+        budgetMonthCount,
+        budgetActiveCount,
+        budgetArchivedCount,
       });
-      return errorResponse(message, 400);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "CATEGORY_HAS_REFERENCES",
+          message,
+          references: {
+            transactionCount,
+            budgetMonthCount,
+            budgetActiveCount,
+            budgetArchivedCount,
+          },
+        },
+        { status: 409 }
+      );
+    }
+
+    const affectedIds = await BudgetModel.find({
+      workspaceId: auth.workspace.id,
+      $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
+    })
+      .select("_id")
+      .lean();
+
+    const [transactionsUpdated, budgetMonthsUpdated] = await Promise.all([
+      TransactionModel.updateMany(
+        { workspaceId: auth.workspace.id, categoryId: objectId },
+        { $set: { categoryId: null } }
+      ),
+      BudgetMonthModel.updateMany(
+        { workspaceId: auth.workspace.id },
+        { $pull: { plannedLines: { categoryId: objectId } } }
+      ),
+    ]);
+
+    const budgetsUpdated = await BudgetModel.updateMany(
+      { workspaceId: auth.workspace.id },
+      {
+        $pull: {
+          categoryIds: objectId,
+          categoryBudgets: { categoryId: objectId },
+        },
+      }
+    );
+
+    if (affectedIds.length > 0) {
+      const affected = await BudgetModel.find({
+        _id: { $in: affectedIds.map((item) => item._id) },
+      });
+
+      for (const budget of affected) {
+        budget.totalBudgetMinor = (budget.categoryBudgets ?? []).reduce(
+          (sum, row) => sum + row.amountMinor,
+          0
+        );
+        await budget.save();
+      }
     }
 
     await CategoryModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
 
-    return NextResponse.json({ data: { deleted: true } });
+    return NextResponse.json({
+      data: {
+        deleted: true,
+        forced: forceDelete,
+        changes: {
+          transactionsUpdated: transactionsUpdated.modifiedCount,
+          budgetsUpdated: budgetsUpdated.modifiedCount,
+          budgetMonthsUpdated: budgetMonthsUpdated.modifiedCount,
+        },
+      },
+    });
   }
 
   category.isArchived = true;

@@ -24,6 +24,20 @@ type ApiItemResponse<T> = { data: T };
 
 type DeleteResponse = { data: { deleted: boolean } };
 
+type CategoryDeleteReferences = {
+  transactionCount: number;
+  budgetMonthCount: number;
+  budgetActiveCount: number;
+  budgetArchivedCount: number;
+};
+
+type CategoryDeletePreviewResponse = {
+  ok?: boolean;
+  code?: string;
+  message?: string;
+  references?: CategoryDeleteReferences;
+};
+
 const normalizeKind = (kind?: CategoryKind | null): CategoryFormKind =>
   kind === "income" ? "income" : "expense";
 
@@ -69,6 +83,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
   const [deleteCategoryOpen, setDeleteCategoryOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [deleteCategoryReferences, setDeleteCategoryReferences] =
+    useState<CategoryDeleteReferences | null>(null);
+  const [deleteCategoryMessage, setDeleteCategoryMessage] = useState<string | null>(null);
 
   const kindOptions = [
     { value: "expense" as const, label: t(locale, "category_kind_expense") },
@@ -308,9 +325,38 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
     setIsSubmitting(true);
     try {
-      await delJSON<DeleteResponse>(`/api/categories/${categoryToDelete._id}?hard=1`);
+      if (!deleteCategoryReferences) {
+        const previewResponse = await fetch(`/api/categories/${categoryToDelete._id}?hard=1`, {
+          method: "DELETE",
+          headers: { Accept: "application/json" },
+        });
+
+        if (previewResponse.status === 409) {
+          const payload = (await previewResponse
+            .json()
+            .catch(() => null)) as CategoryDeletePreviewResponse | null;
+
+          if (payload?.code === "CATEGORY_HAS_REFERENCES" && payload.references) {
+            setDeleteCategoryMessage(payload.message ?? null);
+            setDeleteCategoryReferences(payload.references);
+            return;
+          }
+        }
+
+        if (!previewResponse.ok) {
+          const payload = (await previewResponse
+            .json()
+            .catch(() => null)) as { error?: { message?: string } } | null;
+          throw new Error(payload?.error?.message ?? previewResponse.statusText);
+        }
+      } else {
+        await delJSON<DeleteResponse>(`/api/categories/${categoryToDelete._id}?hard=1&force=1`);
+      }
+
       setDeleteCategoryOpen(false);
       setCategoryToDelete(null);
+      setDeleteCategoryReferences(null);
+      setDeleteCategoryMessage(null);
       await loadData();
     } catch (err) {
       handleError(err);
@@ -352,6 +398,8 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
   const openDeleteCategoryModal = (category: Category) => {
     setCategoryToDelete(category);
+    setDeleteCategoryReferences(null);
+    setDeleteCategoryMessage(null);
     setDeleteCategoryOpen(true);
   };
 
@@ -985,22 +1033,59 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       <Modal
         open={deleteCategoryOpen}
         title={t(locale, "categories_delete_category_title")}
-        onClose={() => setDeleteCategoryOpen(false)}
+        onClose={() => {
+          setDeleteCategoryOpen(false);
+          setDeleteCategoryReferences(null);
+          setDeleteCategoryMessage(null);
+        }}
       >
         <div className="space-y-4">
-          <p className="text-sm opacity-70">
-            {t(locale, "categories_delete_category_body")}
-          </p>
+          {deleteCategoryReferences ? (
+            <>
+              <p className="text-sm opacity-70">
+                {deleteCategoryMessage ??
+                  "This category is currently in use. Deleting anyway will apply the changes below:"}
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-sm opacity-80">
+                <li>
+                  referenced by {deleteCategoryReferences.transactionCount} transactions → will
+                  become “Uncategorized”
+                </li>
+                <li>
+                  referenced by
+                  {" "}
+                  {deleteCategoryReferences.budgetActiveCount +
+                    deleteCategoryReferences.budgetArchivedCount}
+                  {" "}
+                  budgets → removed from budgets
+                </li>
+                <li>
+                  referenced by {deleteCategoryReferences.budgetMonthCount} budget-month planned
+                  lines → removed from month budgets
+                </li>
+              </ul>
+            </>
+          ) : (
+            <p className="text-sm opacity-70">
+              {t(locale, "categories_delete_category_body")}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setDeleteCategoryOpen(false)}
+              onClick={() => {
+                setDeleteCategoryOpen(false);
+                setDeleteCategoryReferences(null);
+                setDeleteCategoryMessage(null);
+              }}
             >
               {t(locale, "categories_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting} onClick={handleDeleteCategory}>
-              {t(locale, "categories_delete_permanently")}
+              {deleteCategoryReferences
+                ? "Delete anyway"
+                : t(locale, "categories_delete_permanently")}
             </SubmitButton>
           </div>
         </div>
