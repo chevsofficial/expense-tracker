@@ -1,16 +1,11 @@
-export type DashboardTotalsByCurrency = Record<
-  string,
-  {
-    incomeMinor: number;
-    expenseMinor: number;
-    netMinor: number;
-    incomeCount: number;
-    expenseCount: number;
-  }
->;
+export type DashboardTotals = {
+  incomeMinor: number;
+  expenseMinor: number;
+  netMinor: number;
+  transactionCount: number;
+};
 
 export type BreakdownEntry = {
-  currency: string;
   amountMinor: number;
   count: number;
 };
@@ -40,7 +35,7 @@ export type BudgetVsActualEntry = {
 
 export type DashboardDataResponse = {
   month: string;
-  totalsByCurrency: DashboardTotalsByCurrency;
+  totals: DashboardTotals;
   byCategory: {
     income: CategoryBreakdownEntry[];
     expense: CategoryBreakdownEntry[];
@@ -53,5 +48,5 @@ export type DashboardDataResponse = {
     income: MerchantBreakdownEntry[];
     expense: MerchantBreakdownEntry[];
   };
-  budgetVsActual: Record<string, BudgetVsActualEntry>;
+  budgetVsActual: BudgetVsActualEntry;
 };

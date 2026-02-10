@@ -16,7 +16,6 @@ export type CategoryBreakdownRow = {
   id: string | null;
   name: string;
   emoji?: string | null;
-  currency: string;
   amountMinor: number;
   count: number;
 };
@@ -25,9 +24,15 @@ type CategoryBreakdownWidgetProps = {
   locale: Locale;
   title: string;
   rows: CategoryBreakdownRow[];
+  currency: string;
 };
 
-export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdownWidgetProps) {
+export function CategoryBreakdownWidget({
+  locale,
+  title,
+  rows,
+  currency,
+}: CategoryBreakdownWidgetProps) {
   const [view, setView] = useState<"card" | "table" | "pie" | "percentage">("card");
 
   const chartRows = useMemo(() => rows.slice(0, 8), [rows]);
@@ -77,13 +82,13 @@ export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdo
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={`${row.id ?? "uncategorized"}-${row.currency}`}>
+                  <tr key={`${row.id ?? "uncategorized"}`}>
                     <td>
                       {row.emoji ? `${row.emoji} ` : ""}
                       {row.name}
                     </td>
                     <td className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)}
+                      {formatCurrency(locale, row.amountMinor, currency)}
                     </td>
                   </tr>
                 ))}
@@ -96,7 +101,7 @@ export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdo
           <div className="grid gap-3 md:grid-cols-2">
             {rows.map((row) => (
               <div
-                key={`${row.id ?? "uncategorized"}-${row.currency}`}
+                key={`${row.id ?? "uncategorized"}`}
                 className="rounded-lg border border-base-300 p-3"
               >
                 <p className="text-sm font-semibold">
@@ -104,7 +109,7 @@ export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdo
                   {row.name}
                 </p>
                 <p className="text-lg font-semibold">
-                  {formatCurrency(locale, row.amountMinor, row.currency)}
+                  {formatCurrency(locale, row.amountMinor, currency)}
                 </p>
                 <p className="text-xs opacity-60">
                   {row.count} {t(locale, "dashboard_transactions")}
@@ -117,7 +122,7 @@ export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdo
         {rows.length > 0 && view === "pie" ? (
           <PieChartWidget
             data={pieData}
-            valueFormatter={(value) => formatCurrency(locale, value, chartRows[0]?.currency ?? "USD")}
+            valueFormatter={(value) => formatCurrency(locale, value, currency)}
           />
         ) : null}
 
@@ -126,14 +131,14 @@ export function CategoryBreakdownWidget({ locale, title, rows }: CategoryBreakdo
             {rows.map((row) => {
               const percent = total > 0 ? (row.amountMinor / total) * 100 : 0;
               return (
-                <div key={`${row.id ?? "uncategorized"}-${row.currency}`}>
+                <div key={`${row.id ?? "uncategorized"}`}>
                   <div className="flex items-center justify-between text-sm">
                     <span>
                       {row.emoji ? `${row.emoji} ` : ""}
                       {row.name}
                     </span>
                     <span className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)} · {percent.toFixed(1)}%
+                      {formatCurrency(locale, row.amountMinor, currency)} · {percent.toFixed(1)}%
                     </span>
                   </div>
                   <progress

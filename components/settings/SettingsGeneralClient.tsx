@@ -1,19 +1,71 @@
 "use client";
 
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Locale } from "@/src/i18n/messages";
 import { ThemeContext } from "@/src/theme/ThemeProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { getJSON, putJSON } from "@/src/lib/apiClient";
+import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
+import { getWorkspaceCurrency } from "@/src/lib/currency";
 
-export function SettingsGeneralClient({ locale }: { locale: Locale }) {
+type SettingsResponse = { data: { defaultCurrency: string } };
+
+export function SettingsGeneralClient({
+  locale,
+  defaultCurrency,
+}: {
+  locale: Locale;
+  defaultCurrency: string;
+}) {
+  const router = useRouter();
   const theme = useContext(ThemeContext);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [sex, setSex] = useState<"male" | "female" | "other" | "">("");
   const [dob, setDob] = useState("");
+  const [currency, setCurrency] = useState(() => getWorkspaceCurrency({ defaultCurrency }));
+  const [savingCurrency, setSavingCurrency] = useState(false);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
 
   const email = "user@email.com";
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        const response = await getJSON<SettingsResponse>("/api/settings/general");
+        if (isMounted) {
+          setCurrency(getWorkspaceCurrency({ defaultCurrency: response.data.defaultCurrency }));
+        }
+      } catch (err) {
+        if (isMounted) {
+          const message = err instanceof Error ? err.message : "Unable to load settings.";
+          setCurrencyError(message);
+        }
+      }
+    };
+    void loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleCurrencyChange = async (nextCurrency: string) => {
+    setCurrency(nextCurrency);
+    setSavingCurrency(true);
+    setCurrencyError(null);
+    try {
+      await putJSON<SettingsResponse>("/api/settings/general", { defaultCurrency: nextCurrency });
+      router.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update currency.";
+      setCurrencyError(message);
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -110,6 +162,30 @@ export function SettingsGeneralClient({ locale }: { locale: Locale }) {
           <p className="opacity-70 text-sm">Choose your preferred language.</p>
 
           <LanguageToggle locale={locale} />
+        </div>
+      </div>
+
+      <div className="card bg-base-200 border border-base-300">
+        <div className="card-body space-y-4">
+          <h2 className="font-semibold">Currency</h2>
+          <p className="text-sm opacity-70">Select the currency used to display amounts.</p>
+          <label className="form-control w-full max-w-xs">
+            <span className="label-text">Default currency</span>
+            <select
+              className="select select-bordered"
+              value={currency}
+              onChange={(event) => void handleCurrencyChange(event.target.value)}
+              disabled={savingCurrency}
+            >
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+          </label>
+          {currencyError ? <p className="text-sm text-error">{currencyError}</p> : null}
+          {savingCurrency ? <p className="text-sm opacity-70">Saving…</p> : null}
         </div>
       </div>
 

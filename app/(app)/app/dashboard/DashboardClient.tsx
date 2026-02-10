@@ -33,18 +33,17 @@ type Merchant = {
 type SummaryResponse = {
   data: {
     totals: {
-      incomeMinorByCurrency: Record<string, number>;
-      expenseMinorByCurrency: Record<string, number>;
-      balanceMinorByCurrency: Record<string, number>;
+      incomeMinor: number;
+      expenseMinor: number;
+      balanceMinor: number;
     };
-    totalBalanceAsOfEnd: { byCurrency: Record<string, number> };
-    totalChange: { byCurrency: Record<string, number> };
+    totalBalanceAsOfEnd: { amountMinor: number };
+    totalChange: { amountMinor: number };
     byCategory: {
       income: Array<{
         id: string | null;
         name: string;
         emoji?: string | null;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
@@ -52,7 +51,6 @@ type SummaryResponse = {
         id: string | null;
         name: string;
         emoji?: string | null;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
@@ -61,14 +59,12 @@ type SummaryResponse = {
       income: Array<{
         id: string | null;
         name: string;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
       expense: Array<{
         id: string | null;
         name: string;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
@@ -77,14 +73,12 @@ type SummaryResponse = {
       income: Array<{
         groupId: string | null;
         groupName: string;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
       expense: Array<{
         groupId: string | null;
         groupName: string;
-        currency: string;
         amountMinor: number;
         count: number;
       }>;
@@ -94,9 +88,7 @@ type SummaryResponse = {
       actualMinor: number;
       remainingMinor: number;
       progressPct: number;
-      currency: string;
     };
-    supportedCurrencies: string[];
   };
 };
 
@@ -109,7 +101,6 @@ type NextTwoWeeksResponse = {
       title: string;
       nextDate: string;
       amountMinor: number;
-      currency: string;
       kind: "income" | "expense";
       merchantName?: string | null;
       categoryName?: string | null;
@@ -130,11 +121,16 @@ const buildDefaultRange = () => {
   };
 };
 
-export function DashboardClient({ locale }: { locale: Locale }) {
+export function DashboardClient({
+  locale,
+  defaultCurrency,
+}: {
+  locale: Locale;
+  defaultCurrency: string;
+}) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [supportedCurrencies, setSupportedCurrencies] = useState<string[]>([]);
   const [summary, setSummary] = useState<SummaryResponse["data"] | null>(null);
   const [recurring, setRecurring] = useState<NextTwoWeeksResponse["data"] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -145,7 +141,6 @@ export function DashboardClient({ locale }: { locale: Locale }) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
-  const [selectedCurrency, setSelectedCurrency] = useState<string>("");
 
   const loadFilters = useCallback(async () => {
     try {
@@ -176,12 +171,8 @@ export function DashboardClient({ locale }: { locale: Locale }) {
       if (selectedAccountId) params.set("accountId", selectedAccountId);
       if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
       if (selectedMerchantId) params.set("merchantId", selectedMerchantId);
-      if (selectedCurrency) {
-        params.set("currency", selectedCurrency);
-      }
       const response = await getJSON<SummaryResponse>(`/api/dashboard/summary?${params}`);
       setSummary(response.data);
-      setSupportedCurrencies(response.data.supportedCurrencies);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
       setError(message);
@@ -195,20 +186,13 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     selectedAccountId,
     selectedCategoryId,
     selectedMerchantId,
-    selectedCurrency,
   ]);
 
   const loadRecurring = useCallback(async () => {
     setError(null);
     setRecurringLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedCurrency) {
-        params.set("currency", selectedCurrency);
-      }
-      const response = await getJSON<NextTwoWeeksResponse>(
-        `/api/dashboard/next-two-weeks?${params}`
-      );
+      const response = await getJSON<NextTwoWeeksResponse>("/api/dashboard/next-two-weeks");
       setRecurring(response.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
@@ -216,7 +200,7 @@ export function DashboardClient({ locale }: { locale: Locale }) {
     } finally {
       setRecurringLoading(false);
     }
-  }, [locale, selectedCurrency]);
+  }, [locale]);
 
   useEffect(() => {
     void loadFilters();
@@ -257,7 +241,6 @@ export function DashboardClient({ locale }: { locale: Locale }) {
         accounts={accounts}
         categories={categories}
         merchants={merchants}
-        currencies={supportedCurrencies}
         dateRange={dateRange}
         onDateRangeChange={setDateRange}
         selectedAccountId={selectedAccountId}
@@ -266,8 +249,6 @@ export function DashboardClient({ locale }: { locale: Locale }) {
         onCategoryChange={setSelectedCategoryId}
         selectedMerchantId={selectedMerchantId}
         onMerchantChange={setSelectedMerchantId}
-        selectedCurrency={selectedCurrency}
-        onCurrencyChange={setSelectedCurrency}
       />
 
       {error ? (
@@ -287,50 +268,74 @@ export function DashboardClient({ locale }: { locale: Locale }) {
         <DashboardGrid>
           <TotalBalanceCard
             locale={locale}
-            totals={summary.totalBalanceAsOfEnd.byCurrency}
+            total={summary.totalBalanceAsOfEnd.amountMinor}
+            currency={defaultCurrency}
           />
-          <TotalChangeCard locale={locale} totals={summary.totalChange.byCurrency} />
-          <TotalIncomeCard locale={locale} totals={summary.totals.incomeMinorByCurrency} />
-          <TotalExpensesCard locale={locale} totals={summary.totals.expenseMinorByCurrency} />
+          <TotalChangeCard
+            locale={locale}
+            total={summary.totalChange.amountMinor}
+            currency={defaultCurrency}
+          />
+          <TotalIncomeCard
+            locale={locale}
+            total={summary.totals.incomeMinor}
+            currency={defaultCurrency}
+          />
+          <TotalExpensesCard
+            locale={locale}
+            total={summary.totals.expenseMinor}
+            currency={defaultCurrency}
+          />
           <GroupBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_income_by_groups")}
             rows={groupBreakdown.income}
+            currency={defaultCurrency}
           />
           <GroupBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_expense_by_groups")}
             rows={groupBreakdown.expense}
+            currency={defaultCurrency}
           />
           <CategoryBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_income_by_categories")}
             rows={categoryBreakdown.income}
+            currency={defaultCurrency}
           />
           <CategoryBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_expense_by_categories")}
             rows={categoryBreakdown.expense}
+            currency={defaultCurrency}
           />
           <MerchantBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_income_by_merchants")}
             rows={merchantBreakdown.income}
+            currency={defaultCurrency}
           />
           <MerchantBreakdownWidget
             locale={locale}
             title={t(locale, "dashboard_widget_expense_by_merchants")}
             rows={merchantBreakdown.expense}
+            currency={defaultCurrency}
           />
           <div className="col-span-12 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="min-w-0">
-              <BudgetVsActualSummaryCard locale={locale} data={summary.budgetVsActual} />
+              <BudgetVsActualSummaryCard
+                locale={locale}
+                data={summary.budgetVsActual}
+                currency={defaultCurrency}
+              />
             </div>
             <div className="min-w-0">
               <NextTwoWeeksRecurring
                 locale={locale}
                 data={recurring}
                 loading={recurringLoading}
+                currency={defaultCurrency}
               />
             </div>
           </div>

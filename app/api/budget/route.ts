@@ -13,7 +13,6 @@ const plannedLineSchema = z.object({
 });
 
 const upsertSchema = z.object({
-  currency: z.string().trim().min(1).optional(),
   plannedLines: z.array(plannedLineSchema),
 });
 
@@ -90,7 +89,7 @@ export async function PUT(request: NextRequest) {
   const budget = await getOrCreateBudget(
     auth.workspace.id,
     parsedMonth.data,
-    parsedBody.data.currency ?? auth.workspace.defaultCurrency
+    auth.workspace.defaultCurrency
   );
 
   const plannedMap = new Map(
@@ -121,7 +120,7 @@ export async function PUT(request: NextRequest) {
     }
   }
 
-  budget.currency = parsedBody.data.currency ?? budget.currency;
+  budget.currency = auth.workspace.defaultCurrency;
   budget.plannedLines = Array.from(plannedMap.values());
   await budget.save();
 

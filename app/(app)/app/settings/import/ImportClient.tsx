@@ -21,7 +21,6 @@ const entityFields: Record<string, string[]> = {
   transactions: [
     "date",
     "amount",
-    "currency",
     "kind",
     "merchant",
     "category",

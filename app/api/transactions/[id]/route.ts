@@ -5,7 +5,6 @@ import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
 import { BudgetModel } from "@/src/models/Budget";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
@@ -21,7 +20,6 @@ const dateSchema = z
 const updateSchema = z.object({
   date: dateSchema.optional(),
   amount: amountSchema.optional(),
-  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   kind: z.enum(["income", "expense"]).optional(),
   accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
@@ -64,10 +62,6 @@ export async function PUT(
 
   if (parsed.data.amount !== undefined) {
     update.amountMinor = toMinorUnits(parsed.data.amount);
-  }
-
-  if (parsed.data.currency !== undefined) {
-    update.currency = parsed.data.currency;
   }
 
   if (parsed.data.kind !== undefined) {

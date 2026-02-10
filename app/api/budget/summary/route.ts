@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     data: {
       month: summary.month,
-      currencies: summary.currencies,
+      rows: summary.rows ?? [],
+      totals: summary.totals ?? { plannedMinor: 0, actualMinor: 0, remainingMinor: 0 },
     },
   });
 }

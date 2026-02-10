@@ -15,7 +15,7 @@ type SummaryRow = {
   transactionCount: number;
 };
 
-type CurrencySectionProps = {
+type BudgetSummarySectionProps = {
   currency: string;
   rows: SummaryRow[];
   totals: { plannedMinor: number; actualMinor: number; remainingMinor: number };
@@ -29,13 +29,18 @@ type CurrencySectionProps = {
   };
 };
 
-export function CurrencySection({ currency, rows, totals, locale, labels }: CurrencySectionProps) {
+export function BudgetSummarySection({
+  currency,
+  rows,
+  totals,
+  locale,
+  labels,
+}: BudgetSummarySectionProps) {
   return (
     <SurfaceCard>
       <SurfaceCardBody className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">{currency}</h2>
             <p className="text-sm opacity-70">
               {labels.planned}: {formatCurrency(totals.plannedMinor, currency, locale)} ·{" "}
               {labels.actual}: {formatCurrency(totals.actualMinor, currency, locale)} ·{" "}

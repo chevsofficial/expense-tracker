@@ -5,7 +5,6 @@ import { Modal } from "@/components/ui/Modal";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { ScheduleFields } from "@/components/recurring/ScheduleFields";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
@@ -19,7 +18,6 @@ type Merchant = {
 type RecurringForm = {
   name: string;
   amount: string;
-  currency: string;
   kind: "expense" | "income";
   categoryId: string;
   merchantId: string;
@@ -98,21 +96,6 @@ export function RecurringFormModal({
               onChange={(event) => onFormChange({ ...formState, amount: event.target.value })}
               required
             />
-          </label>
-          <label className="form-control w-full">
-            <span className="label-text">{t(locale, "recurring_currency")}</span>
-            <select
-              className="select select-bordered w-full"
-              value={formState.currency}
-              onChange={(event) => onFormChange({ ...formState, currency: event.target.value })}
-              required
-            >
-              {SUPPORTED_CURRENCIES.map((currency) => (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              ))}
-            </select>
           </label>
           <label className="form-control w-full">
             <span className="label-text">{t(locale, "recurring_kind")}</span>

@@ -10,7 +10,7 @@ import { monthRange } from "@/src/utils/month";
 const monthSchema = z.string().regex(/^\d{4}-\d{2}$/, "Invalid month");
 
 type TotalsRow = {
-  _id: { currency: string; kind: "expense" | "income" };
+  _id: { kind: "expense" | "income" };
   total: number;
   count: number;
 };
@@ -43,36 +43,25 @@ export async function GET(request: NextRequest) {
     { $match: match },
     {
       $group: {
-        _id: { currency: "$currency", kind: "$kind" },
+        _id: { kind: "$kind" },
         total: { $sum: "$amountMinor" },
         count: { $sum: 1 },
       },
     },
   ]);
 
-  const totalsMap = new Map<string, { expenseMinor: number; incomeMinor: number; count: number }>();
-  totals.forEach((row) => {
-    const entry = totalsMap.get(row._id.currency) ?? {
-      expenseMinor: 0,
-      incomeMinor: 0,
-      count: 0,
-    };
-    if (row._id.kind === "expense") entry.expenseMinor = row.total;
-    if (row._id.kind === "income") entry.incomeMinor = row.total;
-    entry.count += row.count;
-    totalsMap.set(row._id.currency, entry);
-  });
-
-  const totalsByCurrency = Array.from(totalsMap.entries()).map(([currency, totalsRow]) => ({
-    currency,
-    incomeMinor: totalsRow.incomeMinor,
-    expenseMinor: totalsRow.expenseMinor,
-    netMinor: totalsRow.incomeMinor - totalsRow.expenseMinor,
-    transactionCount: totalsRow.count,
-  }));
+  const totalsSummary = totals.reduce(
+    (acc, row) => {
+      if (row._id.kind === "expense") acc.expenseMinor = row.total;
+      if (row._id.kind === "income") acc.incomeMinor = row.total;
+      acc.transactionCount += row.count;
+      return acc;
+    },
+    { incomeMinor: 0, expenseMinor: 0, transactionCount: 0 }
+  );
 
   const topCategories = await TransactionModel.aggregate<{
-    _id: { categoryId: string | null; currency: string };
+    _id: { categoryId: string | null };
     expenseMinor: number;
     count: number;
   }>([
@@ -84,7 +73,7 @@ export async function GET(request: NextRequest) {
     },
     {
       $group: {
-        _id: { categoryId: "$categoryId", currency: "$currency" },
+        _id: { categoryId: "$categoryId" },
         expenseMinor: { $sum: "$amountMinor" },
         count: { $sum: 1 },
       },
@@ -103,7 +92,7 @@ export async function GET(request: NextRequest) {
   const categoryMap = new Map(categories.map((category) => [category._id.toString(), category]));
 
   const topMerchants = await TransactionModel.aggregate<{
-    _id: { merchantId: string | null; currency: string };
+    _id: { merchantId: string | null };
     expenseMinor: number;
     count: number;
     merchantNameSnapshot?: string | null;
@@ -116,7 +105,7 @@ export async function GET(request: NextRequest) {
     },
     {
       $group: {
-        _id: { merchantId: "$merchantId", currency: "$currency" },
+        _id: { merchantId: "$merchantId" },
         expenseMinor: { $sum: "$amountMinor" },
         count: { $sum: 1 },
         merchantNameSnapshot: { $first: "$merchantNameSnapshot" },
@@ -138,7 +127,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     data: {
       month: parsedMonth.data,
-      totalsByCurrency,
+      totals: {
+        incomeMinor: totalsSummary.incomeMinor,
+        expenseMinor: totalsSummary.expenseMinor,
+        netMinor: totalsSummary.incomeMinor - totalsSummary.expenseMinor,
+        transactionCount: totalsSummary.transactionCount,
+      },
       topMerchants: topMerchants.map((row) => {
         const merchantId = row._id.merchantId;
         const resolvedName = merchantId
@@ -147,7 +141,6 @@ export async function GET(request: NextRequest) {
         return {
           merchantId,
           merchantName: resolvedName,
-          currency: row._id.currency,
           expenseMinor: row.expenseMinor,
           count: row.count,
         };
@@ -160,7 +153,6 @@ export async function GET(request: NextRequest) {
         return {
           categoryId,
           categoryName: categoryId ? resolvedName : "Uncategorized",
-          currency: row._id.currency,
           expenseMinor: row.expenseMinor,
           count: row.count,
         };

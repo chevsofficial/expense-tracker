@@ -18,7 +18,6 @@ type Transaction = {
   _id: string;
   date: string;
   amountMinor: number;
-  currency: string;
   kind: "income" | "expense";
   categoryId: string | null;
   merchantNameSnapshot?: string | null;
@@ -443,7 +442,7 @@ export function BudgetDetailClient({
                       <span className="font-semibold">
                         {formatCurrency(
                           transaction.amountMinor,
-                          transaction.currency || defaultCurrency,
+                          defaultCurrency,
                           locale
                         )}
                       </span>

@@ -3,7 +3,6 @@ import { z } from "zod";
 import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 import { isDateOnlyString, parseDateOnly, toDateOnlyString } from "@/src/server/dates";
 import { computeNextRunAt } from "@/src/utils/recurring";
@@ -19,7 +18,6 @@ const scheduleSchema = z
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   amount: z.number().positive().optional(),
-  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   kind: z.enum(["expense", "income"]).optional(),
   categoryId: z.string().nullable().optional(),
   merchantId: z.string().nullable().optional(),
@@ -89,7 +87,6 @@ export async function PUT(
 
   if (parsed.data.name !== undefined) update.name = parsed.data.name;
   if (parsed.data.amount !== undefined) update.amountMinor = toMinorUnits(parsed.data.amount);
-  if (parsed.data.currency !== undefined) update.currency = parsed.data.currency;
   if (parsed.data.kind !== undefined) update.kind = parsed.data.kind;
   if (parsed.data.isArchived !== undefined) update.isArchived = parsed.data.isArchived;
 

@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { TransactionModel } from "@/src/models/Transaction";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { buildTxFilter } from "@/src/server/dashboard/buildTxFilter";
 import { getBudgetSummary } from "@/src/server/budget/getBudgetSummary";
@@ -14,7 +13,6 @@ const querySchema = z.object({
   accountId: z.string().optional(),
   categoryId: z.string().optional(),
   merchantId: z.string().optional(),
-  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
 });
 
 const addDays = (date: Date, days: number) =>
@@ -25,29 +23,23 @@ const parseOptionalId = (value?: string) => {
   return trimmed ? trimmed : undefined;
 };
 
-const summarizeTotals = (rows: Array<{ _id: { currency: string; kind: "income" | "expense" }; total: number }>) => {
-  const incomeMinorByCurrency: Record<string, number> = {};
-  const expenseMinorByCurrency: Record<string, number> = {};
-  const balanceMinorByCurrency: Record<string, number> = {};
+const summarizeTotals = (rows: Array<{ _id: { kind: "income" | "expense" }; total: number }>) => {
+  let incomeMinor = 0;
+  let expenseMinor = 0;
 
   rows.forEach((row) => {
     if (row._id.kind === "income") {
-      incomeMinorByCurrency[row._id.currency] = row.total;
+      incomeMinor = row.total;
     } else {
-      expenseMinorByCurrency[row._id.currency] = row.total;
+      expenseMinor = row.total;
     }
   });
 
-  const currencies = new Set([
-    ...Object.keys(incomeMinorByCurrency),
-    ...Object.keys(expenseMinorByCurrency),
-  ]);
-  currencies.forEach((currency) => {
-    balanceMinorByCurrency[currency] =
-      (incomeMinorByCurrency[currency] ?? 0) - (expenseMinorByCurrency[currency] ?? 0);
-  });
-
-  return { incomeMinorByCurrency, expenseMinorByCurrency, balanceMinorByCurrency };
+  return {
+    incomeMinor,
+    expenseMinor,
+    balanceMinor: incomeMinor - expenseMinor,
+  };
 };
 
 export async function GET(request: NextRequest) {
@@ -76,19 +68,18 @@ export async function GET(request: NextRequest) {
     accountIds: accountId ? [accountId] : undefined,
     categoryIds: categoryId ? [categoryId] : undefined,
     merchantIds: merchantId ? [merchantId] : undefined,
-    currency: parsed.data.currency,
     start: startDate,
     end: endExclusive,
   });
 
   const totalsRows = await TransactionModel.aggregate<{
-    _id: { currency: string; kind: "income" | "expense" };
+    _id: { kind: "income" | "expense" };
     total: number;
   }>([
     { $match: rangeFilter },
     {
       $group: {
-        _id: { currency: "$currency", kind: "$kind" },
+        _id: { kind: "$kind" },
         total: { $sum: "$amountMinor" },
       },
     },
@@ -97,7 +88,7 @@ export async function GET(request: NextRequest) {
   const totals = summarizeTotals(totalsRows);
 
   const balanceRows = await TransactionModel.aggregate<{
-    _id: { currency: string; kind: "income" | "expense" };
+    _id: { kind: "income" | "expense" };
     total: number;
   }>([
     {
@@ -106,13 +97,12 @@ export async function GET(request: NextRequest) {
         accountIds: accountId ? [accountId] : undefined,
         categoryIds: categoryId ? [categoryId] : undefined,
         merchantIds: merchantId ? [merchantId] : undefined,
-        currency: parsed.data.currency,
         end: endExclusive,
       }),
     },
     {
       $group: {
-        _id: { currency: "$currency", kind: "$kind" },
+        _id: { kind: "$kind" },
         total: { $sum: "$amountMinor" },
       },
     },
@@ -121,7 +111,7 @@ export async function GET(request: NextRequest) {
   const balanceTotals = summarizeTotals(balanceRows);
 
   const startBalanceRows = await TransactionModel.aggregate<{
-    _id: { currency: string; kind: "income" | "expense" };
+    _id: { kind: "income" | "expense" };
     total: number;
   }>([
     {
@@ -130,34 +120,23 @@ export async function GET(request: NextRequest) {
         accountIds: accountId ? [accountId] : undefined,
         categoryIds: categoryId ? [categoryId] : undefined,
         merchantIds: merchantId ? [merchantId] : undefined,
-        currency: parsed.data.currency,
         end: startDate,
       }),
     },
     {
       $group: {
-        _id: { currency: "$currency", kind: "$kind" },
+        _id: { kind: "$kind" },
         total: { $sum: "$amountMinor" },
       },
     },
   ]);
 
   const startBalanceTotals = summarizeTotals(startBalanceRows);
-
-  const totalChangeByCurrency: Record<string, number> = {};
-  const changeCurrencies = new Set([
-    ...Object.keys(balanceTotals.balanceMinorByCurrency),
-    ...Object.keys(startBalanceTotals.balanceMinorByCurrency),
-  ]);
-  changeCurrencies.forEach((currency) => {
-    totalChangeByCurrency[currency] =
-      (balanceTotals.balanceMinorByCurrency[currency] ?? 0) -
-      (startBalanceTotals.balanceMinorByCurrency[currency] ?? 0);
-  });
+  const totalChangeMinor = balanceTotals.balanceMinor - startBalanceTotals.balanceMinor;
 
   const topCategoriesByKind = async (kind: "income" | "expense") => {
     const rows = await TransactionModel.aggregate<{
-      _id: { categoryId: string | null; currency: string };
+      _id: { categoryId: string | null };
       total: number;
       count: number;
       workspaceId: string;
@@ -166,7 +145,7 @@ export async function GET(request: NextRequest) {
       { $match: { ...rangeFilter, kind } },
       {
         $group: {
-          _id: { categoryId: "$categoryId", currency: "$currency" },
+          _id: { categoryId: "$categoryId" },
           total: { $sum: "$amountMinor" },
           count: { $sum: 1 },
           workspaceId: { $first: "$workspaceId" },
@@ -202,7 +181,6 @@ export async function GET(request: NextRequest) {
         id: row._id.categoryId ? row._id.categoryId.toString() : null,
         name: categoryName,
         emoji: row.category?.emoji ?? null,
-        currency: row._id.currency,
         amountMinor: row.total,
         count: row.count,
       };
@@ -211,7 +189,7 @@ export async function GET(request: NextRequest) {
 
   const topMerchantsByKind = async (kind: "income" | "expense") => {
     const rows = await TransactionModel.aggregate<{
-      _id: { merchantId: string | null; currency: string };
+      _id: { merchantId: string | null };
       total: number;
       count: number;
       workspaceId: string;
@@ -220,7 +198,7 @@ export async function GET(request: NextRequest) {
       { $match: { ...rangeFilter, kind } },
       {
         $group: {
-          _id: { merchantId: "$merchantId", currency: "$currency" },
+          _id: { merchantId: "$merchantId" },
           total: { $sum: "$amountMinor" },
           count: { $sum: 1 },
           workspaceId: { $first: "$workspaceId" },
@@ -253,7 +231,6 @@ export async function GET(request: NextRequest) {
       return {
         id: row._id.merchantId ? row._id.merchantId.toString() : null,
         name: merchantName,
-        currency: row._id.currency,
         amountMinor: row.total,
         count: row.count,
       };
@@ -262,7 +239,7 @@ export async function GET(request: NextRequest) {
 
   const topGroupsByKind = async (kind: "income" | "expense") => {
     const rows = await TransactionModel.aggregate<{
-      _id: { groupId: string | null; currency: string };
+      _id: { groupId: string | null };
       total: number;
       count: number;
       workspaceId: string;
@@ -290,7 +267,7 @@ export async function GET(request: NextRequest) {
       { $addFields: { groupId: { $ifNull: ["$category.groupId", null] } } },
       {
         $group: {
-          _id: { groupId: "$groupId", currency: "$currency" },
+          _id: { groupId: "$groupId" },
           total: { $sum: "$amountMinor" },
           count: { $sum: 1 },
           workspaceId: { $first: "$workspaceId" },
@@ -325,7 +302,6 @@ export async function GET(request: NextRequest) {
       return {
         groupId: row._id.groupId ? row._id.groupId.toString() : null,
         groupName,
-        currency: row._id.currency,
         amountMinor: row.total,
         count: row.count,
       };
@@ -348,24 +324,11 @@ export async function GET(request: NextRequest) {
     topGroupsByKind("expense"),
   ]);
 
-  const supportedCurrencies = await TransactionModel.distinct(
-    "currency",
-    buildTxFilter({
-      workspaceId: auth.workspace.id,
-      accountIds: accountId ? [accountId] : undefined,
-      categoryIds: categoryId ? [categoryId] : undefined,
-      merchantIds: merchantId ? [merchantId] : undefined,
-    })
-  );
-
   const budgetSummary = await getBudgetSummary({
     workspace: auth.workspace,
     month: currentMonth(),
   });
-  const budgetSection =
-    budgetSummary.currencies.find((section) => section.currency === budgetSummary.budgetCurrency) ??
-    budgetSummary.currencies[0];
-  const budgetTotals = budgetSection?.totals ?? {
+  const budgetTotals = budgetSummary.totals ?? {
     plannedMinor: 0,
     actualMinor: 0,
     remainingMinor: 0,
@@ -379,10 +342,10 @@ export async function GET(request: NextRequest) {
     data: {
       totals,
       totalBalanceAsOfEnd: {
-        byCurrency: balanceTotals.balanceMinorByCurrency,
+        amountMinor: balanceTotals.balanceMinor,
       },
       totalChange: {
-        byCurrency: totalChangeByCurrency,
+        amountMinor: totalChangeMinor,
       },
       byCategory: {
         income: topCategoriesIncome,
@@ -401,9 +364,7 @@ export async function GET(request: NextRequest) {
         actualMinor: budgetTotals.actualMinor,
         remainingMinor: budgetTotals.remainingMinor,
         progressPct: budgetProgress,
-        currency: budgetSection?.currency ?? budgetSummary.budgetCurrency,
       },
-      supportedCurrencies,
     },
   });
 }

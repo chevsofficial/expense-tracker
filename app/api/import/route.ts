@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       const row = rows[i];
       const dateValue = getFieldValue(row, mapping, "date").trim();
       const amountValue = getFieldValue(row, mapping, "amount").trim();
-      const currency = getFieldValue(row, mapping, "currency").trim();
+      const currency = auth.workspace.defaultCurrency;
       const kindValue = getFieldValue(row, mapping, "kind").trim();
       const merchantName = getFieldValue(row, mapping, "merchant").trim();
       const categoryName = getFieldValue(row, mapping, "category").trim();

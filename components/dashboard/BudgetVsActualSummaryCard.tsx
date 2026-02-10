@@ -11,8 +11,8 @@ type BudgetVsActualSummaryCardProps = {
     actualMinor: number;
     remainingMinor: number;
     progressPct: number;
-    currency: string;
   };
+  currency: string;
   className?: string;
 };
 
@@ -25,6 +25,7 @@ const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =
 export function BudgetVsActualSummaryCard({
   locale,
   data,
+  currency,
   className,
 }: BudgetVsActualSummaryCardProps) {
   const progress = Math.round(data.progressPct * 100);
@@ -41,7 +42,7 @@ export function BudgetVsActualSummaryCard({
               {t(locale, "dashboard_budget_vs_actual_planned")}
             </p>
             <p className="text-lg font-semibold">
-              {formatCurrency(locale, data.plannedMinor, data.currency)}
+              {formatCurrency(locale, data.plannedMinor, currency)}
             </p>
           </div>
           <div>
@@ -49,7 +50,7 @@ export function BudgetVsActualSummaryCard({
               {t(locale, "dashboard_budget_vs_actual_actual")}
             </p>
             <p className="text-lg font-semibold">
-              {formatCurrency(locale, data.actualMinor, data.currency)}
+              {formatCurrency(locale, data.actualMinor, currency)}
             </p>
           </div>
           <div>
@@ -57,7 +58,7 @@ export function BudgetVsActualSummaryCard({
               {t(locale, "dashboard_budget_vs_actual_remaining")}
             </p>
             <p className="text-lg font-semibold">
-              {formatCurrency(locale, data.remainingMinor, data.currency)}
+              {formatCurrency(locale, data.remainingMinor, currency)}
             </p>
           </div>
         </div>

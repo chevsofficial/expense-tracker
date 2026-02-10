@@ -42,7 +42,7 @@ export function BudgetSummaryTable({ rows, locale, currency, labels }: BudgetSum
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.categoryId ?? "uncategorized"}-${currency}`}>
+            <tr key={`${row.categoryId ?? "uncategorized"}`}>
               <td>{row.categoryName}</td>
               <td>{formatCurrency(row.plannedMinor, currency, locale)}</td>
               <td>{formatCurrency(row.actualMinor, currency, locale)}</td>
