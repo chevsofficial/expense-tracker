@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:namekey": "node scripts/migrate-namekey.mjs"
+    "migrate:namekey": "node scripts/migrate-namekey.mjs",
+    "migrate:budgets-categoryBudgets": "node scripts/migrate-budgets-categoryBudgets.mjs"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
