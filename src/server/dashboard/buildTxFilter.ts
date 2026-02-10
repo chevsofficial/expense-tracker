@@ -6,7 +6,6 @@ type BuildTxFilterInput = {
   accountIds?: string[];
   categoryIds?: string[];
   merchantIds?: string[];
-  currency?: string;
   start?: Date;
   end?: Date;
   includeArchived?: boolean;
@@ -43,10 +42,6 @@ export function buildTxFilter(input: BuildTxFilterInput) {
       .map(parseObjectId)
       .filter(Boolean) as mongoose.Types.ObjectId[];
     filter.merchantId = { $in: merchantObjectIds };
-  }
-
-  if (input.currency) {
-    filter.currency = input.currency;
   }
 
   if (input.start || input.end) {

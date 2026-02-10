@@ -1,15 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
 import { RecurringModel } from "@/src/models/Recurring";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { toYmdUtc } from "@/src/utils/dateOnly";
-
-const querySchema = z.object({
-  currency: z.enum(SUPPORTED_CURRENCIES).optional(),
-});
 
 const addDays = (ymd: string, days: number) => {
   const date = new Date(`${ymd}T00:00:00.000Z`);
@@ -21,10 +15,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const parsed = querySchema.safeParse(params);
-  if (!parsed.success) {
-    return errorResponse(parsed.error.message, 400);
+  if (request.nextUrl.searchParams.has("currency")) {
+    return errorResponse("Currency filtering is no longer supported.", 400);
   }
 
   const from = toYmdUtc(new Date());
@@ -33,7 +25,6 @@ export async function GET(request: NextRequest) {
   const recurringItems = await RecurringModel.find({
     workspaceId: auth.workspace.id,
     isArchived: false,
-    ...(parsed.data.currency ? { currency: parsed.data.currency } : {}),
     nextRunOn: { $gte: from, $lte: to },
   }).lean();
 
@@ -65,7 +56,6 @@ export async function GET(request: NextRequest) {
       title: item.name,
       nextDate: item.nextRunOn,
       amountMinor: item.amountMinor,
-      currency: item.currency,
       kind: item.kind,
       merchantName: merchant?.name ?? null,
       categoryName: category?.nameCustom?.trim() || category?.nameKey || null,

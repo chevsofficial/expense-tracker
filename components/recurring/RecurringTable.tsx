@@ -9,7 +9,6 @@ type RecurringItem = {
   _id: string;
   name: string;
   amountMinor: number;
-  currency: string;
   kind: "expense" | "income";
   categoryId?: string | null;
   merchantId?: string | null;
@@ -26,6 +25,7 @@ type RecurringItem = {
 type RecurringTableProps = {
   items: RecurringItem[];
   locale: Locale;
+  currency: string;
   statusValue: string;
   labels: {
     name: string;
@@ -52,6 +52,7 @@ type RecurringTableProps = {
 export function RecurringTable({
   items,
   locale,
+  currency,
   statusValue,
   labels,
   categoryMap,
@@ -81,7 +82,7 @@ export function RecurringTable({
           {items.map((item) => (
             <tr key={item._id} className={item.isArchived ? "opacity-60" : ""}>
               <td>{item.name}</td>
-              <td>{formatCurrency(item.amountMinor, item.currency, locale)}</td>
+              <td>{formatCurrency(item.amountMinor, currency, locale)}</td>
               <td>{item.categoryId ? categoryMap.get(item.categoryId) : "-"}</td>
               <td>{item.merchantId ? merchantMap.get(item.merchantId) : "-"}</td>
               <td>{scheduleLabel(item)}</td>

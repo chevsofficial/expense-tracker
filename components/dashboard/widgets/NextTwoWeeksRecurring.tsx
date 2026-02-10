@@ -14,7 +14,6 @@ type RecurringItem = {
   title: string;
   nextDate: string;
   amountMinor: number;
-  currency: string;
   kind: "income" | "expense";
   merchantName?: string | null;
   categoryName?: string | null;
@@ -23,6 +22,7 @@ type RecurringItem = {
 
 type NextTwoWeeksRecurringProps = {
   locale: Locale;
+  currency: string;
   data: {
     from: string;
     to: string;
@@ -34,6 +34,7 @@ type NextTwoWeeksRecurringProps = {
 
 export function NextTwoWeeksRecurring({
   locale,
+  currency,
   data,
   loading,
   className,
@@ -79,8 +80,12 @@ export function NextTwoWeeksRecurring({
                     {item.merchantName ? <span>{" "}• {item.merchantName}</span> : null}
                   </p>
                 </div>
-                <div className={`text-right text-lg font-semibold ${item.kind === "income" ? "text-success" : "text-error"}`}>
-                  {formatCurrency(locale, item.amountMinor, item.currency)}
+                <div
+                  className={`text-right text-lg font-semibold ${
+                    item.kind === "income" ? "text-success" : "text-error"
+                  }`}
+                >
+                  {formatCurrency(locale, item.amountMinor, currency)}
                 </div>
               </div>
             ))}

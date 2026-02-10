@@ -5,12 +5,10 @@ import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
 import { BudgetModel } from "@/src/models/Budget";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
-
-const currencySchema = z.enum(SUPPORTED_CURRENCIES);
+import { getWorkspaceCurrency } from "@/src/lib/currency";
 
 const amountSchema = z
   .number()
@@ -24,7 +22,6 @@ const dateSchema = z
 const createSchema = z.object({
   date: dateSchema,
   amount: amountSchema,
-  currency: currencySchema,
   kind: z.enum(["income", "expense"]),
   accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
@@ -59,7 +56,6 @@ export async function GET(request: NextRequest) {
   const accountParam = params.get("accountId");
   const accountIdsParam = params.get("accountIds");
   const budgetParam = params.get("budgetId");
-  const currencyParam = params.get("currency");
   const searchParam = params.get("q");
   const startDateParam = params.get("startDate");
   const endDateParam = params.get("endDate");
@@ -164,13 +160,6 @@ export async function GET(request: NextRequest) {
       }
       filter.budgetId = budgetId;
     }
-  }
-
-  if (currencyParam) {
-    if (!SUPPORTED_CURRENCIES.includes(currencyParam as (typeof SUPPORTED_CURRENCIES)[number])) {
-      return errorResponse("Invalid currency", 400);
-    }
-    filter.currency = currencyParam;
   }
 
   if (searchParam) {
@@ -278,6 +267,7 @@ export async function POST(request: NextRequest) {
     categoryId: categoryObjectId ?? null,
     budgetId: budgetObjectId ?? null,
     amountMinor: toMinorUnits(amount),
+    currency: getWorkspaceCurrency(auth.workspace),
     date: normalizeToUtcMidnight(date),
     merchantId: merchantObjectId,
     merchantNameSnapshot: resolvedMerchantNameSnapshot,

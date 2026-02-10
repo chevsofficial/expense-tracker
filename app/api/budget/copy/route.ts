@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   });
 
   const plannedLines = source?.plannedLines ?? [];
-  const currency = source?.currency ?? auth.workspace.defaultCurrency;
+  const currency = auth.workspace.defaultCurrency;
 
   const budget = await BudgetMonthModel.findOneAndUpdate(
     { workspaceId: auth.workspace.id, month: toParsed.data },

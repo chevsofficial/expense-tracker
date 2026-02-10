@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { t } from "@/src/i18n/t";
 import { toYmdUtc } from "@/src/utils/dateOnly";
 import { RecurringFormModal } from "@/components/recurring/RecurringFormModal";
@@ -15,7 +14,6 @@ type Recurring = {
   _id: string;
   name: string;
   amountMinor: number;
-  currency: string;
   kind: "expense" | "income";
   categoryId?: string | null;
   merchantId?: string | null;
@@ -42,7 +40,6 @@ type ApiItemResponse<T> = { data: T };
 type RecurringForm = {
   name: string;
   amount: string;
-  currency: string;
   kind: "expense" | "income";
   categoryId: string;
   merchantId: string;
@@ -56,7 +53,13 @@ const getTodayInput = () => toYmdUtc(new Date());
 
 const getDayFromDateInput = (value: string) => Number(value.split("-")[2]) || 1;
 
-export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; defaultCurrency: string }) {
+export function RecurringClient({
+  locale,
+  defaultCurrency,
+}: {
+  locale: Locale;
+  defaultCurrency: string;
+}) {
   const [recurring, setRecurring] = useState<Recurring[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
@@ -71,19 +74,11 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
   const [recurringToDelete, setRecurringToDelete] = useState<Recurring | null>(null);
   const [dayOfMonthOverridden, setDayOfMonthOverridden] = useState(false);
 
-  const resolvedDefaultCurrency = useMemo(() => {
-    if (SUPPORTED_CURRENCIES.includes(defaultCurrency as (typeof SUPPORTED_CURRENCIES)[number])) {
-      return defaultCurrency;
-    }
-    return "MXN";
-  }, [defaultCurrency]);
-
   const [formState, setFormState] = useState<RecurringForm>(() => {
     const today = getTodayInput();
     return {
       name: "",
       amount: "",
-      currency: resolvedDefaultCurrency,
       kind: "expense",
       categoryId: "uncategorized",
       merchantId: "unassigned",
@@ -194,7 +189,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     setFormState({
       name: "",
       amount: "",
-      currency: resolvedDefaultCurrency,
       kind: "expense",
       categoryId: "uncategorized",
       merchantId: "unassigned",
@@ -232,7 +226,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     const payload = {
       name: formState.name,
       amount: amountValue,
-      currency: formState.currency,
       kind: formState.kind,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
       merchantId: formState.merchantId === "unassigned" ? null : formState.merchantId,
@@ -268,7 +261,6 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
     setFormState({
       name: item.name,
       amount: (item.amountMinor / 100).toFixed(2),
-      currency: item.currency,
       kind: item.kind,
       categoryId: item.categoryId ?? "uncategorized",
       merchantId: item.merchantId ?? "unassigned",
@@ -425,6 +417,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
             <RecurringTable
               items={activeRecurring}
               locale={locale}
+              currency={defaultCurrency}
               statusValue={t(locale, "recurring_status_active")}
               labels={{
                 name: t(locale, "recurring_name"),
@@ -459,6 +452,7 @@ export function RecurringClient({ locale, defaultCurrency }: { locale: Locale; d
                 <RecurringTable
                   items={archivedRecurring}
                   locale={locale}
+                  currency={defaultCurrency}
                   statusValue={t(locale, "recurring_status_archived")}
                   labels={{
                     name: t(locale, "recurring_name"),

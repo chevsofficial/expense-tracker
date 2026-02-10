@@ -21,9 +21,9 @@ import { CreateBudgetWizardModal, type Budget } from "@/components/budgets/Creat
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { formatMonthLabel } from "@/src/utils/month";
 import { t } from "@/src/i18n/t";
-import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
+import { getWorkspaceCurrency } from "@/src/lib/currency";
 
 type TransactionKind = "income" | "expense";
 
@@ -31,7 +31,6 @@ type Transaction = {
   _id: string;
   date: string;
   amountMinor: number;
-  currency: string;
   kind: TransactionKind;
   accountId?: string | null;
   categoryId: string | null;
@@ -60,7 +59,6 @@ type Account = {
   _id: string;
   name: string;
   type?: string | null;
-  currency?: string | null;
   isArchived?: boolean;
 };
 
@@ -75,7 +73,6 @@ type DeleteResponse = { data: { deleted: boolean } };
 type TransactionForm = {
   date: string;
   amount: string;
-  currency: string;
   kind: TransactionKind;
   accountId: string;
   categoryId: string;
@@ -150,7 +147,6 @@ export function TransactionsClient({
   const [merchantFilter, setMerchantFilter] = useState<string>("");
   const [accountFilter, setAccountFilter] = useState<string>("");
   const [budgetFilter, setBudgetFilter] = useState<string>("");
-  const [currencyFilter, setCurrencyFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -170,17 +166,14 @@ export function TransactionsClient({
 
   const [budgetWizardOpen, setBudgetWizardOpen] = useState(false);
 
-  const resolvedDefaultCurrency = useMemo(() => {
-    if (SUPPORTED_CURRENCIES.includes(defaultCurrency as (typeof SUPPORTED_CURRENCIES)[number])) {
-      return defaultCurrency;
-    }
-    return "MXN";
-  }, [defaultCurrency]);
+  const resolvedDefaultCurrency = useMemo(
+    () => getWorkspaceCurrency({ defaultCurrency }),
+    [defaultCurrency]
+  );
 
   const [formState, setFormState] = useState<TransactionForm>(() => ({
     date: getTodayInput(),
     amount: "",
-    currency: resolvedDefaultCurrency,
     kind: "expense",
     accountId: "unassigned",
     categoryId: "uncategorized",
@@ -237,10 +230,10 @@ export function TransactionsClient({
   );
 
   const formatCurrency = useCallback(
-    (amountMinor: number, currency: string) =>
+    (amountMinor: number) =>
       new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: currency || resolvedDefaultCurrency,
+        currency: resolvedDefaultCurrency,
       }).format(amountMinor / 100),
     [locale, resolvedDefaultCurrency]
   );
@@ -308,7 +301,6 @@ export function TransactionsClient({
       if (merchantFilter) params.set("merchantId", merchantFilter);
       if (accountFilter) params.set("accountId", accountFilter);
       if (budgetFilter) params.set("budgetId", budgetFilter);
-      if (currencyFilter) params.set("currency", currencyFilter);
       if (searchFilter) params.set("q", searchFilter);
       params.set("includeArchived", String(showArchived));
 
@@ -329,7 +321,6 @@ export function TransactionsClient({
     merchantFilter,
     accountFilter,
     budgetFilter,
-    currencyFilter,
     searchFilter,
   ]);
 
@@ -357,7 +348,6 @@ export function TransactionsClient({
     const paramMerchant = searchParams.get("merchantId");
     const paramAccount = searchParams.get("accountId");
     const paramBudget = searchParams.get("budgetId");
-    const paramCurrency = searchParams.get("currency");
     const paramQuery = searchParams.get("q");
     const paramArchived = searchParams.get("includeArchived");
 
@@ -367,7 +357,6 @@ export function TransactionsClient({
     if (paramMerchant) setMerchantFilter(paramMerchant);
     if (paramAccount) setAccountFilter(paramAccount);
     if (paramBudget) setBudgetFilter(paramBudget);
-    if (paramCurrency) setCurrencyFilter(paramCurrency);
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
 
@@ -383,7 +372,6 @@ export function TransactionsClient({
     if (merchantFilter) params.set("merchantId", merchantFilter);
     if (accountFilter) params.set("accountId", accountFilter);
     if (budgetFilter) params.set("budgetId", budgetFilter);
-    if (currencyFilter) params.set("currency", currencyFilter);
     if (searchFilter) params.set("q", searchFilter);
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
@@ -394,7 +382,6 @@ export function TransactionsClient({
     merchantFilter,
     accountFilter,
     budgetFilter,
-    currencyFilter,
     searchFilter,
     showArchived,
     router,
@@ -409,7 +396,6 @@ export function TransactionsClient({
     setFormState({
       date: getTodayInput(),
       amount: "",
-      currency: resolvedDefaultCurrency,
       kind: "expense",
       accountId: defaultAccountId,
       categoryId: "uncategorized",
@@ -431,7 +417,6 @@ export function TransactionsClient({
     setFormState({
       date: formatDateInput(transaction.date),
       amount: (transaction.amountMinor / 100).toFixed(2),
-      currency: transaction.currency,
       kind: transaction.kind,
       accountId: transaction.accountId ?? "unassigned",
       categoryId: transaction.categoryId ?? "uncategorized",
@@ -556,7 +541,6 @@ export function TransactionsClient({
     const payload: Record<string, unknown> = {
       date: formState.date,
       amount: amountValue,
-      currency: formState.currency,
       kind: formState.kind,
       accountId: formState.accountId === "unassigned" ? null : formState.accountId,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
@@ -775,7 +759,7 @@ export function TransactionsClient({
                 <td>
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
-                <td>{formatCurrency(transaction.amountMinor, transaction.currency)}</td>
+                <td>{formatCurrency(transaction.amountMinor)}</td>
                 <td>
                   {receiptUrl ? (
                     <button
@@ -968,23 +952,6 @@ export function TransactionsClient({
                   ))}
                 </select>
               </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_currency")}
-                </span>
-                <select
-                  className="select select-bordered select-sm"
-                  value={currencyFilter}
-                  onChange={(event) => setCurrencyFilter(event.target.value)}
-                >
-                  <option value="">{t(locale, "transactions_filter_any")}</option>
-                  {SUPPORTED_CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <label className="form-control w-full md:col-span-2 lg:col-span-2">
                 <span className="label-text mb-1 text-sm font-medium">
                   {t(locale, "transactions_search")}
@@ -1083,24 +1050,6 @@ export function TransactionsClient({
               step="0.01"
               onChange={(event) => setFormState({ ...formState, amount: event.target.value })}
             />
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_currency")}
-              </span>
-              <select
-                className="select select-bordered"
-                value={formState.currency}
-                onChange={(event) =>
-                  setFormState({ ...formState, currency: event.target.value })
-                }
-              >
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_kind")}

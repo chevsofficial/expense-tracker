@@ -15,7 +15,6 @@ const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =
 export type GroupBreakdownRow = {
   groupId: string | null;
   groupName: string;
-  currency: string;
   amountMinor: number;
   count: number;
 };
@@ -24,9 +23,15 @@ type GroupBreakdownWidgetProps = {
   locale: Locale;
   title: string;
   rows: GroupBreakdownRow[];
+  currency: string;
 };
 
-export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidgetProps) {
+export function GroupBreakdownWidget({
+  locale,
+  title,
+  rows,
+  currency,
+}: GroupBreakdownWidgetProps) {
   const [view, setView] = useState<"card" | "table" | "pie" | "percentage">("card");
 
   const chartRows = useMemo(() => rows.slice(0, 8), [rows]);
@@ -76,10 +81,10 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={`${row.groupId ?? "ungrouped"}-${row.currency}`}>
+                  <tr key={`${row.groupId ?? "ungrouped"}`}>
                     <td>{row.groupName}</td>
                     <td className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)}
+                      {formatCurrency(locale, row.amountMinor, currency)}
                     </td>
                   </tr>
                 ))}
@@ -92,12 +97,12 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
           <div className="grid gap-3 md:grid-cols-2">
             {rows.map((row) => (
               <div
-                key={`${row.groupId ?? "ungrouped"}-${row.currency}`}
+                key={`${row.groupId ?? "ungrouped"}`}
                 className="rounded-lg border border-base-300 p-3"
               >
                 <p className="text-sm font-semibold">{row.groupName}</p>
                 <p className="text-lg font-semibold">
-                  {formatCurrency(locale, row.amountMinor, row.currency)}
+                  {formatCurrency(locale, row.amountMinor, currency)}
                 </p>
                 <p className="text-xs opacity-60">
                   {row.count} {t(locale, "dashboard_transactions")}
@@ -110,7 +115,7 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
         {rows.length > 0 && view === "pie" ? (
           <PieChartWidget
             data={pieData}
-            valueFormatter={(value) => formatCurrency(locale, value, chartRows[0]?.currency ?? "USD")}
+            valueFormatter={(value) => formatCurrency(locale, value, currency)}
           />
         ) : null}
 
@@ -119,11 +124,11 @@ export function GroupBreakdownWidget({ locale, title, rows }: GroupBreakdownWidg
             {rows.map((row) => {
               const percent = total > 0 ? (row.amountMinor / total) * 100 : 0;
               return (
-                <div key={`${row.groupId ?? "ungrouped"}-${row.currency}`}>
+                <div key={`${row.groupId ?? "ungrouped"}`}>
                   <div className="flex items-center justify-between text-sm">
                     <span>{row.groupName}</span>
                     <span className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)} · {percent.toFixed(1)}%
+                      {formatCurrency(locale, row.amountMinor, currency)} · {percent.toFixed(1)}%
                     </span>
                   </div>
                   <progress

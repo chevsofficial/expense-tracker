@@ -10,33 +10,25 @@ const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =
 
 export function TotalBalanceCard({
   locale,
-  totals,
+  total,
+  currency,
 }: {
   locale: Locale;
-  totals: Record<string, number>;
+  total: number;
+  currency: string;
 }) {
-  const entries = Object.entries(totals);
-
   return (
     <SurfaceCard className="col-span-12 md:col-span-6">
       <SurfaceCardBody>
         <h3 className="text-sm font-semibold uppercase opacity-60">
           {t(locale, "dashboard_total_balance")}
         </h3>
-        {entries.length === 0 ? (
-          <p className="text-sm opacity-70">{t(locale, "dashboard_no_activity")}</p>
-        ) : (
-          <div className="space-y-2">
-            {entries.map(([currency, amount]) => (
-              <div key={currency} className="flex items-center justify-between">
-                <span className="text-sm uppercase opacity-70">{currency}</span>
-                <span className="text-lg font-semibold">
-                  {formatCurrency(locale, amount, currency)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-sm uppercase opacity-70">{currency}</span>
+          <span className="text-lg font-semibold">
+            {formatCurrency(locale, total, currency)}
+          </span>
+        </div>
       </SurfaceCardBody>
     </SurfaceCard>
   );

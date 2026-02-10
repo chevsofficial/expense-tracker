@@ -15,7 +15,6 @@ const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =
 export type MerchantBreakdownRow = {
   id: string | null;
   name: string;
-  currency: string;
   amountMinor: number;
   count: number;
 };
@@ -24,9 +23,15 @@ type MerchantBreakdownWidgetProps = {
   locale: Locale;
   title: string;
   rows: MerchantBreakdownRow[];
+  currency: string;
 };
 
-export function MerchantBreakdownWidget({ locale, title, rows }: MerchantBreakdownWidgetProps) {
+export function MerchantBreakdownWidget({
+  locale,
+  title,
+  rows,
+  currency,
+}: MerchantBreakdownWidgetProps) {
   const [view, setView] = useState<"card" | "table" | "pie" | "percentage">("card");
 
   const chartRows = useMemo(() => rows.slice(0, 8), [rows]);
@@ -76,10 +81,10 @@ export function MerchantBreakdownWidget({ locale, title, rows }: MerchantBreakdo
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={`${row.id ?? "unassigned"}-${row.currency}`}>
+                  <tr key={`${row.id ?? "unassigned"}`}>
                     <td>{row.name}</td>
                     <td className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)}
+                      {formatCurrency(locale, row.amountMinor, currency)}
                     </td>
                   </tr>
                 ))}
@@ -92,12 +97,12 @@ export function MerchantBreakdownWidget({ locale, title, rows }: MerchantBreakdo
           <div className="grid gap-3 md:grid-cols-2">
             {rows.map((row) => (
               <div
-                key={`${row.id ?? "unassigned"}-${row.currency}`}
+                key={`${row.id ?? "unassigned"}`}
                 className="rounded-lg border border-base-300 p-3"
               >
                 <p className="text-sm font-semibold">{row.name}</p>
                 <p className="text-lg font-semibold">
-                  {formatCurrency(locale, row.amountMinor, row.currency)}
+                  {formatCurrency(locale, row.amountMinor, currency)}
                 </p>
                 <p className="text-xs opacity-60">
                   {row.count} {t(locale, "dashboard_transactions")}
@@ -110,7 +115,7 @@ export function MerchantBreakdownWidget({ locale, title, rows }: MerchantBreakdo
         {rows.length > 0 && view === "pie" ? (
           <PieChartWidget
             data={pieData}
-            valueFormatter={(value) => formatCurrency(locale, value, chartRows[0]?.currency ?? "USD")}
+            valueFormatter={(value) => formatCurrency(locale, value, currency)}
           />
         ) : null}
 
@@ -119,11 +124,11 @@ export function MerchantBreakdownWidget({ locale, title, rows }: MerchantBreakdo
             {rows.map((row) => {
               const percent = total > 0 ? (row.amountMinor / total) * 100 : 0;
               return (
-                <div key={`${row.id ?? "unassigned"}-${row.currency}`}>
+                <div key={`${row.id ?? "unassigned"}`}>
                   <div className="flex items-center justify-between text-sm">
                     <span>{row.name}</span>
                     <span className="text-right">
-                      {formatCurrency(locale, row.amountMinor, row.currency)} · {percent.toFixed(1)}%
+                      {formatCurrency(locale, row.amountMinor, currency)} · {percent.toFixed(1)}%
                     </span>
                   </div>
                   <progress

@@ -80,22 +80,6 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
     kind: "expense",
   },
   {
-    type: "income_by_currency",
-    titleKey: "dashboard_widget_income_by_currency",
-    supportedViews: ["table", "bar", "pie"],
-    defaultView: "table",
-    defaultSize: { w: 4, h: 3 },
-    kind: "income",
-  },
-  {
-    type: "expense_by_currency",
-    titleKey: "dashboard_widget_expense_by_currency",
-    supportedViews: ["table", "bar", "pie"],
-    defaultView: "table",
-    defaultSize: { w: 4, h: 3 },
-    kind: "expense",
-  },
-  {
     type: "income_tx_count",
     titleKey: "dashboard_widget_income_tx_count",
     supportedViews: ["card", "table"],

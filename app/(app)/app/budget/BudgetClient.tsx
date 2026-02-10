@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { MonthPicker } from "@/components/shared/MonthPicker";
-import { CurrencySection } from "@/components/budget/CurrencySection";
+import { BudgetSummarySection } from "@/components/budget/BudgetSummarySection";
 import { formatMonthLabel } from "@/src/utils/month";
 import type { Locale } from "@/src/i18n/messages";
 
@@ -19,15 +19,10 @@ type SummaryRow = {
   transactionCount: number;
 };
 
-type CurrencySectionData = {
-  currency: string;
-  rows: SummaryRow[];
-  totals: { plannedMinor: number; actualMinor: number; remainingMinor: number };
-};
-
 type BudgetSummary = {
   month: string;
-  currencies: CurrencySectionData[];
+  rows: SummaryRow[];
+  totals: { plannedMinor: number; actualMinor: number; remainingMinor: number };
 };
 
 type ApiItemResponse<T> = { data: T };
@@ -38,7 +33,13 @@ const getCurrentMonth = () => {
   return `${now.getFullYear()}-${month}`;
 };
 
-export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: string }) {
+export function BudgetClient({
+  locale,
+  defaultCurrency,
+}: {
+  locale: Locale;
+  defaultCurrency: string;
+}) {
   const searchParams = useSearchParams();
   const initializedFromQuery = useRef(false);
   const [month, setMonth] = useState(getCurrentMonth());
@@ -72,7 +73,8 @@ export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: stri
     void loadSummary();
   }, [loadSummary]);
 
-  const sections = useMemo(() => summary?.currencies ?? [], [summary]);
+  const rows = useMemo(() => summary?.rows ?? [], [summary]);
+  const totals = summary?.totals ?? { plannedMinor: 0, actualMinor: 0, remainingMinor: 0 };
 
   const labels = {
     category: t(locale, "budget_category"),
@@ -109,18 +111,15 @@ export function BudgetClient({ locale }: { locale: Locale; defaultCurrency: stri
 
       {loading ? (
         <p className="text-sm opacity-60">{t(locale, "budget_loading")}</p>
-      ) : sections.length ? (
+      ) : rows.length ? (
         <div className="space-y-6">
-          {sections.map((section) => (
-            <CurrencySection
-              key={section.currency}
-              currency={section.currency}
-              rows={section.rows}
-              totals={section.totals}
-              locale={locale}
-              labels={labels}
-            />
-          ))}
+          <BudgetSummarySection
+            currency={defaultCurrency}
+            rows={rows}
+            totals={totals}
+            locale={locale}
+            labels={labels}
+          />
         </div>
       ) : (
         <p className="text-sm opacity-60">{t(locale, "budget_empty")}</p>
