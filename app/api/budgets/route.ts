@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
   })();
 
   if (!includeSummary) {
-    return NextResponse.json({ data: sortedBudgets });
+    return NextResponse.json({ data: Array.isArray(sortedBudgets) ? sortedBudgets : [] });
   }
 
   const budgetsWithSummary = await Promise.all(
@@ -150,9 +150,17 @@ export async function GET(request: NextRequest) {
       if (!range.start || !range.end) {
         return { ...budget, spentMinor: 0 };
       }
+
+      const categoryBudgetEntries = Array.isArray(budget.categoryBudgets) ? budget.categoryBudgets : [];
+      const categoryIdsForSpend = categoryBudgetEntries.map((entry) => entry?.categoryId).filter(Boolean);
+
+      if (!categoryIdsForSpend.length) {
+        return { ...budget, spentMinor: 0 };
+      }
+
       const spentMinor = await getBudgetSpend({
         workspaceId: auth.workspace.id.toString(),
-        categoryIds: budget.categoryBudgets.map((entry) => entry.categoryId),
+        categoryIds: categoryIdsForSpend,
         accountIds: budget.accountIds ?? null,
         startDate: normalizeToUtcMidnight(range.start),
         endDate: normalizeToUtcMidnight(range.end),
@@ -161,7 +169,7 @@ export async function GET(request: NextRequest) {
     })
   );
 
-  return NextResponse.json({ data: budgetsWithSummary });
+  return NextResponse.json({ data: Array.isArray(budgetsWithSummary) ? budgetsWithSummary : [] });
 }
 
 export async function POST(request: NextRequest) {
