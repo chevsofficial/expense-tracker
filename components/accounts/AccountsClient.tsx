@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -151,10 +152,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral">{t(locale, "accounts_title")}</h1>
-          <p className="text-sm opacity-70">{t(locale, "accounts_subtitle")}</p>
-        </div>
+        <PageHeader title={t(locale, "accounts_title")} subtitle={t(locale, "accounts_subtitle")} />
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             {t(locale, "accounts_add")}

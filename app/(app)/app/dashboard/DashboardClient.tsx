@@ -16,6 +16,7 @@ import { TotalChangeCard } from "@/components/dashboard/widgets/TotalChangeCard"
 import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard";
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
 import { NextTwoWeeksRecurring } from "@/components/dashboard/widgets/NextTwoWeeksRecurring";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { Category } from "@/src/types/category";
 
 type Account = {
@@ -231,10 +232,7 @@ export function DashboardClient({
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral">{t(locale, "dashboard_title")}</h1>
-        <p className="text-sm opacity-70">{t(locale, "dashboard_subtitle")}</p>
-      </div>
+      <PageHeader title={t(locale, "dashboard_title")} subtitle={t(locale, "dashboard_subtitle")} />
 
       <DashboardFilterBar
         locale={locale}

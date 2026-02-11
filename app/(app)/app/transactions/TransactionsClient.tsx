@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -820,10 +821,7 @@ export function TransactionsClient({
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral">{t(locale, "transactions_title")}</h1>
-          <p className="mt-2 opacity-70">{formattedMonth}</p>
-        </div>
+        <PageHeader title={t(locale, "transactions_title")} subtitle={formattedMonth} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <span className="opacity-70">{t(locale, "transactions_show_archived")}</span>

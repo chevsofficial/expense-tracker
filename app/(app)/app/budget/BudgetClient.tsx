@@ -6,6 +6,7 @@ import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { MonthPicker } from "@/components/shared/MonthPicker";
 import { BudgetSummarySection } from "@/components/budget/BudgetSummarySection";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { formatMonthLabel } from "@/src/utils/month";
 import type { Locale } from "@/src/i18n/messages";
 
@@ -87,10 +88,7 @@ export function BudgetClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral">{t(locale, "budget_title")}</h1>
-          <p className="text-sm opacity-70">{formatMonthLabel(month, locale)}</p>
-        </div>
+        <PageHeader title={t(locale, "budget_title")} subtitle={formatMonthLabel(month, locale)} />
         <MonthPicker
           locale={locale}
           month={month}

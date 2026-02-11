@@ -14,24 +14,29 @@ const items = [
 export function SettingsSideNav() {
   const pathname = usePathname();
 
+  const isActive = (href: string) => pathname === href;
+
+  const linkClass = (href: string) => {
+    const active = isActive(href);
+    return [
+      "relative block px-3 py-2 text-sm font-light transition-colors",
+      active ? "text-primary" : "text-[#7b93a4]",
+      "hover:text-primary",
+    ].join(" ");
+  };
+
+  const indicatorClass = (href: string) =>
+    isActive(href) ? "before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2px] before:bg-primary" : "";
+
   return (
-    <ul className="menu px-1">
-      {items.map((item) => {
-        const isActive = pathname === item.href;
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className={[
-                "rounded-lg",
-                isActive ? "bg-primary text-primary-content" : "hover:bg-base-300/60",
-              ].join(" ")}
-            >
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
+    <ul className="space-y-1 px-1">
+      {items.map((item) => (
+        <li key={item.href}>
+          <Link href={item.href} className={`${linkClass(item.href)} ${indicatorClass(item.href)}`}>
+            {item.label}
+          </Link>
+        </li>
+      ))}
     </ul>
   );
 }
