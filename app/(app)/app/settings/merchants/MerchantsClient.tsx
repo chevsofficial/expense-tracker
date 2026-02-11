@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -163,10 +164,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-neutral">{t(locale, "merchants_title")}</h1>
-          <p className="text-sm opacity-70">{t(locale, "merchants_subtitle")}</p>
-        </div>
+        <PageHeader title={t(locale, "merchants_title")} subtitle={t(locale, "merchants_subtitle")} />
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             {t(locale, "merchants_add")}

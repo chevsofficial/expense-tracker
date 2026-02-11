@@ -80,3 +80,8 @@ html,
 body {
   height: 100%;
 }
+
+:root {
+  font-family: var(--font-open-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}

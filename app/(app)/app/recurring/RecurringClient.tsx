@@ -7,6 +7,7 @@ import { t } from "@/src/i18n/t";
 import { toYmdUtc } from "@/src/utils/dateOnly";
 import { RecurringFormModal } from "@/components/recurring/RecurringFormModal";
 import { RecurringTable } from "@/components/recurring/RecurringTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
 
@@ -357,7 +358,7 @@ export function RecurringClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-neutral">{t(locale, "recurring_title")}</h1>
+        <PageHeader title={t(locale, "recurring_title")} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input

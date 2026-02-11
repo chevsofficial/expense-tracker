@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Locale } from "@/src/i18n/messages";
 import { ThemeContext } from "@/src/theme/ThemeProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getJSON, putJSON } from "@/src/lib/apiClient";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
@@ -69,7 +70,7 @@ export function SettingsGeneralClient({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">General</h1>
+      <PageHeader title="General" />
 
       <div className="card bg-base-200 border border-base-300">
         <div className="card-body space-y-4">

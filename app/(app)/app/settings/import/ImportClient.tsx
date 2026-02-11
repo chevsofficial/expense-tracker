@@ -4,6 +4,7 @@ import { useMemo, useState, type ChangeEvent } from "react";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { postJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { Locale } from "@/src/i18n/messages";
 
 type ParsedRow = Record<string, string>;
@@ -157,10 +158,7 @@ export function ImportClient({ locale }: { locale: Locale }) {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral">{t(locale, "import_title")}</h1>
-        <p className="text-sm opacity-70">{t(locale, "import_subtitle")}</p>
-      </div>
+      <PageHeader title={t(locale, "import_title")} subtitle={t(locale, "import_subtitle")} />
 
       <div className="card bg-base-100 shadow">
         <div className="card-body space-y-4">

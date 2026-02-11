@@ -1,7 +1,9 @@
+import { PageHeader } from "@/components/ui/PageHeader";
+
 export default function AboutSettingsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">About</h1>
+      <PageHeader title="About" />
 
       <div className="card bg-base-200 border border-base-300">
         <div className="card-body space-y-3">

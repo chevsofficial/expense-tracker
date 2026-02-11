@@ -21,23 +21,32 @@ export function AppTopNav({
   rightSlot?: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === "/app/settings"
+      ? pathname.startsWith("/app/settings")
+      : href === "/app/budgets"
+        ? pathname.startsWith("/app/budgets")
+        : pathname === href;
+
   const linkClass = (href: string) => {
-    const isActive =
-      href === "/app/settings"
-        ? pathname.startsWith("/app/settings")
-        : href === "/app/budgets"
-          ? pathname.startsWith("/app/budgets")
-          : pathname === href;
+    const active = isActive(href);
     return [
-      "btn btn-ghost",
-      "text-base-content",
-      "hover:bg-base-300/60",
-      isActive ? "bg-primary text-primary-content hover:bg-primary" : "",
+      "relative px-3 py-2 text-sm",
+      "font-light",
+      "transition-colors",
+      active ? "text-primary" : "text-[#7b93a4]",
+      "hover:text-primary",
     ].join(" ");
   };
 
+  const underlineClass = (href: string) =>
+    isActive(href)
+      ? "after:content-[''] after:absolute after:left-2 after:right-2 after:-bottom-1 after:h-[2px] after:bg-primary"
+      : "";
+
   return (
-    <div className="navbar bg-base-200 text-base-content border-b border-base-300">
+    <div className="navbar bg-white text-base-content border-b border-base-300">
       <div className="navbar-start">
         <div className="dropdown sm:hidden">
           <div tabIndex={0} role="button" className="btn btn-ghost">
@@ -67,39 +76,57 @@ export function AppTopNav({
             </li>
           </ul>
         </div>
-        <Link href="/app/dashboard" className="btn btn-ghost text-xl text-base-content">
-          {appName}
+        <Link href="/app/dashboard" className="flex items-center gap-2 px-2 py-2" aria-label={appName}>
+          <img src="/brand/spendary-logo.svg" alt="Spendary" className="h-8 w-auto" />
         </Link>
       </div>
       <div className="navbar-center hidden sm:flex">
-        <ul className="menu menu-horizontal px-1">
+        <ul className="flex items-center gap-1">
           <li>
-            <Link href="/app/dashboard" className={linkClass("/app/dashboard")}>
+            <Link
+              href="/app/dashboard"
+              className={`${linkClass("/app/dashboard")} ${underlineClass("/app/dashboard")}`}
+            >
               {dashboardLabel}
             </Link>
           </li>
           <li>
-            <Link href="/app/accounts" className={linkClass("/app/accounts")}>
+            <Link
+              href="/app/accounts"
+              className={`${linkClass("/app/accounts")} ${underlineClass("/app/accounts")}`}
+            >
               {accountsLabel}
             </Link>
           </li>
           <li>
-            <Link href="/app/transactions" className={linkClass("/app/transactions")}>
+            <Link
+              href="/app/transactions"
+              className={`${linkClass("/app/transactions")} ${underlineClass("/app/transactions")}`}
+            >
               {transactionsLabel}
             </Link>
           </li>
           <li>
-            <Link href="/app/budgets" className={linkClass("/app/budgets")}>
+            <Link
+              href="/app/budgets"
+              className={`${linkClass("/app/budgets")} ${underlineClass("/app/budgets")}`}
+            >
               {budgetLabel}
             </Link>
           </li>
           <li>
-            <Link href="/app/recurring" className={linkClass("/app/recurring")}>
+            <Link
+              href="/app/recurring"
+              className={`${linkClass("/app/recurring")} ${underlineClass("/app/recurring")}`}
+            >
               {recurringLabel}
             </Link>
           </li>
           <li>
-            <Link href="/app/settings" className={linkClass("/app/settings")}>
+            <Link
+              href="/app/settings"
+              className={`${linkClass("/app/settings")} ${underlineClass("/app/settings")}`}
+            >
               Settings
             </Link>
           </li>
