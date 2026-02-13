@@ -28,8 +28,8 @@ export function parseMonth(value: string): ParsedMonth | null {
   return { year, monthIndex, start, end };
 }
 
-export function currentMonth() {
+export function currentMonth(): string {
   const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${now.getFullYear()}-${month}`;
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}`;
 }

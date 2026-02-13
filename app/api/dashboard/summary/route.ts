@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { buildTxFilter } from "@/src/server/dashboard/buildTxFilter";
 import { getBudgetSummary } from "@/src/server/budget/getBudgetSummary";
+import { currentMonth } from "@/src/server/month";
 import { isYmd, ymdToUtcDate } from "@/src/utils/dateOnly";
 
 const querySchema = z
@@ -335,10 +336,8 @@ export async function GET(request: NextRequest) {
     topGroupsByKind("expense"),
   ]);
 
-  const budgetSummary = await getBudgetSummary({
-    workspace: auth.workspace,
-    month: currentMonth(),
-  });
+  const month = currentMonth();
+  const budgetSummary = await getBudgetSummary({ workspace: auth.workspace, month });
   const budgetTotals = budgetSummary.totals ?? {
     plannedMinor: 0,
     actualMinor: 0,
