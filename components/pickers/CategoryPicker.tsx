@@ -64,7 +64,7 @@ export function CategoryPicker({
     () =>
       categoryMatches.filter(
         (category) =>
-          (category.kind === "income" || category.kind === "both") && !category.isArchived
+          category.kind === "income" && !category.isArchived
       ),
     [categoryMatches]
   );
@@ -72,7 +72,7 @@ export function CategoryPicker({
     () =>
       categoryMatches.filter(
         (category) =>
-          (category.kind === "expense" || category.kind === "both") && !category.isArchived
+          category.kind === "expense" && !category.isArchived
       ),
     [categoryMatches]
   );

@@ -1,4 +1,4 @@
-export type CategoryKind = "income" | "expense" | "both";
+export type CategoryKind = "income" | "expense";
 
 export type Category = {
   _id: string;

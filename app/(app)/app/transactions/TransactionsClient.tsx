@@ -120,6 +120,19 @@ const formatDateInput = (value: string) => {
   return `${year}-${month}-${day}`;
 };
 
+const kindFromCategory = (
+  categoryId: string | null,
+  categories: Category[]
+): TransactionKind | null => {
+  if (!categoryId) return null;
+  const category = categories.find((item) => item._id === categoryId);
+  if (!category) return null;
+  if (category.kind === "income" || category.kind === "expense") {
+    return category.kind;
+  }
+  return "expense";
+};
+
 export function TransactionsClient({
   locale,
   defaultCurrency,
@@ -196,14 +209,24 @@ export function TransactionsClient({
   }, [categories, categoryName]);
 
   const selectableCategories = useMemo(
-    () => categories.filter((category) => category.kind === "income" || category.kind === "expense"),
+    () =>
+      categories.filter(
+        (category) =>
+          !category.isArchived && (category.kind === "income" || category.kind === "expense")
+      ),
     [categories]
   );
 
-  const formCategories = useMemo(
-    () => selectableCategories.filter((category) => category.kind === formState.kind),
-    [formState.kind, selectableCategories]
+  const selectedCategoryKind = useMemo(
+    () =>
+      kindFromCategory(
+        formState.categoryId === "uncategorized" ? null : formState.categoryId,
+        selectableCategories
+      ),
+    [formState.categoryId, selectableCategories]
   );
+
+  const isKindLocked = Boolean(selectedCategoryKind);
 
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -518,10 +541,18 @@ export function TransactionsClient({
   };
 
   const handleFormCategoryChange = (categoryId: string) => {
-    setFormState((current) => ({
-      ...current,
-      categoryId: categoryId || "uncategorized",
-    }));
+    setFormState((current) => {
+      const normalizedCategoryId = categoryId || "uncategorized";
+      const forcedKind = kindFromCategory(
+        normalizedCategoryId === "uncategorized" ? null : normalizedCategoryId,
+        selectableCategories
+      );
+      return {
+        ...current,
+        categoryId: normalizedCategoryId,
+        kind: forcedKind ?? current.kind,
+      };
+    });
   };
 
   const handleBudgetChange = (value: string) => {
@@ -553,10 +584,15 @@ export function TransactionsClient({
 
     const trimmedMerchantName = formState.merchantNameSnapshot.trim();
 
+    const forcedKind = kindFromCategory(
+      formState.categoryId === "uncategorized" ? null : formState.categoryId,
+      selectableCategories
+    );
+
     const payload: Record<string, unknown> = {
       date: formState.date,
       amount: amountValue,
-      kind: formState.kind,
+      kind: forcedKind ?? formState.kind,
       accountId: formState.accountId === "unassigned" ? null : formState.accountId,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
       budgetId: formState.budgetId === "none" ? null : formState.budgetId,
@@ -1055,19 +1091,27 @@ export function TransactionsClient({
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_kind")}
               </span>
-              <select
-                className="select select-bordered"
-                value={formState.kind}
-                onChange={(event) => {
-                  setFormState({
-                    ...formState,
-                    kind: event.target.value as TransactionKind,
-                  });
-                }}
-              >
-                <option value="expense">{t(locale, "category_kind_expense")}</option>
-                <option value="income">{t(locale, "category_kind_income")}</option>
-              </select>
+              {isKindLocked ? (
+                <div className="badge badge-outline h-10 w-fit px-4 text-sm font-medium">
+                  {selectedCategoryKind === "income"
+                    ? t(locale, "category_kind_income")
+                    : t(locale, "category_kind_expense")}
+                </div>
+              ) : (
+                <select
+                  className="select select-bordered"
+                  value={formState.kind}
+                  onChange={(event) => {
+                    setFormState({
+                      ...formState,
+                      kind: event.target.value as TransactionKind,
+                    });
+                  }}
+                >
+                  <option value="expense">{t(locale, "category_kind_expense")}</option>
+                  <option value="income">{t(locale, "category_kind_income")}</option>
+                </select>
+              )}
             </label>
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
@@ -1099,7 +1143,7 @@ export function TransactionsClient({
               </span>
               <CategoryPicker
                 locale={locale}
-                categories={formCategories}
+                categories={selectableCategories}
                 value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
                 onChange={handleFormCategoryChange}
                 allowEmpty
