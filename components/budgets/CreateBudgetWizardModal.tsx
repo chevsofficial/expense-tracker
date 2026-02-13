@@ -170,8 +170,7 @@ export function CreateBudgetWizardModal({
     () =>
       (categories ?? []).filter(
         (category) =>
-          !category.isArchived &&
-          (category.kind === "expense" || category.kind === "both" || !category.kind)
+          !category.isArchived && (category.kind === "expense" || !category.kind)
       ),
     [categories]
   );

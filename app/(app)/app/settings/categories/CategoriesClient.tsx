@@ -17,7 +17,7 @@ type CategoryGroup = {
   isArchived?: boolean;
 };
 
-type CategoryFormKind = Exclude<CategoryKind, "both">;
+type CategoryFormKind = CategoryKind;
 
 type ApiListResponse<T> = { data: T[] };
 

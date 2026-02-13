@@ -56,6 +56,7 @@ export async function PUT(
 
   const update: Record<string, unknown> = {};
   let resolvedKind = parsed.data.kind;
+  let categoryKindFromPayload: "income" | "expense" | null = null;
 
   if (parsed.data.date) {
     update.date = normalizeToUtcMidnight(parsed.data.date);
@@ -101,6 +102,7 @@ export async function PUT(
       }
       update.categoryId = categoryObjectId;
       resolvedKind = category.kind;
+      categoryKindFromPayload = category.kind;
     }
   }
 
@@ -160,6 +162,31 @@ export async function PUT(
   }
 
   if (resolvedKind !== undefined) {
+    if (categoryKindFromPayload) {
+      resolvedKind = categoryKindFromPayload;
+    } else if (parsed.data.categoryId === undefined) {
+      const existingTransaction = await TransactionModel.findOne(
+        { _id: objectId, workspaceId: auth.workspace.id },
+        { categoryId: 1 }
+      ).lean();
+
+      if (!existingTransaction) {
+        return errorResponse("Transaction not found", 404);
+      }
+
+      if (existingTransaction.categoryId) {
+        const existingCategory = await CategoryModel.findOne(
+          { _id: existingTransaction.categoryId, workspaceId: auth.workspace.id },
+          { kind: 1 }
+        ).lean();
+
+        if (!existingCategory) {
+          return errorResponse("Category not found", 404);
+        }
+
+        resolvedKind = existingCategory.kind;
+      }
+    }
     update.kind = resolvedKind;
   }
 
