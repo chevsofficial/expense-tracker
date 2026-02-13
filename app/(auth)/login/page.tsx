@@ -18,7 +18,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-6 bg-base-100 text-base-content">
       <div className="card bg-base-100 shadow-xl w-full max-w-md">
         <div className="card-body">
-          <h1 className="text-2xl font-bold text-neutral">Sign in</h1>
+          <h1 className="page-title text-2xl">Sign in</h1>
           <p className="opacity-70">We’ll email you a magic link.</p>
 
           <form className="mt-4 space-y-3" onSubmit={onSubmit}>

@@ -288,7 +288,7 @@ export function BudgetDetailClient({
           <Link className="link link-primary text-sm" href="/app/budgets">
             {t(locale, "budgets_back_to_list")}
           </Link>
-          <h1 className="mt-2 text-3xl font-bold text-neutral">
+          <h1 className="page-title mt-2">
             {budget.emoji ? `${budget.emoji} ` : ""}
             {budget.name}
           </h1>
