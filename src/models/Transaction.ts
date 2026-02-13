@@ -32,8 +32,8 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null, index: true },
     budgetId: { type: mongoose.Schema.Types.ObjectId, ref: "Budget", default: null, index: true },
     recurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
-    sourceRecurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", default: null, index: true },
-    sourceOccurrenceOn: { type: String, default: null, index: true },
+    sourceRecurringId: { type: mongoose.Schema.Types.ObjectId, ref: "Recurring", index: true },
+    sourceOccurrenceOn: { type: String, index: true },
     amountMinor: { type: Number, required: true },
     currency: { type: String, required: true },
     kind: { type: String, enum: ["income", "expense"], required: true },
@@ -54,7 +54,13 @@ TransactionSchema.index({ workspaceId: 1, accountId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, budgetId: 1, date: 1 });
 TransactionSchema.index(
   { workspaceId: 1, sourceRecurringId: 1, sourceOccurrenceOn: 1 },
-  { unique: true, sparse: true }
+  {
+    unique: true,
+    partialFilterExpression: {
+      sourceRecurringId: { $exists: true, $ne: null },
+      sourceOccurrenceOn: { $exists: true, $ne: null },
+    },
+  }
 );
 
 export const TransactionModel = getModel<TransactionDoc>("Transaction", TransactionSchema);
