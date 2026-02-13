@@ -7,8 +7,8 @@ export function PageHeader({
 }) {
   return (
     <div>
-      <h1 className="text-3xl font-bold text-neutral">{title}</h1>
-      {subtitle ? <p className="mt-2 opacity-70">{subtitle}</p> : null}
+      <h1 className="page-title">{title}</h1>
+      {subtitle ? <p className="body-text mt-2 opacity-70">{subtitle}</p> : null}
     </div>
   );
 }
