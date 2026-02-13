@@ -3,6 +3,7 @@
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+import { DateRangePicker, type DateRangeValue } from "@/components/shared/DateRangePicker";
 import type { Category } from "@/src/types/category";
 
 type Account = {
@@ -17,13 +18,8 @@ type Merchant = {
   isArchived?: boolean;
 };
 
-type DateRange = {
-  start: string;
-  end: string;
-};
-
 export type DashboardFilters = {
-  dateRange: DateRange;
+  dateRange: DateRangeValue;
   accountId?: string;
   categoryId?: string;
   merchantId?: string;
@@ -34,8 +30,8 @@ type DashboardFilterBarProps = {
   accounts: Account[];
   categories: Category[];
   merchants: Merchant[];
-  dateRange: DateRange;
-  onDateRangeChange: (range: DateRange) => void;
+  dateRange: DateRangeValue;
+  onDateRangeChange: (range: DateRangeValue) => void;
   selectedAccountId: string;
   onAccountChange: (value: string) => void;
   selectedCategoryId: string;
@@ -67,38 +63,7 @@ export function DashboardFilterBar({
     <SurfaceCard>
       <SurfaceCardBody className="space-y-3">
         <div className="mb-3 flex flex-wrap gap-2">
-          <label className="form-control w-full sm:w-auto">
-            <span className="label-text mb-1 text-sm font-medium">
-              {t(locale, "dashboard_filters_start")}
-            </span>
-            <input
-              type="date"
-              className="input input-bordered w-full sm:w-44"
-              value={dateRange.start}
-              onChange={(event) =>
-                onDateRangeChange({
-                  ...dateRange,
-                  start: event.target.value,
-                })
-              }
-            />
-          </label>
-          <label className="form-control w-full sm:w-auto">
-            <span className="label-text mb-1 text-sm font-medium">
-              {t(locale, "dashboard_filters_end")}
-            </span>
-            <input
-              type="date"
-              className="input input-bordered w-full sm:w-44"
-              value={dateRange.end}
-              onChange={(event) =>
-                onDateRangeChange({
-                  ...dateRange,
-                  end: event.target.value,
-                })
-              }
-            />
-          </label>
+          <DateRangePicker locale={locale} value={dateRange} onChange={onDateRangeChange} />
         </div>
 
         <div className="flex flex-wrap gap-2">

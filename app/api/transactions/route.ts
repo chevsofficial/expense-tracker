@@ -43,6 +43,9 @@ function isValidMonthParam(monthParam: string) {
   return Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12;
 }
 
+const addDays = (date: Date, days: number) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
+
 export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
@@ -84,10 +87,12 @@ export async function GET(request: NextRequest) {
       return errorResponse("Invalid end date", 400);
     }
     const startDate = startDateParam ? normalizeToUtcMidnight(startDateParam) : undefined;
-    const endDate = endDateParam ? normalizeToUtcMidnight(endDateParam) : undefined;
+    const endDateExclusive = endDateParam
+      ? addDays(normalizeToUtcMidnight(endDateParam), 1)
+      : undefined;
     filter.date = {
       ...(startDate ? { $gte: startDate } : {}),
-      ...(endDate ? { $lte: endDate } : {}),
+      ...(endDateExclusive ? { $lt: endDateExclusive } : {}),
     };
   }
 

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
-import { toYmdUtc } from "@/src/utils/dateOnly";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 import { BudgetVsActualSummaryCard } from "@/components/dashboard/BudgetVsActualSummaryCard";
@@ -17,6 +16,7 @@ import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard"
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
 import { NextTwoWeeksRecurring } from "@/components/dashboard/widgets/NextTwoWeeksRecurring";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getPresetRange } from "@/src/utils/dateRange";
 import type { Category } from "@/src/types/category";
 
 type Account = {
@@ -112,15 +112,6 @@ type NextTwoWeeksResponse = {
 
 type ApiListResponse<T> = { data: T[] };
 
-const buildDefaultRange = () => {
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
-  return {
-    start: toYmdUtc(start),
-    end: toYmdUtc(end),
-  };
-};
 
 export function DashboardClient({
   locale,
@@ -138,7 +129,7 @@ export function DashboardClient({
   const [recurringLoading, setRecurringLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [dateRange, setDateRange] = useState(buildDefaultRange);
+  const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
@@ -160,15 +151,12 @@ export function DashboardClient({
   }, [locale]);
 
   const loadSummary = useCallback(async () => {
-    if (!dateRange.start || !dateRange.end) {
-      return;
-    }
     setError(null);
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("start", dateRange.start);
-      params.set("end", dateRange.end);
+      if (dateRange.start) params.set("startDate", dateRange.start);
+      if (dateRange.end) params.set("endDate", dateRange.end);
       if (selectedAccountId) params.set("accountId", selectedAccountId);
       if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
       if (selectedMerchantId) params.set("merchantId", selectedMerchantId);
