@@ -198,12 +198,14 @@ export async function POST(request: NextRequest) {
     merchantId,
     merchantNameSnapshot,
     budgetId,
+    kind,
     ...rest
   } = parsed.data;
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
   if (categoryId && !categoryObjectId) {
     return errorResponse("Invalid category id", 400);
   }
+  let resolvedKind = kind;
   if (categoryObjectId) {
     const category = await CategoryModel.findOne({
       _id: categoryObjectId,
@@ -212,6 +214,7 @@ export async function POST(request: NextRequest) {
     if (!category) {
       return errorResponse("Category not found", 404);
     }
+    resolvedKind = category.kind;
   }
 
   const accountObjectId = accountId ? parseObjectId(accountId) : null;
@@ -278,6 +281,7 @@ export async function POST(request: NextRequest) {
     merchantNameSnapshot: resolvedMerchantNameSnapshot,
     receiptUrls: receiptUrls ?? [],
     isArchived: false,
+    kind: resolvedKind,
     ...rest,
   });
 

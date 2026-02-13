@@ -55,6 +55,7 @@ export async function PUT(
   }
 
   const update: Record<string, unknown> = {};
+  let resolvedKind = parsed.data.kind;
 
   if (parsed.data.date) {
     update.date = normalizeToUtcMidnight(parsed.data.date);
@@ -62,10 +63,6 @@ export async function PUT(
 
   if (parsed.data.amount !== undefined) {
     update.amountMinor = toMinorUnits(parsed.data.amount);
-  }
-
-  if (parsed.data.kind !== undefined) {
-    update.kind = parsed.data.kind;
   }
 
   if (parsed.data.accountId !== undefined) {
@@ -103,6 +100,7 @@ export async function PUT(
         return errorResponse("Category not found", 404);
       }
       update.categoryId = categoryObjectId;
+      resolvedKind = category.kind;
     }
   }
 
@@ -159,6 +157,10 @@ export async function PUT(
 
   if (parsed.data.isArchived !== undefined) {
     update.isArchived = parsed.data.isArchived;
+  }
+
+  if (resolvedKind !== undefined) {
+    update.kind = resolvedKind;
   }
 
   if (Object.keys(update).length === 0) {
