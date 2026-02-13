@@ -263,7 +263,7 @@ export function BudgetsClient({
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-neutral">{t(locale, "budgets_title")}</h1>
+          <h1 className="page-title">{t(locale, "budgets_title")}</h1>
           <p className="mt-2 opacity-70">{t(locale, "budgets_subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

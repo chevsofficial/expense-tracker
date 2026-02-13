@@ -81,7 +81,26 @@ body {
   height: 100%;
 }
 
-:root {
-  font-family: var(--font-open-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-    Arial, "Noto Sans", "Liberation Sans", sans-serif;
+@utility font-brand {
+  font-family: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply font-brand text-3xl font-black text-neutral;
+  }
+
+  .section-title {
+    @apply font-brand text-xl font-bold text-neutral;
+  }
+
+  .body-text {
+    @apply font-brand text-base font-normal text-neutral;
+  }
 }

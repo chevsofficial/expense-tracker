@@ -5,7 +5,7 @@ export default function CheckEmailPage() {
     <main className="min-h-screen flex items-center justify-center p-6 bg-base-100 text-base-content">
       <div className="card bg-base-100 shadow-xl w-full max-w-md">
         <div className="card-body">
-          <h1 className="text-2xl font-bold text-neutral">Check your email</h1>
+          <h1 className="page-title text-2xl">Check your email</h1>
           <p className="opacity-70 mt-2">
             We sent you a sign-in link. If you don’t see it, check spam or try again.
           </p>

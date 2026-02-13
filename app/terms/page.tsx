@@ -4,7 +4,7 @@ export default function TermsPage() {
       <div className="mx-auto max-w-3xl px-4 py-10">
         <div className="card bg-base-200 border border-base-300">
           <div className="card-body prose max-w-none">
-            <h1>Terms of Use</h1>
+            <h1 className="page-title">Terms of Use</h1>
             <p>Placeholder terms. Replace with final legal text.</p>
           </div>
         </div>

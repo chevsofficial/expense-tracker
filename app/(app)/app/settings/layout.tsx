@@ -7,7 +7,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <div className="sticky top-4">
           <div className="card bg-base-200 border border-base-300">
             <div className="card-body p-3">
-              <h2 className="font-semibold px-2 py-1">Settings</h2>
+              <h2 className="section-title px-2 py-1 text-lg">Settings</h2>
               <SettingsSideNav />
             </div>
           </div>
