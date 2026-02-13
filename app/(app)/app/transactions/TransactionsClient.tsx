@@ -20,7 +20,8 @@ import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { CreateBudgetWizardModal, type Budget } from "@/components/budgets/CreateBudgetWizardModal";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
-import { formatMonthLabel } from "@/src/utils/month";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import { formatRangeLabel, getPresetRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
@@ -108,11 +109,6 @@ const getTodayInput = () => {
   return `${year}-${month}-${day}`;
 };
 
-const getCurrentMonth = () => {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${now.getFullYear()}-${month}`;
-};
 
 const formatDateInput = (value: string) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -142,7 +138,7 @@ export function TransactionsClient({
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
-  const [month, setMonth] = useState(getCurrentMonth());
+  const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
   const [kindFilter, setKindFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [merchantFilter, setMerchantFilter] = useState<string>("");
@@ -296,7 +292,8 @@ export function TransactionsClient({
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (month) params.set("month", month);
+      if (dateRange.start) params.set("startDate", dateRange.start);
+      if (dateRange.end) params.set("endDate", dateRange.end);
       if (kindFilter) params.set("kind", kindFilter);
       if (categoryFilter) params.set("categoryId", categoryFilter);
       if (merchantFilter) params.set("merchantId", merchantFilter);
@@ -315,7 +312,8 @@ export function TransactionsClient({
     }
   }, [
     locale,
-    month,
+    dateRange.end,
+    dateRange.start,
     showArchived,
     kindFilter,
     categoryFilter,
@@ -344,6 +342,8 @@ export function TransactionsClient({
   useEffect(() => {
     if (initializedFromQuery.current) return;
     const paramMonth = searchParams.get("month");
+    const paramStartDate = searchParams.get("startDate");
+    const paramEndDate = searchParams.get("endDate");
     const paramKind = searchParams.get("kind");
     const paramCategory = searchParams.get("categoryId");
     const paramMerchant = searchParams.get("merchantId");
@@ -352,7 +352,19 @@ export function TransactionsClient({
     const paramQuery = searchParams.get("q");
     const paramArchived = searchParams.get("includeArchived");
 
-    if (paramMonth) setMonth(paramMonth);
+    if (paramStartDate || paramEndDate) {
+      setDateRange({
+        start: paramStartDate || null,
+        end: paramEndDate || null,
+      });
+    } else if (paramMonth && /^\d{4}-\d{2}$/.test(paramMonth)) {
+      const [yearRaw, monthRaw] = paramMonth.split("-");
+      const year = Number(yearRaw);
+      const monthIndex = Number(monthRaw) - 1;
+      const start = new Date(Date.UTC(year, monthIndex, 1)).toISOString().slice(0, 10);
+      const end = new Date(Date.UTC(year, monthIndex + 1, 0)).toISOString().slice(0, 10);
+      setDateRange({ start, end });
+    }
     if (paramKind) setKindFilter(paramKind);
     if (paramCategory) setCategoryFilter(paramCategory);
     if (paramMerchant) setMerchantFilter(paramMerchant);
@@ -367,7 +379,8 @@ export function TransactionsClient({
   useEffect(() => {
     if (!initializedFromQuery.current) return;
     const params = new URLSearchParams();
-    if (month) params.set("month", month);
+    if (dateRange.start) params.set("startDate", dateRange.start);
+    if (dateRange.end) params.set("endDate", dateRange.end);
     if (kindFilter) params.set("kind", kindFilter);
     if (categoryFilter) params.set("categoryId", categoryFilter);
     if (merchantFilter) params.set("merchantId", merchantFilter);
@@ -377,7 +390,8 @@ export function TransactionsClient({
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
   }, [
-    month,
+    dateRange.end,
+    dateRange.start,
     kindFilter,
     categoryFilter,
     merchantFilter,
@@ -605,7 +619,7 @@ export function TransactionsClient({
     }
   };
 
-  const formattedMonth = useMemo(() => formatMonthLabel(month, locale), [locale, month]);
+  const formattedDateRange = useMemo(() => formatRangeLabel(dateRange, locale), [dateRange, locale]);
 
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
@@ -821,7 +835,7 @@ export function TransactionsClient({
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title={t(locale, "transactions_title")} subtitle={formattedMonth} />
+        <PageHeader title={t(locale, "transactions_title")} subtitle={formattedDateRange} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <span className="opacity-70">{t(locale, "transactions_show_archived")}</span>
@@ -850,18 +864,7 @@ export function TransactionsClient({
       <SurfaceCard>
         <SurfaceCardBody className="space-y-3">
           <div className="grid grid-cols-1 gap-3">
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_month")}
-              </span>
-              <input
-                type="month"
-                className="input input-bordered input-sm"
-                value={month}
-                onChange={(event) => setMonth(event.target.value)}
-              />
-              <div className="mt-1 text-xs opacity-60">{formattedMonth}</div>
-            </label>
+            <DateRangePicker locale={locale} value={dateRange} onChange={setDateRange} />
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4 lg:grid-cols-8">
               <label className="form-control w-full">
                 <span className="label-text mb-1 text-sm font-medium">

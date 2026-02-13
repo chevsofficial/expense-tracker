@@ -4,16 +4,25 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { errorResponse, requireAuthContext } from "@/src/server/api";
 import { buildTxFilter } from "@/src/server/dashboard/buildTxFilter";
 import { getBudgetSummary } from "@/src/server/budget/getBudgetSummary";
-import { currentMonth } from "@/src/server/month";
 import { isYmd, ymdToUtcDate } from "@/src/utils/dateOnly";
 
-const querySchema = z.object({
-  start: z.string().refine(isYmd, "Invalid start date"),
-  end: z.string().refine(isYmd, "Invalid end date"),
-  accountId: z.string().optional(),
-  categoryId: z.string().optional(),
-  merchantId: z.string().optional(),
-});
+const querySchema = z
+  .object({
+    startDate: z.string().refine(isYmd, "Invalid start date").optional(),
+    endDate: z.string().refine(isYmd, "Invalid end date").optional(),
+    accountId: z.string().optional(),
+    categoryId: z.string().optional(),
+    merchantId: z.string().optional(),
+  })
+  .refine(
+    (value) =>
+      !(
+        value.startDate &&
+        value.endDate &&
+        ymdToUtcDate(value.startDate) > ymdToUtcDate(value.endDate)
+      ),
+    { message: "Invalid date range" }
+  );
 
 const addDays = (date: Date, days: number) =>
   new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
@@ -52,12 +61,10 @@ export async function GET(request: NextRequest) {
     return errorResponse(parsed.error.message, 400);
   }
 
-  const startDate = ymdToUtcDate(parsed.data.start);
-  const endDateInclusive = ymdToUtcDate(parsed.data.end);
-  if (startDate > endDateInclusive) {
-    return errorResponse("Invalid date range", 400);
-  }
-  const endExclusive = addDays(endDateInclusive, 1);
+  const startDate = parsed.data.startDate ? ymdToUtcDate(parsed.data.startDate) : undefined;
+  const endExclusive = parsed.data.endDate
+    ? addDays(ymdToUtcDate(parsed.data.endDate), 1)
+    : undefined;
 
   const accountId = parseOptionalId(parsed.data.accountId);
   const categoryId = parseOptionalId(parsed.data.categoryId);
@@ -110,29 +117,33 @@ export async function GET(request: NextRequest) {
 
   const balanceTotals = summarizeTotals(balanceRows);
 
-  const startBalanceRows = await TransactionModel.aggregate<{
-    _id: { kind: "income" | "expense" };
-    total: number;
-  }>([
-    {
-      $match: buildTxFilter({
-        workspaceId: auth.workspace.id,
-        accountIds: accountId ? [accountId] : undefined,
-        categoryIds: categoryId ? [categoryId] : undefined,
-        merchantIds: merchantId ? [merchantId] : undefined,
-        end: startDate,
-      }),
-    },
-    {
-      $group: {
-        _id: { kind: "$kind" },
-        total: { $sum: "$amountMinor" },
-      },
-    },
-  ]);
+  const startBalanceRows = startDate
+    ? await TransactionModel.aggregate<{
+        _id: { kind: "income" | "expense" };
+        total: number;
+      }>([
+        {
+          $match: buildTxFilter({
+            workspaceId: auth.workspace.id,
+            accountIds: accountId ? [accountId] : undefined,
+            categoryIds: categoryId ? [categoryId] : undefined,
+            merchantIds: merchantId ? [merchantId] : undefined,
+            end: startDate,
+          }),
+        },
+        {
+          $group: {
+            _id: { kind: "$kind" },
+            total: { $sum: "$amountMinor" },
+          },
+        },
+      ])
+    : [];
 
   const startBalanceTotals = summarizeTotals(startBalanceRows);
-  const totalChangeMinor = balanceTotals.balanceMinor - startBalanceTotals.balanceMinor;
+  const totalChangeMinor = startDate
+    ? balanceTotals.balanceMinor - startBalanceTotals.balanceMinor
+    : balanceTotals.balanceMinor;
 
   const topCategoriesByKind = async (kind: "income" | "expense") => {
     const rows = await TransactionModel.aggregate<{
