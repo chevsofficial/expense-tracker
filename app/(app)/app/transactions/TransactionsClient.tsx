@@ -209,11 +209,7 @@ export function TransactionsClient({
   }, [categories, categoryName]);
 
   const selectableCategories = useMemo(
-    () =>
-      categories.filter(
-        (category) =>
-          !category.isArchived && (category.kind === "income" || category.kind === "expense")
-      ),
+    () => categories.filter((category) => !category.isArchived),
     [categories]
   );
 
