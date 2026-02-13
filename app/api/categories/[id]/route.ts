@@ -192,26 +192,72 @@ export async function DELETE(
       .select("_id")
       .lean();
 
-    const [transactionsUpdated, budgetMonthsUpdated] = await Promise.all([
-      TransactionModel.updateMany(
+    let transactionsUpdatedCount = 0;
+    try {
+      const transactionsUpdated = await TransactionModel.updateMany(
         { workspaceId: auth.workspace.id, categoryId: objectId },
         { $set: { categoryId: null } }
-      ),
-      BudgetMonthModel.updateMany(
-        { workspaceId: auth.workspace.id },
-        { $pull: { plannedLines: { categoryId: objectId } } }
-      ),
-    ]);
+      );
+      transactionsUpdatedCount = transactionsUpdated.modifiedCount;
+    } catch (error) {
+      logError("Failed tx cleanup", {
+        workspaceId: auth.workspace.id,
+        categoryId: id,
+        hardDelete,
+        forceDelete,
+        query,
+        error,
+      });
+      throw error;
+    }
 
-    const budgetsUpdated = await BudgetModel.updateMany(
-      { workspaceId: auth.workspace.id },
-      {
-        $pull: {
-          categoryIds: objectId,
-          categoryBudgets: { categoryId: objectId },
-        },
-      }
-    );
+    let budgetMonthsUpdatedCount = 0;
+    try {
+      const budgetMonthsUpdated = await BudgetMonthModel.updateMany(
+        { workspaceId: auth.workspace.id, "plannedLines.categoryId": objectId },
+        { $pull: { plannedLines: { categoryId: objectId } } }
+      );
+      budgetMonthsUpdatedCount = budgetMonthsUpdated.modifiedCount;
+    } catch (error) {
+      logError("Failed budgetmonth cleanup", {
+        workspaceId: auth.workspace.id,
+        categoryId: id,
+        hardDelete,
+        forceDelete,
+        query,
+        error,
+      });
+      throw error;
+    }
+
+    let budgetsUpdated = 0;
+    try {
+      const [categoryIdsUpdated, categoryBudgetsUpdated] = await Promise.all([
+        BudgetModel.updateMany(
+          { workspaceId: auth.workspace.id, categoryIds: objectId },
+          { $pull: { categoryIds: objectId } }
+        ),
+        BudgetModel.updateMany(
+          {
+            workspaceId: auth.workspace.id,
+            "categoryBudgets.categoryId": objectId,
+          },
+          { $pull: { categoryBudgets: { categoryId: objectId } } }
+        ),
+      ]);
+
+      budgetsUpdated = categoryIdsUpdated.modifiedCount + categoryBudgetsUpdated.modifiedCount;
+    } catch (error) {
+      logError("Failed budget cleanup", {
+        workspaceId: auth.workspace.id,
+        categoryId: id,
+        hardDelete,
+        forceDelete,
+        query,
+        error,
+      });
+      throw error;
+    }
 
     if (affectedIds.length > 0) {
       const affected = await BudgetModel.find({
@@ -234,9 +280,9 @@ export async function DELETE(
         deleted: true,
         forced: forceDelete,
         changes: {
-          transactionsUpdated: transactionsUpdated.modifiedCount,
-          budgetsUpdated: budgetsUpdated.modifiedCount,
-          budgetMonthsUpdated: budgetMonthsUpdated.modifiedCount,
+          transactionsUpdated: transactionsUpdatedCount,
+          budgetsUpdated,
+          budgetMonthsUpdated: budgetMonthsUpdatedCount,
         },
       },
     });
