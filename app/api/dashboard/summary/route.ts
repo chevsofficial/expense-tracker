@@ -50,6 +50,28 @@ const summarizeTotals = (rows: Array<{ _id: { kind: "income" | "expense" }; tota
   };
 };
 
+const summarizeBalance = (
+  rows: Array<{ _id: { kind: "income" | "expense" | "transfer"; transferSide?: "out" | "in" | null }; total: number }>
+) => {
+  let balanceMinor = 0;
+
+  rows.forEach((row) => {
+    if (row._id.kind === "income") {
+      balanceMinor += row.total;
+      return;
+    }
+
+    if (row._id.kind === "expense") {
+      balanceMinor -= row.total;
+      return;
+    }
+
+    balanceMinor += row._id.transferSide === "out" ? -row.total : row.total;
+  });
+
+  return { balanceMinor };
+};
+
 export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
@@ -82,7 +104,7 @@ export async function GET(request: NextRequest) {
     _id: { kind: "income" | "expense" };
     total: number;
   }>([
-    { $match: rangeFilter },
+    { $match: { ...rangeFilter, kind: { $in: ["income", "expense"] } } },
     {
       $group: {
         _id: { kind: "$kind" },
@@ -94,7 +116,7 @@ export async function GET(request: NextRequest) {
   const totals = summarizeTotals(totalsRows);
 
   const balanceRows = await TransactionModel.aggregate<{
-    _id: { kind: "income" | "expense" };
+    _id: { kind: "income" | "expense" | "transfer"; transferSide?: "out" | "in" | null };
     total: number;
   }>([
     {
@@ -108,17 +130,17 @@ export async function GET(request: NextRequest) {
     },
     {
       $group: {
-        _id: { kind: "$kind" },
+        _id: { kind: "$kind", transferSide: "$transferSide" },
         total: { $sum: "$amountMinor" },
       },
     },
   ]);
 
-  const balanceTotals = summarizeTotals(balanceRows);
+  const balanceTotals = summarizeBalance(balanceRows);
 
   const startBalanceRows = startDate
     ? await TransactionModel.aggregate<{
-        _id: { kind: "income" | "expense" };
+        _id: { kind: "income" | "expense" | "transfer"; transferSide?: "out" | "in" | null };
         total: number;
       }>([
         {
@@ -132,14 +154,14 @@ export async function GET(request: NextRequest) {
         },
         {
           $group: {
-            _id: { kind: "$kind" },
+            _id: { kind: "$kind", transferSide: "$transferSide" },
             total: { $sum: "$amountMinor" },
           },
         },
       ])
     : [];
 
-  const startBalanceTotals = summarizeTotals(startBalanceRows);
+  const startBalanceTotals = summarizeBalance(startBalanceRows);
   const totalChangeMinor = startDate
     ? balanceTotals.balanceMinor - startBalanceTotals.balanceMinor
     : balanceTotals.balanceMinor;

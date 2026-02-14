@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (kindParam) {
-    if (!["income", "expense"].includes(kindParam)) {
+    if (!["income", "expense", "transfer"].includes(kindParam)) {
       return errorResponse("Invalid kind", 400);
     }
     filter.kind = kindParam;
