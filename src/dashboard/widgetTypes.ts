@@ -9,8 +9,7 @@ export type DashboardMetricType =
   | "income_by_merchants"
   | "expense_by_merchants"
   | "income_tx_count"
-  | "expense_tx_count"
-  | "budget_vs_actual";
+  | "expense_tx_count";
 
 export type DashboardWidgetView = "card" | "table" | "bar" | "pie" | "percentage";
 

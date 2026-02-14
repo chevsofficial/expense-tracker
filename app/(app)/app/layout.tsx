@@ -25,7 +25,6 @@ export default async function AppLayout({
         dashboardLabel={t(locale, "nav_dashboard")}
         accountsLabel={t(locale, "nav_accounts")}
         transactionsLabel={t(locale, "nav_transactions")}
-        budgetLabel={t(locale, "nav_budget")}
         rightSlot={null}
       />
       <div className="mx-auto w-full max-w-6xl px-4 py-6">{children}</div>

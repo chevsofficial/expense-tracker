@@ -18,7 +18,6 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
-import { CreateBudgetWizardModal, type Budget } from "@/components/budgets/CreateBudgetWizardModal";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { formatRangeLabel, getPresetRange } from "@/src/utils/dateRange";
@@ -36,7 +35,6 @@ type Transaction = {
   kind: TransactionKind;
   accountId?: string | null;
   categoryId: string | null;
-  budgetId?: string | null;
   note?: string;
   merchantId?: string | null;
   merchantNameSnapshot?: string | null;
@@ -44,12 +42,6 @@ type Transaction = {
   isArchived?: boolean;
 };
 
-type CategoryGroup = {
-  _id: string;
-  nameKey?: string;
-  nameCustom?: string;
-  isArchived?: boolean;
-};
 
 type Merchant = {
   _id: string;
@@ -78,7 +70,6 @@ type TransactionForm = {
   kind: TransactionKind;
   accountId: string;
   categoryId: string;
-  budgetId: string;
   merchantId: string | null;
   merchantNameSnapshot: string;
   note: string;
@@ -145,10 +136,8 @@ export function TransactionsClient({
   const initializedFromQuery = useRef(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
@@ -156,7 +145,6 @@ export function TransactionsClient({
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [merchantFilter, setMerchantFilter] = useState<string>("");
   const [accountFilter, setAccountFilter] = useState<string>("");
-  const [budgetFilter, setBudgetFilter] = useState<string>("");
   const [searchFilter, setSearchFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -174,7 +162,6 @@ export function TransactionsClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-  const [budgetWizardOpen, setBudgetWizardOpen] = useState(false);
 
   const resolvedDefaultCurrency = useMemo(
     () => getWorkspaceCurrency({ defaultCurrency }),
@@ -187,7 +174,6 @@ export function TransactionsClient({
     kind: "expense",
     accountId: "unassigned",
     categoryId: "uncategorized",
-    budgetId: "none",
     merchantId: null,
     merchantNameSnapshot: "",
     note: "",
@@ -256,12 +242,10 @@ export function TransactionsClient({
 
   const loadCategories = useCallback(async () => {
     try {
-      const [categoriesResponse, groupsResponse] = await Promise.all([
-        getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
-        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=false"),
-      ]);
+      const categoriesResponse = await getJSON<ApiListResponse<Category>>(
+        "/api/categories?includeArchived=false"
+      );
       setCategories(categoriesResponse.data);
-      setCategoryGroups(groupsResponse.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
       setToast(message);
@@ -295,17 +279,6 @@ export function TransactionsClient({
     }
   }, [locale]);
 
-  const loadBudgets = useCallback(async () => {
-    try {
-      const response = await getJSON<ApiListResponse<Budget>>(
-        "/api/budgets?includeArchived=true"
-      );
-      setBudgets(response.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
-      setToast(message);
-    }
-  }, [locale]);
 
   const loadTransactions = useCallback(async () => {
     setLoading(true);
@@ -317,8 +290,7 @@ export function TransactionsClient({
       if (categoryFilter) params.set("categoryId", categoryFilter);
       if (merchantFilter) params.set("merchantId", merchantFilter);
       if (accountFilter) params.set("accountId", accountFilter);
-      if (budgetFilter) params.set("budgetId", budgetFilter);
-      if (searchFilter) params.set("q", searchFilter);
+        if (searchFilter) params.set("q", searchFilter);
       params.set("includeArchived", String(showArchived));
 
       const response = await getJSON<TransactionsResponse>(`/api/transactions?${params}`);
@@ -338,7 +310,6 @@ export function TransactionsClient({
     categoryFilter,
     merchantFilter,
     accountFilter,
-    budgetFilter,
     searchFilter,
   ]);
 
@@ -355,10 +326,6 @@ export function TransactionsClient({
   }, [loadAccounts]);
 
   useEffect(() => {
-    void loadBudgets();
-  }, [loadBudgets]);
-
-  useEffect(() => {
     if (initializedFromQuery.current) return;
     const paramMonth = searchParams.get("month");
     const paramStartDate = searchParams.get("startDate");
@@ -367,7 +334,6 @@ export function TransactionsClient({
     const paramCategory = searchParams.get("categoryId");
     const paramMerchant = searchParams.get("merchantId");
     const paramAccount = searchParams.get("accountId");
-    const paramBudget = searchParams.get("budgetId");
     const paramQuery = searchParams.get("q");
     const paramArchived = searchParams.get("includeArchived");
 
@@ -388,7 +354,6 @@ export function TransactionsClient({
     if (paramCategory) setCategoryFilter(paramCategory);
     if (paramMerchant) setMerchantFilter(paramMerchant);
     if (paramAccount) setAccountFilter(paramAccount);
-    if (paramBudget) setBudgetFilter(paramBudget);
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
 
@@ -404,7 +369,6 @@ export function TransactionsClient({
     if (categoryFilter) params.set("categoryId", categoryFilter);
     if (merchantFilter) params.set("merchantId", merchantFilter);
     if (accountFilter) params.set("accountId", accountFilter);
-    if (budgetFilter) params.set("budgetId", budgetFilter);
     if (searchFilter) params.set("q", searchFilter);
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
@@ -415,7 +379,6 @@ export function TransactionsClient({
     categoryFilter,
     merchantFilter,
     accountFilter,
-    budgetFilter,
     searchFilter,
     showArchived,
     router,
@@ -433,8 +396,7 @@ export function TransactionsClient({
       kind: "expense",
       accountId: defaultAccountId,
       categoryId: "uncategorized",
-      budgetId: "none",
-      merchantId: null,
+        merchantId: null,
       merchantNameSnapshot: "",
       note: "",
       receiptUrls: [],
@@ -454,7 +416,6 @@ export function TransactionsClient({
       kind: transaction.kind,
       accountId: transaction.accountId ?? "unassigned",
       categoryId: transaction.categoryId ?? "uncategorized",
-      budgetId: transaction.budgetId ?? "none",
       merchantId: transaction.merchantId ?? null,
       merchantNameSnapshot: merchantName,
       note: transaction.note ?? "",
@@ -551,24 +512,6 @@ export function TransactionsClient({
     });
   };
 
-  const handleBudgetChange = (value: string) => {
-    if (value === "create") {
-      setBudgetWizardOpen(true);
-      return;
-    }
-    setFormState((current) => ({
-      ...current,
-      budgetId: value || "none",
-    }));
-  };
-
-  const handleBudgetSaved = async (budget: Budget) => {
-    await loadBudgets();
-    setFormState((current) => ({
-      ...current,
-      budgetId: budget._id,
-    }));
-  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -591,7 +534,6 @@ export function TransactionsClient({
       kind: forcedKind ?? formState.kind,
       accountId: formState.accountId === "unassigned" ? null : formState.accountId,
       categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
-      budgetId: formState.budgetId === "none" ? null : formState.budgetId,
       merchantId: formState.merchantId,
       merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
     };
@@ -966,25 +908,7 @@ export function TransactionsClient({
                     ))}
                 </select>
               </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_budget_filter")}
-                </span>
-                <select
-                  className="select select-bordered select-sm"
-                  value={budgetFilter}
-                  onChange={(event) => setBudgetFilter(event.target.value)}
-                >
-                  <option value="">{t(locale, "transactions_filter_any")}</option>
-                  <option value="none">{t(locale, "transactions_budget_none")}</option>
-                  {budgets.map((budget) => (
-                    <option key={budget._id} value={budget._id}>
-                      {budget.name}
-                      {budget.archivedAt ? ` (${t(locale, "budgets_archived_section")})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              
               <label className="form-control w-full md:col-span-2 lg:col-span-2">
                 <span className="label-text mb-1 text-sm font-medium">
                   {t(locale, "transactions_search")}
@@ -1148,26 +1072,7 @@ export function TransactionsClient({
                 showManageLink
               />
             </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_budget")}
-              </span>
-              <select
-                className="select select-bordered"
-                value={formState.budgetId}
-                onChange={(event) => handleBudgetChange(event.target.value)}
-              >
-                <option value="none">{t(locale, "transactions_budget_none")}</option>
-                {budgets
-                  .filter((budget) => !budget.archivedAt)
-                  .map((budget) => (
-                    <option key={budget._id} value={budget._id}>
-                      {budget.name}
-                    </option>
-                  ))}
-                <option value="create">{t(locale, "transactions_budget_create_new")}</option>
-              </select>
-            </label>
+            
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_merchant")}
@@ -1250,17 +1155,6 @@ export function TransactionsClient({
           </div>
         </form>
       </Modal>
-
-      <CreateBudgetWizardModal
-        open={budgetWizardOpen}
-        onClose={() => setBudgetWizardOpen(false)}
-        onSaved={handleBudgetSaved}
-        locale={locale}
-        defaultCurrency={resolvedDefaultCurrency}
-        categories={categories}
-        accounts={accounts}
-        categoryGroups={categoryGroups}
-      />
 
       <Modal
         open={deleteConfirmOpen}

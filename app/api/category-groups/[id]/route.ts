@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
 import { CategoryModel } from "@/src/models/Category";
-import { BudgetMonthModel } from "@/src/models/BudgetMonth";
-import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
@@ -91,23 +89,12 @@ export async function DELETE(
       const categoryIds = categories.map((category) => category._id);
 
       if (categoryIds.length > 0) {
-        const [transactionCount, budgetMonthCount, budgetCount] = await Promise.all([
-          TransactionModel.countDocuments({
-            workspaceId: auth.workspace.id,
-            categoryId: { $in: categoryIds },
-          }),
-          BudgetMonthModel.countDocuments({
-            workspaceId: auth.workspace.id,
-            "plannedLines.categoryId": { $in: categoryIds },
-          }),
-          BudgetModel.countDocuments({
-            workspaceId: auth.workspace.id,
-            categoryIds: { $in: categoryIds },
-          }),
-        ]);
+        const transactionCount = await TransactionModel.countDocuments({
+          workspaceId: auth.workspace.id,
+          categoryId: { $in: categoryIds },
+        });
 
-        const totalBudgetCount = budgetMonthCount + budgetCount;
-        if (transactionCount > 0 || totalBudgetCount > 0) {
+        if (transactionCount > 0) {
           const message =
             "Cannot permanently delete group: some categories are referenced by historical data. Archive instead.";
           logError(message, {
@@ -115,7 +102,6 @@ export async function DELETE(
             groupId: id,
             query,
             transactionCount,
-            budgetCount: totalBudgetCount,
           });
           return errorResponse(message, 400);
         }

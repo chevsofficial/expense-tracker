@@ -4,7 +4,6 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
-import { BudgetModel } from "@/src/models/Budget";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
@@ -25,7 +24,6 @@ const createSchema = z.object({
   kind: z.enum(["income", "expense"]),
   accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
-  budgetId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchantId: z.string().nullable().optional(),
   merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
@@ -58,7 +56,6 @@ export async function GET(request: NextRequest) {
   const merchantParam = params.get("merchantId");
   const accountParam = params.get("accountId");
   const accountIdsParam = params.get("accountIds");
-  const budgetParam = params.get("budgetId");
   const searchParam = params.get("q");
   const startDateParam = params.get("startDate");
   const endDateParam = params.get("endDate");
@@ -155,17 +152,6 @@ export async function GET(request: NextRequest) {
     filter.accountId = { $in: parsedIds };
   }
 
-  if (budgetParam) {
-    if (budgetParam === "none") {
-      filter.budgetId = null;
-    } else {
-      const budgetId = parseObjectId(budgetParam);
-      if (!budgetId) {
-        return errorResponse("Invalid budget id", 400);
-      }
-      filter.budgetId = budgetId;
-    }
-  }
 
   if (searchParam) {
     const regex = { $regex: searchParam, $options: "i" };
@@ -197,7 +183,6 @@ export async function POST(request: NextRequest) {
     receiptUrls,
     merchantId,
     merchantNameSnapshot,
-    budgetId,
     kind,
     ...rest
   } = parsed.data;
@@ -231,19 +216,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const budgetObjectId = budgetId ? parseObjectId(budgetId) : null;
-  if (budgetId && !budgetObjectId) {
-    return errorResponse("Invalid budget id", 400);
-  }
-  if (budgetObjectId) {
-    const budget = await BudgetModel.findOne({
-      _id: budgetObjectId,
-      workspaceId: auth.workspace.id,
-    });
-    if (!budget) {
-      return errorResponse("Budget not found", 404);
-    }
-  }
 
   let merchantObjectId = null;
   let resolvedMerchantNameSnapshot: string | null = merchantNameSnapshot ?? null;
@@ -273,7 +245,6 @@ export async function POST(request: NextRequest) {
     workspaceId: auth.workspace.id,
     accountId: accountObjectId ?? null,
     categoryId: categoryObjectId ?? null,
-    budgetId: budgetObjectId ?? null,
     amountMinor: toMinorUnits(amount),
     currency: getWorkspaceCurrency(auth.workspace),
     date: normalizeToUtcMidnight(date),
