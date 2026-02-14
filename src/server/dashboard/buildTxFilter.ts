@@ -6,6 +6,7 @@ type BuildTxFilterInput = {
   accountIds?: string[];
   categoryIds?: string[];
   merchantIds?: string[];
+  tagIds?: string[];
   start?: Date;
   end?: Date;
   includeArchived?: boolean;
@@ -42,6 +43,13 @@ export function buildTxFilter(input: BuildTxFilterInput) {
       .map(parseObjectId)
       .filter(Boolean) as mongoose.Types.ObjectId[];
     filter.merchantId = { $in: merchantObjectIds };
+  }
+
+  if (input.tagIds?.length) {
+    const tagObjectIds = input.tagIds
+      .map(parseObjectId)
+      .filter(Boolean) as mongoose.Types.ObjectId[];
+    filter.tagIds = { $in: tagObjectIds };
   }
 
   if (input.start || input.end) {

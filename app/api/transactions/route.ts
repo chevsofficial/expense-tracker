@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
+import { TagModel } from "@/src/models/Tag";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { monthRange } from "@/src/utils/month";
 import { errorResponse, requireAuthContext, parseObjectId } from "@/src/server/api";
@@ -28,6 +29,7 @@ const createSchema = z.object({
   merchantId: z.string().nullable().optional(),
   merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
   receiptUrls: z.array(z.string().url()).optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 function toMinorUnits(amount: number) {
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
   const merchantParam = params.get("merchantId");
   const accountParam = params.get("accountId");
   const accountIdsParam = params.get("accountIds");
+  const tagIdsParams = params.getAll("tagIds");
   const searchParam = params.get("q");
   const startDateParam = params.get("startDate");
   const endDateParam = params.get("endDate");
@@ -153,6 +156,16 @@ export async function GET(request: NextRequest) {
   }
 
 
+  if (tagIdsParams.length > 0) {
+    const parsedIds = tagIdsParams
+      .map((value) => parseObjectId(value))
+      .filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (parsedIds.length !== tagIdsParams.length) {
+      return errorResponse("Invalid tag ids", 400);
+    }
+    filter.tagIds = { $in: parsedIds };
+  }
+
   if (searchParam) {
     const regex = { $regex: searchParam, $options: "i" };
     filter.$or = [{ note: regex }, { merchantNameSnapshot: regex }];
@@ -184,6 +197,7 @@ export async function POST(request: NextRequest) {
     merchantId,
     merchantNameSnapshot,
     kind,
+    tagIds,
     ...rest
   } = parsed.data;
   const categoryObjectId = categoryId ? parseObjectId(categoryId) : null;
@@ -216,6 +230,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const resolvedTagIds = (tagIds ?? []).map((value) => parseObjectId(value));
+  if (resolvedTagIds.some((value) => !value)) {
+    return errorResponse("Invalid tag ids", 400);
+  }
+  const validTagIds = resolvedTagIds.filter((value): value is NonNullable<typeof value> => Boolean(value));
+  if (validTagIds.length) {
+    const existingTagsCount = await TagModel.countDocuments({
+      _id: { $in: validTagIds },
+      workspaceId: auth.workspace.id,
+    });
+    if (existingTagsCount !== validTagIds.length) {
+      return errorResponse("Tag not found", 404);
+    }
+  }
 
   let merchantObjectId = null;
   let resolvedMerchantNameSnapshot: string | null = merchantNameSnapshot ?? null;
@@ -251,6 +279,7 @@ export async function POST(request: NextRequest) {
     merchantId: merchantObjectId,
     merchantNameSnapshot: resolvedMerchantNameSnapshot,
     receiptUrls: receiptUrls ?? [],
+    tagIds: validTagIds,
     isArchived: false,
     kind: resolvedKind,
     ...rest,

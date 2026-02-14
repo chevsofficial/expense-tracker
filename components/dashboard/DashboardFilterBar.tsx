@@ -12,6 +12,12 @@ type Account = {
   isArchived?: boolean;
 };
 
+type Tag = {
+  _id: string;
+  name: string;
+  archivedAt?: string | null;
+};
+
 type Merchant = {
   _id: string;
   name: string;
@@ -30,6 +36,7 @@ type DashboardFilterBarProps = {
   accounts: Account[];
   categories: Category[];
   merchants: Merchant[];
+  tags: Tag[];
   dateRange: DateRangeValue;
   onDateRangeChange: (range: DateRangeValue) => void;
   selectedAccountId: string;
@@ -38,6 +45,8 @@ type DashboardFilterBarProps = {
   onCategoryChange: (value: string) => void;
   selectedMerchantId: string;
   onMerchantChange: (value: string) => void;
+  selectedTagIds: string[];
+  onTagIdsChange: (value: string[]) => void;
 };
 
 export function DashboardFilterBar({
@@ -45,6 +54,7 @@ export function DashboardFilterBar({
   accounts,
   categories,
   merchants,
+  tags,
   dateRange,
   onDateRangeChange,
   selectedAccountId,
@@ -53,6 +63,8 @@ export function DashboardFilterBar({
   onCategoryChange,
   selectedMerchantId,
   onMerchantChange,
+  selectedTagIds,
+  onTagIdsChange,
 }: DashboardFilterBarProps) {
   const categoryLabel = (category: Category) => {
     const name = category.nameCustom ?? category.nameKey ?? t(locale, "category_fallback_name");
@@ -114,6 +126,25 @@ export function DashboardFilterBar({
               {merchants.map((merchant) => (
                 <option key={merchant._id} value={merchant._id}>
                   {merchant.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="form-control w-full sm:w-auto">
+            <span className="label-text mb-1 text-sm font-medium">Tags</span>
+            <select
+              className="select select-bordered w-full sm:w-auto"
+              multiple
+              value={selectedTagIds}
+              onChange={(event) => {
+                const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                onTagIdsChange(values);
+              }}
+            >
+              {tags.map((tag) => (
+                <option key={tag._id} value={tag._id}>
+                  {tag.name}
                 </option>
               ))}
             </select>

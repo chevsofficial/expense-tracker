@@ -18,6 +18,7 @@ export type TransactionDoc = {
   note?: string;
   merchantId?: mongoose.Types.ObjectId | null;
   merchantNameSnapshot?: string | null;
+  tagIds: mongoose.Types.ObjectId[];
   receiptUrls: string[];
   isPending?: boolean;
   isArchived: boolean;
@@ -40,6 +41,7 @@ const TransactionSchema = new mongoose.Schema<TransactionDoc>(
     note: { type: String },
     merchantId: { type: mongoose.Schema.Types.ObjectId, ref: "Merchant", default: null },
     merchantNameSnapshot: { type: String },
+    tagIds: { type: [mongoose.Schema.Types.ObjectId], ref: "Tag", default: [] },
     receiptUrls: { type: [String], default: [] },
     isPending: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },
@@ -51,5 +53,6 @@ TransactionSchema.index({ workspaceId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, categoryId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, accountId: 1, date: 1 });
 TransactionSchema.index({ workspaceId: 1, transferId: 1 });
+TransactionSchema.index({ workspaceId: 1, tagIds: 1 });
 
 export const TransactionModel = getModel<TransactionDoc>("Transaction", TransactionSchema);

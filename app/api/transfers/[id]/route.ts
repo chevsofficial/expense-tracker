@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { AccountModel } from "@/src/models/Account";
 import { TransactionModel } from "@/src/models/Transaction";
+import { TagModel } from "@/src/models/Tag";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 
@@ -12,6 +13,7 @@ const updateTransferSchema = z.object({
   amount: z.number().positive().refine(Number.isFinite, "Invalid amount").optional(),
   date: z.string().refine((value) => isYmd(value) || !Number.isNaN(new Date(value).getTime()), "Invalid date").optional(),
   note: z.string().trim().min(1).nullable().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 const toMinorUnits = (amount: number) => Math.round(amount * 100);
@@ -100,6 +102,20 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   if (parsed.data.amount !== undefined) sharedUpdate.amountMinor = toMinorUnits(parsed.data.amount);
   if (parsed.data.date !== undefined) sharedUpdate.date = normalizeToUtcMidnight(parsed.data.date);
   if (parsed.data.note !== undefined) sharedUpdate.note = parsed.data.note ?? undefined;
+
+  if (parsed.data.tagIds !== undefined) {
+    const parsedTagIds = parsed.data.tagIds.map((value) => parseObjectId(value));
+    if (parsedTagIds.some((value) => !value)) return errorResponse("Invalid tag ids", 400);
+    const validTagIds = parsedTagIds.filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (validTagIds.length) {
+      const existingTagsCount = await TagModel.countDocuments({
+        _id: { $in: validTagIds },
+        workspaceId: auth.workspace.id,
+      });
+      if (existingTagsCount !== validTagIds.length) return errorResponse("Tag not found", 404);
+    }
+    sharedUpdate.tagIds = validTagIds;
+  }
 
   const session = await mongoose.startSession();
   try {
