@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   try {
     await session.withTransaction(async () => {
-      await TransactionModel.create(
+      await TransactionModel.insertMany(
         [
           {
             workspaceId: auth.workspace.id,
@@ -92,9 +92,15 @@ export async function POST(request: NextRequest) {
             isPending: false,
           },
         ],
-        { session }
+        { session, ordered: true }
       );
     });
+  } catch (err) {
+    console.error("Transfers API error:", {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return errorResponse("Failed to create transfer", 500);
   } finally {
     await session.endSession();
   }
