@@ -24,6 +24,7 @@ import { formatRangeLabel, getPresetRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
+import type { Tag } from "@/src/types/tag";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
 
 type TransactionKind = "income" | "expense" | "transfer";
@@ -42,6 +43,7 @@ type Transaction = {
   merchantId?: string | null;
   merchantNameSnapshot?: string | null;
   receiptUrls?: string[];
+  tagIds?: string[];
   isArchived?: boolean;
 };
 
@@ -78,6 +80,7 @@ type TransactionForm = {
   merchantNameSnapshot: string;
   note: string;
   receiptUrls: string[];
+  tagIds: string[];
 };
 
 type UploadOk = { data: { url: string } };
@@ -142,6 +145,7 @@ export function TransactionsClient({
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
@@ -149,6 +153,7 @@ export function TransactionsClient({
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [merchantFilter, setMerchantFilter] = useState<string>("");
   const [accountFilter, setAccountFilter] = useState<string>("");
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [searchFilter, setSearchFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -183,6 +188,7 @@ export function TransactionsClient({
     merchantNameSnapshot: "",
     note: "",
     receiptUrls: [],
+    tagIds: [],
   }));
 
   const categoryName = useCallback(
@@ -285,6 +291,17 @@ export function TransactionsClient({
   }, [locale]);
 
 
+
+  const loadTags = useCallback(async () => {
+    try {
+      const response = await getJSON<ApiListResponse<Tag>>("/api/tags?includeArchived=false");
+      setTags(response.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    }
+  }, [locale]);
+
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -295,7 +312,8 @@ export function TransactionsClient({
       if (categoryFilter) params.set("categoryId", categoryFilter);
       if (merchantFilter) params.set("merchantId", merchantFilter);
       if (accountFilter) params.set("accountId", accountFilter);
-        if (searchFilter) params.set("q", searchFilter);
+      if (searchFilter) params.set("q", searchFilter);
+      tagFilters.forEach((tagId) => params.append("tagIds", tagId));
       params.set("includeArchived", String(showArchived));
 
       const response = await getJSON<TransactionsResponse>(`/api/transactions?${params}`);
@@ -316,6 +334,7 @@ export function TransactionsClient({
     merchantFilter,
     accountFilter,
     searchFilter,
+    tagFilters,
   ]);
 
   useEffect(() => {
@@ -331,6 +350,10 @@ export function TransactionsClient({
   }, [loadAccounts]);
 
   useEffect(() => {
+    void loadTags();
+  }, [loadTags]);
+
+  useEffect(() => {
     if (initializedFromQuery.current) return;
     const paramMonth = searchParams.get("month");
     const paramStartDate = searchParams.get("startDate");
@@ -341,6 +364,7 @@ export function TransactionsClient({
     const paramAccount = searchParams.get("accountId");
     const paramQuery = searchParams.get("q");
     const paramArchived = searchParams.get("includeArchived");
+    const paramTagIds = searchParams.getAll("tagIds");
 
     if (paramStartDate || paramEndDate) {
       setDateRange({
@@ -361,6 +385,7 @@ export function TransactionsClient({
     if (paramAccount) setAccountFilter(paramAccount);
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
+    if (paramTagIds.length) setTagFilters(paramTagIds);
 
     initializedFromQuery.current = true;
   }, [searchParams]);
@@ -375,6 +400,7 @@ export function TransactionsClient({
     if (merchantFilter) params.set("merchantId", merchantFilter);
     if (accountFilter) params.set("accountId", accountFilter);
     if (searchFilter) params.set("q", searchFilter);
+    tagFilters.forEach((tagId) => params.append("tagIds", tagId));
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
   }, [
@@ -385,6 +411,7 @@ export function TransactionsClient({
     merchantFilter,
     accountFilter,
     searchFilter,
+    tagFilters,
     showArchived,
     router,
   ]);
@@ -406,6 +433,7 @@ export function TransactionsClient({
       merchantNameSnapshot: "",
       note: "",
       receiptUrls: [],
+      tagIds: [],
     });
     setModalOpen(true);
   };
@@ -440,6 +468,7 @@ export function TransactionsClient({
       merchantNameSnapshot: merchantName,
       note: transaction.note ?? "",
       receiptUrls: transaction.receiptUrls ?? [],
+      tagIds: transaction.tagIds ?? [],
     });
     setModalOpen(true);
   };
@@ -561,6 +590,7 @@ export function TransactionsClient({
           date: formState.date,
           amount: amountValue,
           note: formState.note.trim() || null,
+          tagIds: formState.tagIds,
         };
 
         const existingTransferId = editingTransaction?.transferId;
@@ -582,6 +612,7 @@ export function TransactionsClient({
 
         if (formState.note.trim()) payload.note = formState.note.trim();
         payload.receiptUrls = formState.receiptUrls;
+        payload.tagIds = formState.tagIds;
 
         if (editingTransaction) {
           await putJSON<ApiItemResponse<Transaction>>(
@@ -972,6 +1003,22 @@ export function TransactionsClient({
                     ))}
                 </select>
               </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">Tags</span>
+                <select
+                  className="select select-bordered select-sm"
+                  multiple
+                  value={tagFilters}
+                  onChange={(event) => {
+                    const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                    setTagFilters(values);
+                  }}
+                >
+                  {tags.map((tag) => (
+                    <option key={tag._id} value={tag._id}>{tag.name}</option>
+                  ))}
+                </select>
+              </label>
               
               <label className="form-control w-full md:col-span-2 lg:col-span-2">
                 <span className="label-text mb-1 text-sm font-medium">
@@ -1186,6 +1233,22 @@ export function TransactionsClient({
               />
             </label>
             ) : null}
+            <label className="form-control w-full md:col-span-2">
+              <span className="label-text mb-1 text-sm font-medium">Tags</span>
+              <select
+                className="select select-bordered"
+                multiple
+                value={formState.tagIds}
+                onChange={(event) => {
+                  const values = Array.from(event.target.selectedOptions).map((option) => option.value);
+                  setFormState({ ...formState, tagIds: values });
+                }}
+              >
+                {tags.map((tag) => (
+                  <option key={tag._id} value={tag._id}>{tag.name}</option>
+                ))}
+              </select>
+            </label>
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_note")}

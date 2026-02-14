@@ -4,6 +4,7 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
+import { TagModel } from "@/src/models/Tag";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
@@ -26,6 +27,7 @@ const updateSchema = z.object({
   merchantId: z.string().nullable().optional(),
   merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
   receiptUrls: z.array(z.string().url()).optional(),
+  tagIds: z.array(z.string()).optional(),
   isArchived: z.boolean().optional(),
 });
 
@@ -135,6 +137,26 @@ export async function PUT(
 
   if (parsed.data.receiptUrls !== undefined) {
     update.receiptUrls = parsed.data.receiptUrls;
+  }
+
+  if (parsed.data.tagIds !== undefined) {
+    const parsedTagIds = parsed.data.tagIds.map((value) => parseObjectId(value));
+    if (parsedTagIds.some((value) => !value)) {
+      return errorResponse("Invalid tag ids", 400);
+    }
+
+    const validTagIds = parsedTagIds.filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (validTagIds.length) {
+      const existingTagsCount = await TagModel.countDocuments({
+        _id: { $in: validTagIds },
+        workspaceId: auth.workspace.id,
+      });
+      if (existingTagsCount !== validTagIds.length) {
+        return errorResponse("Tag not found", 404);
+      }
+    }
+
+    update.tagIds = validTagIds;
   }
 
   if (parsed.data.isArchived !== undefined) {

@@ -7,6 +7,7 @@ const items = [
   { href: "/app/settings", label: "General" },
   { href: "/app/settings/categories", label: "Categories" },
   { href: "/app/settings/merchants", label: "Merchants" },
+  { href: "/app/settings/tags", label: "Tags" },
   { href: "/app/settings/import", label: "Imports" },
   { href: "/app/settings/about", label: "About" },
 ];

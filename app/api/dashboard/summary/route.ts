@@ -12,6 +12,7 @@ const querySchema = z
     accountId: z.string().optional(),
     categoryId: z.string().optional(),
     merchantId: z.string().optional(),
+    tagIds: z.array(z.string()).optional(),
   })
   .refine(
     (value) =>
@@ -76,8 +77,15 @@ export async function GET(request: NextRequest) {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
 
-  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const parsed = querySchema.safeParse(params);
+  const params = request.nextUrl.searchParams;
+  const parsed = querySchema.safeParse({
+    startDate: params.get("startDate") ?? undefined,
+    endDate: params.get("endDate") ?? undefined,
+    accountId: params.get("accountId") ?? undefined,
+    categoryId: params.get("categoryId") ?? undefined,
+    merchantId: params.get("merchantId") ?? undefined,
+    tagIds: params.getAll("tagIds"),
+  });
   if (!parsed.success) {
     return errorResponse(parsed.error.message, 400);
   }
@@ -90,12 +98,14 @@ export async function GET(request: NextRequest) {
   const accountId = parseOptionalId(parsed.data.accountId);
   const categoryId = parseOptionalId(parsed.data.categoryId);
   const merchantId = parseOptionalId(parsed.data.merchantId);
+  const tagIds = (parsed.data.tagIds ?? []).map(parseOptionalId).filter((value): value is string => Boolean(value));
 
   const rangeFilter = buildTxFilter({
     workspaceId: auth.workspace.id,
     accountIds: accountId ? [accountId] : undefined,
     categoryIds: categoryId ? [categoryId] : undefined,
     merchantIds: merchantId ? [merchantId] : undefined,
+    tagIds: tagIds.length ? tagIds : undefined,
     start: startDate,
     end: endExclusive,
   });
@@ -125,6 +135,7 @@ export async function GET(request: NextRequest) {
         accountIds: accountId ? [accountId] : undefined,
         categoryIds: categoryId ? [categoryId] : undefined,
         merchantIds: merchantId ? [merchantId] : undefined,
+        tagIds: tagIds.length ? tagIds : undefined,
         end: endExclusive,
       }),
     },
@@ -149,6 +160,7 @@ export async function GET(request: NextRequest) {
             accountIds: accountId ? [accountId] : undefined,
             categoryIds: categoryId ? [categoryId] : undefined,
             merchantIds: merchantId ? [merchantId] : undefined,
+            tagIds: tagIds.length ? tagIds : undefined,
             end: startDate,
           }),
         },
@@ -340,6 +352,47 @@ export async function GET(request: NextRequest) {
     });
   };
 
+
+  const topTagsByKind = async (kind: "income" | "expense") => {
+    const rows = await TransactionModel.aggregate<{
+      _id: string;
+      totalMinor: number;
+      count: number;
+      name?: string;
+      color?: string | null;
+    }>([
+      { $match: { ...rangeFilter, kind, tagIds: { $exists: true, $ne: [] } } },
+      { $unwind: "$tagIds" },
+      {
+        $group: {
+          _id: "$tagIds",
+          totalMinor: { $sum: "$amountMinor" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { totalMinor: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: "tags",
+          localField: "_id",
+          foreignField: "_id",
+          as: "tag",
+        },
+      },
+      { $addFields: { tag: { $first: "$tag" } } },
+      { $project: { totalMinor: 1, count: 1, name: "$tag.name", color: "$tag.color" } },
+    ]);
+
+    return rows.map((row) => ({
+      tagId: row._id.toString(),
+      name: row.name ?? "Unknown tag",
+      color: row.color ?? null,
+      totalMinor: row.totalMinor,
+      count: row.count,
+    }));
+  };
+
   const [
     topCategoriesIncome,
     topCategoriesExpense,
@@ -347,6 +400,8 @@ export async function GET(request: NextRequest) {
     topMerchantsExpense,
     topGroupsIncome,
     topGroupsExpense,
+    topTagsIncome,
+    topTagsExpense,
   ] = await Promise.all([
     topCategoriesByKind("income"),
     topCategoriesByKind("expense"),
@@ -354,6 +409,8 @@ export async function GET(request: NextRequest) {
     topMerchantsByKind("expense"),
     topGroupsByKind("income"),
     topGroupsByKind("expense"),
+    topTagsByKind("income"),
+    topTagsByKind("expense"),
   ]);
 
   return NextResponse.json({
@@ -376,6 +433,10 @@ export async function GET(request: NextRequest) {
       byGroup: {
         income: topGroupsIncome,
         expense: topGroupsExpense,
+      },
+      tagSummaries: {
+        income: topTagsIncome,
+        expense: topTagsExpense,
       },
     },
   });
