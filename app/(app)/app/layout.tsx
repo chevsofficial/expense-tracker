@@ -26,7 +26,6 @@ export default async function AppLayout({
         accountsLabel={t(locale, "nav_accounts")}
         transactionsLabel={t(locale, "nav_transactions")}
         budgetLabel={t(locale, "nav_budget")}
-        recurringLabel={t(locale, "nav_recurring")}
         rightSlot={null}
       />
       <div className="mx-auto w-full max-w-6xl px-4 py-6">{children}</div>
