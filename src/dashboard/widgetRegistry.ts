@@ -95,13 +95,6 @@ export const dashboardWidgetRegistry: DashboardWidgetDefinition[] = [
     defaultSize: { w: 4, h: 2 },
     kind: "expense",
   },
-  {
-    type: "budget_vs_actual",
-    titleKey: "dashboard_widget_budget_vs_actual",
-    supportedViews: ["table", "bar"],
-    defaultView: "table",
-    defaultSize: { w: 6, h: 4 },
-  },
 ];
 
 const widgetDefinitionMap = new Map(

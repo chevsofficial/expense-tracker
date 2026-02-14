@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { CategoryModel } from "@/src/models/Category";
 import { CategoryGroupModel } from "@/src/models/CategoryGroup";
-import { BudgetMonthModel } from "@/src/models/BudgetMonth";
-import { BudgetModel } from "@/src/models/Budget";
 import { TransactionModel } from "@/src/models/Transaction";
 import { requireAuthContext, errorResponse, parseObjectId } from "@/src/server/api";
 
@@ -116,57 +114,18 @@ export async function DELETE(
   const forceDelete = request.nextUrl.searchParams.get("force") === "1";
 
   if (hardDelete) {
-    const [transactionCount, budgetMonthCount, budgetActiveCount, budgetArchivedCount] =
-      await Promise.all([
-      TransactionModel.countDocuments({
-        workspaceId: auth.workspace.id,
-        categoryId: objectId,
-      }),
-      BudgetMonthModel.countDocuments({
-        workspaceId: auth.workspace.id,
-        "plannedLines.categoryId": objectId,
-      }),
-      BudgetModel.countDocuments({
-        workspaceId: auth.workspace.id,
-        archivedAt: null,
-        $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
-      }),
-      BudgetModel.countDocuments({
-        workspaceId: auth.workspace.id,
-        archivedAt: { $ne: null },
-        $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
-      }),
-    ]);
+    const transactionCount = await TransactionModel.countDocuments({
+      workspaceId: auth.workspace.id,
+      categoryId: objectId,
+    });
 
-    const hasRefs =
-      transactionCount > 0 ||
-      budgetMonthCount > 0 ||
-      budgetActiveCount > 0 ||
-      budgetArchivedCount > 0;
-
-    if (hasRefs && !forceDelete) {
-      const messageParts: string[] = [];
-      if (transactionCount > 0) {
-        messageParts.push(`referenced by ${transactionCount} transactions`);
-      }
-      if (budgetMonthCount > 0) {
-        messageParts.push(`referenced by ${budgetMonthCount} budget-month planned lines`);
-      }
-      if (budgetActiveCount + budgetArchivedCount > 0) {
-        messageParts.push(
-          `referenced by ${budgetActiveCount} active budgets and ${budgetArchivedCount} archived budgets`
-        );
-      }
-
-      const message = `Category is in use: ${messageParts.join(", ")}.`;
+    if (transactionCount > 0 && !forceDelete) {
+      const message = `Category is in use: referenced by ${transactionCount} transactions.`;
       logError(message, {
         workspaceId: auth.workspace.id,
         categoryId: id,
         query,
         transactionCount,
-        budgetMonthCount,
-        budgetActiveCount,
-        budgetArchivedCount,
       });
 
       return NextResponse.json(
@@ -176,21 +135,11 @@ export async function DELETE(
           message,
           references: {
             transactionCount,
-            budgetMonthCount,
-            budgetActiveCount,
-            budgetArchivedCount,
           },
         },
         { status: 409 }
       );
     }
-
-    const affectedIds = await BudgetModel.find({
-      workspaceId: auth.workspace.id,
-      $or: [{ categoryIds: objectId }, { "categoryBudgets.categoryId": objectId }],
-    })
-      .select("_id")
-      .lean();
 
     let transactionsUpdatedCount = 0;
     try {
@@ -211,68 +160,6 @@ export async function DELETE(
       throw error;
     }
 
-    let budgetMonthsUpdatedCount = 0;
-    try {
-      const budgetMonthsUpdated = await BudgetMonthModel.updateMany(
-        { workspaceId: auth.workspace.id, "plannedLines.categoryId": objectId },
-        { $pull: { plannedLines: { categoryId: objectId } } }
-      );
-      budgetMonthsUpdatedCount = budgetMonthsUpdated.modifiedCount;
-    } catch (error) {
-      logError("Failed budgetmonth cleanup", {
-        workspaceId: auth.workspace.id,
-        categoryId: id,
-        hardDelete,
-        forceDelete,
-        query,
-        error,
-      });
-      throw error;
-    }
-
-    let budgetsUpdated = 0;
-    try {
-      const [categoryIdsUpdated, categoryBudgetsUpdated] = await Promise.all([
-        BudgetModel.updateMany(
-          { workspaceId: auth.workspace.id, categoryIds: objectId },
-          { $pull: { categoryIds: objectId } }
-        ),
-        BudgetModel.updateMany(
-          {
-            workspaceId: auth.workspace.id,
-            "categoryBudgets.categoryId": objectId,
-          },
-          { $pull: { categoryBudgets: { categoryId: objectId } } }
-        ),
-      ]);
-
-      budgetsUpdated = categoryIdsUpdated.modifiedCount + categoryBudgetsUpdated.modifiedCount;
-    } catch (error) {
-      logError("Failed budget cleanup", {
-        workspaceId: auth.workspace.id,
-        categoryId: id,
-        hardDelete,
-        forceDelete,
-        query,
-        error,
-      });
-      throw error;
-    }
-
-    if (affectedIds.length > 0) {
-      const affected = await BudgetModel.find({
-        _id: { $in: affectedIds.map((item) => item._id) },
-      });
-
-      for (const budget of affected) {
-        budget.totalBudgetMinor = (budget.categoryBudgets ?? []).reduce(
-          (sum, row) => sum + row.amountMinor,
-          0
-        );
-        await budget.save();
-      }
-    }
-
     await CategoryModel.deleteOne({ _id: objectId, workspaceId: auth.workspace.id });
 
     return NextResponse.json({
@@ -281,8 +168,6 @@ export async function DELETE(
         forced: forceDelete,
         changes: {
           transactionsUpdated: transactionsUpdatedCount,
-          budgetsUpdated,
-          budgetMonthsUpdated: budgetMonthsUpdatedCount,
         },
       },
     });

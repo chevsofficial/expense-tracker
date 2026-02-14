@@ -4,7 +4,6 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { CategoryModel } from "@/src/models/Category";
 import { MerchantModel } from "@/src/models/Merchant";
 import { AccountModel } from "@/src/models/Account";
-import { BudgetModel } from "@/src/models/Budget";
 import { isYmd, normalizeToUtcMidnight } from "@/src/utils/dateOnly";
 import { errorResponse, parseObjectId, requireAuthContext } from "@/src/server/api";
 
@@ -23,7 +22,6 @@ const updateSchema = z.object({
   kind: z.enum(["income", "expense"]).optional(),
   accountId: z.string().nullable().optional(),
   categoryId: z.string().nullable().optional(),
-  budgetId: z.string().nullable().optional(),
   note: z.string().trim().min(1).optional(),
   merchantId: z.string().nullable().optional(),
   merchantNameSnapshot: z.string().trim().min(1).nullable().optional(),
@@ -106,24 +104,6 @@ export async function PUT(
     }
   }
 
-  if (parsed.data.budgetId !== undefined) {
-    if (parsed.data.budgetId === null) {
-      update.budgetId = null;
-    } else {
-      const budgetObjectId = parseObjectId(parsed.data.budgetId);
-      if (!budgetObjectId) {
-        return errorResponse("Invalid budget id", 400);
-      }
-      const budget = await BudgetModel.findOne({
-        _id: budgetObjectId,
-        workspaceId: auth.workspace.id,
-      });
-      if (!budget) {
-        return errorResponse("Budget not found", 404);
-      }
-      update.budgetId = budgetObjectId;
-    }
-  }
 
   if (parsed.data.note !== undefined) {
     update.note = parsed.data.note;

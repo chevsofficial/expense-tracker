@@ -8,14 +8,12 @@ export function AppTopNav({
   dashboardLabel,
   accountsLabel,
   transactionsLabel,
-  budgetLabel,
   rightSlot,
 }: {
   appName: string;
   dashboardLabel: string;
   accountsLabel: string;
   transactionsLabel: string;
-  budgetLabel: string;
   rightSlot?: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -23,9 +21,7 @@ export function AppTopNav({
   const isActive = (href: string) =>
     href === "/app/settings"
       ? pathname.startsWith("/app/settings")
-      : href === "/app/budgets"
-        ? pathname.startsWith("/app/budgets")
-        : pathname === href;
+      : pathname === href;
 
   const linkClass = (href: string) => {
     const active = isActive(href);
@@ -64,9 +60,6 @@ export function AppTopNav({
               <Link href="/app/transactions">{transactionsLabel}</Link>
             </li>
             <li>
-              <Link href="/app/budgets">{budgetLabel}</Link>
-            </li>
-            <li>
               <Link href="/app/settings">Settings</Link>
             </li>
           </ul>
@@ -99,14 +92,6 @@ export function AppTopNav({
               className={`${linkClass("/app/transactions")} ${underlineClass("/app/transactions")}`}
             >
               {transactionsLabel}
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/app/budgets"
-              className={`${linkClass("/app/budgets")} ${underlineClass("/app/budgets")}`}
-            >
-              {budgetLabel}
             </Link>
           </li>
           <li>

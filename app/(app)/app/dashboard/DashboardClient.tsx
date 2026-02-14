@@ -6,7 +6,6 @@ import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
-import { BudgetVsActualSummaryCard } from "@/components/dashboard/BudgetVsActualSummaryCard";
 import { CategoryBreakdownWidget } from "@/components/dashboard/widgets/CategoryBreakdownWidget";
 import { MerchantBreakdownWidget } from "@/components/dashboard/widgets/MerchantBreakdownWidget";
 import { GroupBreakdownWidget } from "@/components/dashboard/widgets/GroupBreakdownWidget";
@@ -82,12 +81,6 @@ type SummaryResponse = {
         amountMinor: number;
         count: number;
       }>;
-    };
-    budgetVsActual: {
-      plannedMinor: number;
-      actualMinor: number;
-      remainingMinor: number;
-      progressPct: number;
     };
   };
 };
@@ -272,13 +265,6 @@ export function DashboardClient({
             rows={merchantBreakdown.expense}
             currency={defaultCurrency}
           />
-          <div className="col-span-12">
-            <BudgetVsActualSummaryCard
-              locale={locale}
-              data={summary.budgetVsActual}
-              currency={defaultCurrency}
-            />
-          </div>
         </DashboardGrid>
       ) : null}
     </section>
