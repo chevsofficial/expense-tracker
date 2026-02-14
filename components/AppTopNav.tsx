@@ -9,7 +9,6 @@ export function AppTopNav({
   accountsLabel,
   transactionsLabel,
   budgetLabel,
-  recurringLabel,
   rightSlot,
 }: {
   appName: string;
@@ -17,7 +16,6 @@ export function AppTopNav({
   accountsLabel: string;
   transactionsLabel: string;
   budgetLabel: string;
-  recurringLabel: string;
   rightSlot?: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -69,9 +67,6 @@ export function AppTopNav({
               <Link href="/app/budgets">{budgetLabel}</Link>
             </li>
             <li>
-              <Link href="/app/recurring">{recurringLabel}</Link>
-            </li>
-            <li>
               <Link href="/app/settings">Settings</Link>
             </li>
           </ul>
@@ -112,14 +107,6 @@ export function AppTopNav({
               className={`${linkClass("/app/budgets")} ${underlineClass("/app/budgets")}`}
             >
               {budgetLabel}
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/app/recurring"
-              className={`${linkClass("/app/recurring")} ${underlineClass("/app/recurring")}`}
-            >
-              {recurringLabel}
             </Link>
           </li>
           <li>

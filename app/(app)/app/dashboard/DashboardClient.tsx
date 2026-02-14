@@ -14,7 +14,6 @@ import { TotalBalanceCard } from "@/components/dashboard/widgets/TotalBalanceCar
 import { TotalChangeCard } from "@/components/dashboard/widgets/TotalChangeCard";
 import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard";
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
-import { NextTwoWeeksRecurring } from "@/components/dashboard/widgets/NextTwoWeeksRecurring";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPresetRange } from "@/src/utils/dateRange";
 import type { Category } from "@/src/types/category";
@@ -93,23 +92,6 @@ type SummaryResponse = {
   };
 };
 
-type NextTwoWeeksResponse = {
-  data: {
-    from: string;
-    to: string;
-    items: Array<{
-      recurringId: string;
-      title: string;
-      nextDate: string;
-      amountMinor: number;
-      kind: "income" | "expense";
-      merchantName?: string | null;
-      categoryName?: string | null;
-      categoryEmoji?: string | null;
-    }>;
-  };
-};
-
 type ApiListResponse<T> = { data: T[] };
 
 
@@ -124,9 +106,7 @@ export function DashboardClient({
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [summary, setSummary] = useState<SummaryResponse["data"] | null>(null);
-  const [recurring, setRecurring] = useState<NextTwoWeeksResponse["data"] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [recurringLoading, setRecurringLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
@@ -177,19 +157,6 @@ export function DashboardClient({
     selectedMerchantId,
   ]);
 
-  const loadRecurring = useCallback(async () => {
-    setError(null);
-    setRecurringLoading(true);
-    try {
-      const response = await getJSON<NextTwoWeeksResponse>("/api/dashboard/next-two-weeks");
-      setRecurring(response.data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "dashboard_loading");
-      setError(message);
-    } finally {
-      setRecurringLoading(false);
-    }
-  }, [locale]);
 
   useEffect(() => {
     void loadFilters();
@@ -199,9 +166,6 @@ export function DashboardClient({
     void loadSummary();
   }, [loadSummary]);
 
-  useEffect(() => {
-    void loadRecurring();
-  }, [loadRecurring]);
 
   const hasSummary = Boolean(summary);
 
@@ -308,22 +272,12 @@ export function DashboardClient({
             rows={merchantBreakdown.expense}
             currency={defaultCurrency}
           />
-          <div className="col-span-12 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="min-w-0">
-              <BudgetVsActualSummaryCard
-                locale={locale}
-                data={summary.budgetVsActual}
-                currency={defaultCurrency}
-              />
-            </div>
-            <div className="min-w-0">
-              <NextTwoWeeksRecurring
-                locale={locale}
-                data={recurring}
-                loading={recurringLoading}
-                currency={defaultCurrency}
-              />
-            </div>
+          <div className="col-span-12">
+            <BudgetVsActualSummaryCard
+              locale={locale}
+              data={summary.budgetVsActual}
+              currency={defaultCurrency}
+            />
           </div>
         </DashboardGrid>
       ) : null}
