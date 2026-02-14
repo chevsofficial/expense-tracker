@@ -26,7 +26,7 @@ import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
 
-type TransactionKind = "income" | "expense";
+type TransactionKind = "income" | "expense" | "transfer";
 
 type Transaction = {
   _id: string;
@@ -35,6 +35,9 @@ type Transaction = {
   kind: TransactionKind;
   accountId?: string | null;
   categoryId: string | null;
+  transferId?: string | null;
+  transferSide?: "out" | "in" | null;
+  transferAccountId?: string | null;
   note?: string;
   merchantId?: string | null;
   merchantNameSnapshot?: string | null;
@@ -69,6 +72,7 @@ type TransactionForm = {
   amount: string;
   kind: TransactionKind;
   accountId: string;
+  transferToAccountId: string;
   categoryId: string;
   merchantId: string | null;
   merchantNameSnapshot: string;
@@ -173,6 +177,7 @@ export function TransactionsClient({
     amount: "",
     kind: "expense",
     accountId: "unassigned",
+    transferToAccountId: "unassigned",
     categoryId: "uncategorized",
     merchantId: null,
     merchantNameSnapshot: "",
@@ -208,7 +213,7 @@ export function TransactionsClient({
     [formState.categoryId, selectableCategories]
   );
 
-  const isKindLocked = Boolean(selectedCategoryKind);
+  const isKindLocked = formState.kind !== "transfer" && Boolean(selectedCategoryKind);
 
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -395,6 +400,7 @@ export function TransactionsClient({
       amount: "",
       kind: "expense",
       accountId: defaultAccountId,
+      transferToAccountId: defaultAccountId,
       categoryId: "uncategorized",
         merchantId: null,
       merchantNameSnapshot: "",
@@ -409,12 +415,26 @@ export function TransactionsClient({
       (transaction.merchantId ? merchantMap.get(transaction.merchantId) : null) ??
       transaction.merchantNameSnapshot ??
       "";
+    const transferFromAccount =
+      transaction.kind === "transfer"
+        ? transaction.transferSide === "out"
+          ? transaction.accountId ?? "unassigned"
+          : transaction.transferAccountId ?? "unassigned"
+        : transaction.accountId ?? "unassigned";
+    const transferToAccount =
+      transaction.kind === "transfer"
+        ? transaction.transferSide === "in"
+          ? transaction.accountId ?? "unassigned"
+          : transaction.transferAccountId ?? "unassigned"
+        : transaction.accountId ?? "unassigned";
+
     setEditingTransaction(transaction);
     setFormState({
       date: formatDateInput(transaction.date),
       amount: (transaction.amountMinor / 100).toFixed(2),
       kind: transaction.kind,
-      accountId: transaction.accountId ?? "unassigned",
+      accountId: transferFromAccount,
+      transferToAccountId: transferToAccount,
       categoryId: transaction.categoryId ?? "uncategorized",
       merchantId: transaction.merchantId ?? null,
       merchantNameSnapshot: merchantName,
@@ -528,28 +548,49 @@ export function TransactionsClient({
       selectableCategories
     );
 
-    const payload: Record<string, unknown> = {
-      date: formState.date,
-      amount: amountValue,
-      kind: forcedKind ?? formState.kind,
-      accountId: formState.accountId === "unassigned" ? null : formState.accountId,
-      categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
-      merchantId: formState.merchantId,
-      merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
-    };
-
-    if (formState.note.trim()) payload.note = formState.note.trim();
-    payload.receiptUrls = formState.receiptUrls;
-
     setIsSubmitting(true);
     try {
-      if (editingTransaction) {
-        await putJSON<ApiItemResponse<Transaction>>(
-          `/api/transactions/${editingTransaction._id}`,
-          payload
-        );
+      if (formState.kind === "transfer") {
+        if (formState.accountId === "unassigned" || formState.transferToAccountId === "unassigned") {
+          throw new Error("Select both accounts for transfer");
+        }
+
+        const transferPayload = {
+          fromAccountId: formState.accountId,
+          toAccountId: formState.transferToAccountId,
+          date: formState.date,
+          amount: amountValue,
+          note: formState.note.trim() || null,
+        };
+
+        const existingTransferId = editingTransaction?.transferId;
+        if (existingTransferId) {
+          await putJSON<{ data: { transferId: string } }>(`/api/transfers/${existingTransferId}`, transferPayload);
+        } else {
+          await postJSON<{ data: { transferId: string } }>("/api/transfers", transferPayload);
+        }
       } else {
-        await postJSON<ApiItemResponse<Transaction>>("/api/transactions", payload);
+        const payload: Record<string, unknown> = {
+          date: formState.date,
+          amount: amountValue,
+          kind: forcedKind ?? formState.kind,
+          accountId: formState.accountId === "unassigned" ? null : formState.accountId,
+          categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
+          merchantId: formState.merchantId,
+          merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
+        };
+
+        if (formState.note.trim()) payload.note = formState.note.trim();
+        payload.receiptUrls = formState.receiptUrls;
+
+        if (editingTransaction) {
+          await putJSON<ApiItemResponse<Transaction>>(
+            `/api/transactions/${editingTransaction._id}`,
+            payload
+          );
+        } else {
+          await postJSON<ApiItemResponse<Transaction>>("/api/transactions", payload);
+        }
       }
       setModalOpen(false);
       setEditingTransaction(null);
@@ -581,7 +622,11 @@ export function TransactionsClient({
     if (!transactionToDelete) return;
     setIsSubmitting(true);
     try {
-      await delJSON<DeleteResponse>(`/api/transactions/${transactionToDelete._id}?hard=1`);
+      if (transactionToDelete.kind === "transfer" && transactionToDelete.transferId) {
+        await delJSON<DeleteResponse>(`/api/transfers/${transactionToDelete.transferId}`);
+      } else {
+        await delJSON<DeleteResponse>(`/api/transactions/${transactionToDelete._id}?hard=1`);
+      }
       setDeleteConfirmOpen(false);
       setTransactionToDelete(null);
       await loadTransactions();
@@ -712,7 +757,10 @@ export function TransactionsClient({
             const dateLabel = Number.isNaN(dateObj.getTime())
               ? transaction.date
               : new Intl.DateTimeFormat(locale, { timeZone: "UTC" }).format(dateObj);
-            const categoryLabel = transaction.categoryId
+            const isTransfer = transaction.kind === "transfer";
+            const categoryLabel = isTransfer
+              ? "—"
+              : transaction.categoryId
               ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
               : t(locale, "transactions_uncategorized");
             const accountLabel = transaction.accountId
@@ -721,14 +769,25 @@ export function TransactionsClient({
             const kindLabel =
               transaction.kind === "income"
                 ? t(locale, "category_kind_income")
-                : t(locale, "category_kind_expense");
-            const merchantLabel =
-              (transaction.merchantId
-                ? merchantMap.get(transaction.merchantId)
-                : null) ??
-              transaction.merchantNameSnapshot ??
-              "-";
-            const receiptUrl = transaction.receiptUrls?.[0];
+                : transaction.kind === "expense"
+                ? t(locale, "category_kind_expense")
+                : t(locale, "transactions_kind_transfer");
+            const merchantLabel = isTransfer
+              ? `${t(locale, "transactions_transfer_to_from")} ${
+                  transaction.transferAccountId
+                    ? accountMap.get(transaction.transferAccountId) ?? t(locale, "transactions_account_unassigned")
+                    : t(locale, "transactions_account_unassigned")
+                }`
+              : (transaction.merchantId
+                  ? merchantMap.get(transaction.merchantId)
+                  : null) ??
+                transaction.merchantNameSnapshot ??
+                "-";
+            const displayAmountMinor =
+              isTransfer && transaction.transferSide === "out"
+                ? -transaction.amountMinor
+                : transaction.amountMinor;
+            const receiptUrl = isTransfer ? undefined : transaction.receiptUrls?.[0];
 
             return (
               <tr key={transaction._id}>
@@ -748,7 +807,7 @@ export function TransactionsClient({
                 <td>
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
-                <td>{formatCurrency(transaction.amountMinor)}</td>
+                <td>{formatCurrency(displayAmountMinor)}</td>
                 <td>
                   {receiptUrl ? (
                     <button
@@ -772,15 +831,19 @@ export function TransactionsClient({
                           className="btn btn-ghost btn-xs"
                           onClick={() => openEditModal(transaction)}
                         >
-                          {t(locale, "transactions_edit")}
+                          {transaction.kind === "transfer"
+                            ? t(locale, "transactions_edit_transfer")
+                            : t(locale, "transactions_edit")}
                         </button>
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={() => handleArchive(transaction)}
-                          disabled={transaction.isArchived}
-                        >
-                          {t(locale, "transactions_archive")}
-                        </button>
+                        {transaction.kind !== "transfer" ? (
+                          <button
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => handleArchive(transaction)}
+                            disabled={transaction.isArchived}
+                          >
+                            {t(locale, "transactions_archive")}
+                          </button>
+                        ) : null}
                       </>
                     ) : (
                       <button
@@ -852,6 +915,7 @@ export function TransactionsClient({
                   <option value="">{t(locale, "transactions_filter_any")}</option>
                   <option value="expense">{t(locale, "category_kind_expense")}</option>
                   <option value="income">{t(locale, "category_kind_income")}</option>
+                  <option value="transfer">{t(locale, "transactions_kind_transfer")}</option>
                 </select>
               </label>
               <label className="form-control w-full">
@@ -1030,6 +1094,7 @@ export function TransactionsClient({
                 >
                   <option value="expense">{t(locale, "category_kind_expense")}</option>
                   <option value="income">{t(locale, "category_kind_income")}</option>
+                  <option value="transfer">{t(locale, "transactions_kind_transfer")}</option>
                 </select>
               )}
             </label>
@@ -1057,22 +1122,51 @@ export function TransactionsClient({
                   ))}
               </select>
             </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_category")}
-              </span>
-              <CategoryPicker
-                locale={locale}
-                categories={selectableCategories}
-                value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
-                onChange={handleFormCategoryChange}
-                allowEmpty
-                emptyLabel={t(locale, "transactions_category_uncategorized")}
-                placeholder={t(locale, "transactions_category_search_placeholder")}
-                showManageLink
-              />
-            </label>
-            
+            {formState.kind === "transfer" ? (
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_transfer_to")}
+                </span>
+                <select
+                  className="select select-bordered"
+                  value={formState.transferToAccountId}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      transferToAccountId: event.target.value,
+                    })
+                  }
+                >
+                  <option value="unassigned">{t(locale, "transactions_account_unassigned")}</option>
+                  {accounts
+                    .filter((account) => !account.isArchived)
+                    .map((account) => (
+                      <option key={account._id} value={account._id}>
+                        {account.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            ) : null}
+            {formState.kind !== "transfer" ? (
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_category")}
+                </span>
+                <CategoryPicker
+                  locale={locale}
+                  categories={selectableCategories}
+                  value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
+                  onChange={handleFormCategoryChange}
+                  allowEmpty
+                  emptyLabel={t(locale, "transactions_category_uncategorized")}
+                  placeholder={t(locale, "transactions_category_search_placeholder")}
+                  showManageLink
+                />
+              </label>
+            ) : null}
+
+            {formState.kind !== "transfer" ? (
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_merchant")}
@@ -1091,6 +1185,7 @@ export function TransactionsClient({
                 showManageLink
               />
             </label>
+            ) : null}
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">
                 {t(locale, "transactions_note")}
@@ -1103,6 +1198,7 @@ export function TransactionsClient({
             </label>
           </div>
 
+          {formState.kind !== "transfer" ? (
           <div className="space-y-2">
             <p className="text-sm font-medium">{t(locale, "transactions_receipts")}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -1142,6 +1238,7 @@ export function TransactionsClient({
               <p className="text-sm opacity-60">{t(locale, "transactions_receipts_empty")}</p>
             )}
           </div>
+          ) : null}
 
           <div className="flex justify-end gap-2">
             <button className="btn btn-ghost" type="button" onClick={() => setModalOpen(false)}>

@@ -39,8 +39,13 @@ export async function GET(request: NextRequest) {
     ...(includePending ? {} : { isPending: false }),
   };
 
+  const incomeExpenseMatch = {
+    ...match,
+    kind: { $in: ["income", "expense"] },
+  };
+
   const totals = await TransactionModel.aggregate<TotalsRow>([
-    { $match: match },
+    { $match: incomeExpenseMatch },
     {
       $group: {
         _id: { kind: "$kind" },
