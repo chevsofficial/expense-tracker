@@ -36,7 +36,7 @@ export function SelectionToggle({
         "border",                 // thin border (1px)
         checked
           ? "bg-primary border-primary"
-          : "bg-white border-black",
+          : "bg-white border-neutral-800",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         className,
       ].join(" ")}
