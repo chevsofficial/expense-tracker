@@ -50,7 +50,6 @@ type Transaction = {
   isArchived?: boolean;
 };
 
-
 type Merchant = {
   _id: string;
   name: string;
@@ -117,7 +116,6 @@ const getTodayInput = () => {
   return `${year}-${month}-${day}`;
 };
 
-
 const formatDateInput = (value: string) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const date = new Date(value);
@@ -130,7 +128,7 @@ const formatDateInput = (value: string) => {
 
 const kindFromCategory = (
   categoryId: string | null,
-  categories: Category[]
+  categories: Category[],
 ): TransactionKind | null => {
   if (!categoryId) return null;
   const category = categories.find((item) => item._id === categoryId);
@@ -174,20 +172,23 @@ export function TransactionsClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] =
+    useState<Transaction | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
-  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(
+    null,
+  );
   const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
-
   const resolvedDefaultCurrency = useMemo(
     () => getWorkspaceCurrency({ defaultCurrency }),
-    [defaultCurrency]
+    [defaultCurrency],
   );
 
   const [formState, setFormState] = useState<TransactionForm>(() => ({
@@ -206,10 +207,13 @@ export function TransactionsClient({
 
   const categoryName = useCallback(
     (category?: Category | null) => {
-      const name = category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name");
+      const name =
+        category?.nameCustom?.trim() ||
+        category?.nameKey ||
+        t(locale, "category_fallback_name");
       return category?.emoji ? `${category.emoji} ${name}` : name;
     },
-    [locale]
+    [locale],
   );
 
   const categoryMap = useMemo(() => {
@@ -222,27 +226,31 @@ export function TransactionsClient({
 
   const selectableCategories = useMemo(
     () => categories.filter((category) => !category.isArchived),
-    [categories]
+    [categories],
   );
 
   const selectedCategoryKind = useMemo(
     () =>
       kindFromCategory(
         formState.categoryId === "uncategorized" ? null : formState.categoryId,
-        selectableCategories
+        selectableCategories,
       ),
-    [formState.categoryId, selectableCategories]
+    [formState.categoryId, selectableCategories],
   );
 
   const categoryGroupIdByOption = useMemo(
     () =>
       Object.fromEntries(
-        selectableCategories.map((category) => [category._id, category.groupId ?? null])
+        selectableCategories.map((category) => [
+          category._id,
+          category.groupId ?? null,
+        ]),
       ),
-    [selectableCategories]
+    [selectableCategories],
   );
 
-  const isKindLocked = formState.kind !== "transfer" && Boolean(selectedCategoryKind);
+  const isKindLocked =
+    formState.kind !== "transfer" && Boolean(selectedCategoryKind);
 
   const merchantMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -262,7 +270,7 @@ export function TransactionsClient({
 
   const defaultAccountId = useMemo(
     () => accounts.find((account) => !account.isArchived)?._id ?? "unassigned",
-    [accounts]
+    [accounts],
   );
 
   const formatCurrency = useCallback(
@@ -271,17 +279,20 @@ export function TransactionsClient({
         style: "currency",
         currency: resolvedDefaultCurrency,
       }).format(amountMinor / 100),
-    [locale, resolvedDefaultCurrency]
+    [locale, resolvedDefaultCurrency],
   );
 
   const loadCategories = useCallback(async () => {
     try {
       const categoriesResponse = await getJSON<ApiListResponse<Category>>(
-        "/api/categories?includeArchived=false"
+        "/api/categories?includeArchived=false",
       );
       setCategories(categoriesResponse.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   }, [locale]);
@@ -290,11 +301,14 @@ export function TransactionsClient({
     setMerchantsLoading(true);
     try {
       const response = await getJSON<ApiListResponse<Merchant>>(
-        `/api/merchants?includeArchived=${showArchived}`
+        `/api/merchants?includeArchived=${showArchived}`,
       );
       setMerchants(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setMerchantsLoading(false);
@@ -304,23 +318,29 @@ export function TransactionsClient({
   const loadAccounts = useCallback(async () => {
     try {
       const response = await getJSON<ApiListResponse<Account>>(
-        "/api/accounts?includeArchived=true"
+        "/api/accounts?includeArchived=true",
       );
       setAccounts(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   }, [locale]);
 
-
-
   const loadTags = useCallback(async () => {
     try {
-      const response = await getJSON<ApiListResponse<Tag>>("/api/tags?includeArchived=false");
+      const response = await getJSON<ApiListResponse<Tag>>(
+        "/api/tags?includeArchived=false",
+      );
       setTags(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   }, [locale]);
@@ -328,11 +348,14 @@ export function TransactionsClient({
   const loadCategoryGroups = useCallback(async () => {
     try {
       const response = await getJSON<ApiListResponse<CategoryGroup>>(
-        "/api/category-groups?includeArchived=false"
+        "/api/category-groups?includeArchived=false",
       );
       setCategoryGroups(response.data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   }, [locale]);
@@ -345,28 +368,30 @@ export function TransactionsClient({
       if (resolvedRange.start) params.set("startDate", resolvedRange.start);
       if (resolvedRange.end) params.set("endDate", resolvedRange.end);
       if (kindFilter) params.set("kind", kindFilter);
-      if (filters.categoryIds.length) params.set("categoryIds", filters.categoryIds.join(","));
-      if (filters.merchantIds.length) params.set("merchantIds", filters.merchantIds.join(","));
-      if (filters.accountIds.length) params.set("accountIds", filters.accountIds.join(","));
+      if (filters.categoryIds.length)
+        params.set("categoryIds", filters.categoryIds.join(","));
+      if (filters.merchantIds.length)
+        params.set("merchantIds", filters.merchantIds.join(","));
+      if (filters.accountIds.length)
+        params.set("accountIds", filters.accountIds.join(","));
       if (searchFilter) params.set("q", searchFilter);
       filters.tagIds.forEach((tagId) => params.append("tagIds", tagId));
       params.set("includeArchived", String(showArchived));
 
-      const response = await getJSON<TransactionsResponse>(`/api/transactions?${params}`);
+      const response = await getJSON<TransactionsResponse>(
+        `/api/transactions?${params}`,
+      );
       setTransactions(response.data.items);
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setLoading(false);
     }
-  }, [
-    locale,
-    filters,
-    showArchived,
-    kindFilter,
-    searchFilter,
-  ]);
+  }, [locale, filters, showArchived, kindFilter, searchFilter]);
 
   useEffect(() => {
     void loadCategories();
@@ -404,29 +429,50 @@ export function TransactionsClient({
     if (paramStartDate || paramEndDate) {
       setFilters((current) => ({
         ...current,
-        dateRange: { preset: "custom", start: paramStartDate ?? undefined, end: paramEndDate ?? undefined },
+        dateRange: {
+          preset: "custom",
+          start: paramStartDate ?? undefined,
+          end: paramEndDate ?? undefined,
+        },
       }));
     } else if (paramMonth && /^\d{4}-\d{2}$/.test(paramMonth)) {
       const [yearRaw, monthRaw] = paramMonth.split("-");
       const year = Number(yearRaw);
       const monthIndex = Number(monthRaw) - 1;
-      const start = new Date(Date.UTC(year, monthIndex, 1)).toISOString().slice(0, 10);
-      const end = new Date(Date.UTC(year, monthIndex + 1, 0)).toISOString().slice(0, 10);
-      setFilters((current) => ({ ...current, dateRange: { preset: "custom", start, end } }));
+      const start = new Date(Date.UTC(year, monthIndex, 1))
+        .toISOString()
+        .slice(0, 10);
+      const end = new Date(Date.UTC(year, monthIndex + 1, 0))
+        .toISOString()
+        .slice(0, 10);
+      setFilters((current) => ({
+        ...current,
+        dateRange: { preset: "custom", start, end },
+      }));
     }
     if (paramKind) setKindFilter(paramKind);
-    if (paramCategory) setFilters((current) => ({ ...current, categoryIds: [paramCategory] }));
-    if (paramMerchant) setFilters((current) => ({ ...current, merchantIds: [paramMerchant] }));
-    if (paramAccount) setFilters((current) => ({ ...current, accountIds: [paramAccount] }));
-    const paramCategoryIds = searchParams.get("categoryIds")?.split(",").filter(Boolean) ?? [];
-    const paramMerchantIds = searchParams.get("merchantIds")?.split(",").filter(Boolean) ?? [];
-    const paramAccountIds = searchParams.get("accountIds")?.split(",").filter(Boolean) ?? [];
-    if (paramCategoryIds.length) setFilters((current) => ({ ...current, categoryIds: paramCategoryIds }));
-    if (paramMerchantIds.length) setFilters((current) => ({ ...current, merchantIds: paramMerchantIds }));
-    if (paramAccountIds.length) setFilters((current) => ({ ...current, accountIds: paramAccountIds }));
+    if (paramCategory)
+      setFilters((current) => ({ ...current, categoryIds: [paramCategory] }));
+    if (paramMerchant)
+      setFilters((current) => ({ ...current, merchantIds: [paramMerchant] }));
+    if (paramAccount)
+      setFilters((current) => ({ ...current, accountIds: [paramAccount] }));
+    const paramCategoryIds =
+      searchParams.get("categoryIds")?.split(",").filter(Boolean) ?? [];
+    const paramMerchantIds =
+      searchParams.get("merchantIds")?.split(",").filter(Boolean) ?? [];
+    const paramAccountIds =
+      searchParams.get("accountIds")?.split(",").filter(Boolean) ?? [];
+    if (paramCategoryIds.length)
+      setFilters((current) => ({ ...current, categoryIds: paramCategoryIds }));
+    if (paramMerchantIds.length)
+      setFilters((current) => ({ ...current, merchantIds: paramMerchantIds }));
+    if (paramAccountIds.length)
+      setFilters((current) => ({ ...current, accountIds: paramAccountIds }));
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
-    if (paramTagIds.length) setFilters((current) => ({ ...current, tagIds: paramTagIds }));
+    if (paramTagIds.length)
+      setFilters((current) => ({ ...current, tagIds: paramTagIds }));
 
     initializedFromQuery.current = true;
   }, [searchParams]);
@@ -438,20 +484,17 @@ export function TransactionsClient({
     if (resolvedRange.start) params.set("startDate", resolvedRange.start);
     if (resolvedRange.end) params.set("endDate", resolvedRange.end);
     if (kindFilter) params.set("kind", kindFilter);
-    if (filters.categoryIds.length) params.set("categoryIds", filters.categoryIds.join(","));
-    if (filters.merchantIds.length) params.set("merchantIds", filters.merchantIds.join(","));
-    if (filters.accountIds.length) params.set("accountIds", filters.accountIds.join(","));
+    if (filters.categoryIds.length)
+      params.set("categoryIds", filters.categoryIds.join(","));
+    if (filters.merchantIds.length)
+      params.set("merchantIds", filters.merchantIds.join(","));
+    if (filters.accountIds.length)
+      params.set("accountIds", filters.accountIds.join(","));
     if (searchFilter) params.set("q", searchFilter);
     filters.tagIds.forEach((tagId) => params.append("tagIds", tagId));
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
-  }, [
-    filters,
-    kindFilter,
-    searchFilter,
-    showArchived,
-    router,
-  ]);
+  }, [filters, kindFilter, searchFilter, showArchived, router]);
 
   useEffect(() => {
     void loadTransactions();
@@ -466,7 +509,7 @@ export function TransactionsClient({
       accountId: defaultAccountId,
       transferToAccountId: defaultAccountId,
       categoryId: "uncategorized",
-        merchantId: null,
+      merchantId: null,
       merchantNameSnapshot: "",
       note: "",
       receiptUrls: [],
@@ -477,21 +520,23 @@ export function TransactionsClient({
 
   const openEditModal = (transaction: Transaction) => {
     const merchantName =
-      (transaction.merchantId ? merchantMap.get(transaction.merchantId) : null) ??
+      (transaction.merchantId
+        ? merchantMap.get(transaction.merchantId)
+        : null) ??
       transaction.merchantNameSnapshot ??
       "";
     const transferFromAccount =
       transaction.kind === "transfer"
         ? transaction.transferSide === "out"
-          ? transaction.accountId ?? "unassigned"
-          : transaction.transferAccountId ?? "unassigned"
-        : transaction.accountId ?? "unassigned";
+          ? (transaction.accountId ?? "unassigned")
+          : (transaction.transferAccountId ?? "unassigned")
+        : (transaction.accountId ?? "unassigned");
     const transferToAccount =
       transaction.kind === "transfer"
         ? transaction.transferSide === "in"
-          ? transaction.accountId ?? "unassigned"
-          : transaction.transferAccountId ?? "unassigned"
-        : transaction.accountId ?? "unassigned";
+          ? (transaction.accountId ?? "unassigned")
+          : (transaction.transferAccountId ?? "unassigned")
+        : (transaction.accountId ?? "unassigned");
 
     setEditingTransaction(transaction);
     setFormState({
@@ -537,7 +582,10 @@ export function TransactionsClient({
         receiptUrls: [...current.receiptUrls, url],
       }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setUploadingReceipt(false);
@@ -558,20 +606,26 @@ export function TransactionsClient({
       if (trimmedName.length < 2) return null;
       setCreatingMerchant(true);
       try {
-        const response = await postJSON<ApiItemResponse<Merchant>>("/api/merchants", {
-          nameCustom: trimmedName,
-        });
+        const response = await postJSON<ApiItemResponse<Merchant>>(
+          "/api/merchants",
+          {
+            nameCustom: trimmedName,
+          },
+        );
         setMerchants((current) => [response.data, ...current]);
         return response.data;
       } catch (err) {
-        const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+        const message =
+          err instanceof Error
+            ? err.message
+            : t(locale, "transactions_generic_error");
         setToast(message);
         return null;
       } finally {
         setCreatingMerchant(false);
       }
     },
-    [locale]
+    [locale],
   );
 
   const handleFormMerchantChange = (merchantId: string) => {
@@ -588,7 +642,7 @@ export function TransactionsClient({
       const normalizedCategoryId = categoryId || "uncategorized";
       const forcedKind = kindFromCategory(
         normalizedCategoryId === "uncategorized" ? null : normalizedCategoryId,
-        selectableCategories
+        selectableCategories,
       );
       return {
         ...current,
@@ -597,7 +651,6 @@ export function TransactionsClient({
       };
     });
   };
-
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -611,13 +664,16 @@ export function TransactionsClient({
 
     const forcedKind = kindFromCategory(
       formState.categoryId === "uncategorized" ? null : formState.categoryId,
-      selectableCategories
+      selectableCategories,
     );
 
     setIsSubmitting(true);
     try {
       if (formState.kind === "transfer") {
-        if (formState.accountId === "unassigned" || formState.transferToAccountId === "unassigned") {
+        if (
+          formState.accountId === "unassigned" ||
+          formState.transferToAccountId === "unassigned"
+        ) {
           throw new Error("Select both accounts for transfer");
         }
 
@@ -632,19 +688,31 @@ export function TransactionsClient({
 
         const existingTransferId = editingTransaction?.transferId;
         if (existingTransferId) {
-          await putJSON<{ data: { transferId: string } }>(`/api/transfers/${existingTransferId}`, transferPayload);
+          await putJSON<{ data: { transferId: string } }>(
+            `/api/transfers/${existingTransferId}`,
+            transferPayload,
+          );
         } else {
-          await postJSON<{ data: { transferId: string } }>("/api/transfers", transferPayload);
+          await postJSON<{ data: { transferId: string } }>(
+            "/api/transfers",
+            transferPayload,
+          );
         }
       } else {
         const payload: Record<string, unknown> = {
           date: formState.date,
           amount: amountValue,
           kind: forcedKind ?? formState.kind,
-          accountId: formState.accountId === "unassigned" ? null : formState.accountId,
-          categoryId: formState.categoryId === "uncategorized" ? null : formState.categoryId,
+          accountId:
+            formState.accountId === "unassigned" ? null : formState.accountId,
+          categoryId:
+            formState.categoryId === "uncategorized"
+              ? null
+              : formState.categoryId,
           merchantId: formState.merchantId,
-          merchantNameSnapshot: formState.merchantId ? trimmedMerchantName || null : null,
+          merchantNameSnapshot: formState.merchantId
+            ? trimmedMerchantName || null
+            : null,
         };
 
         if (formState.note.trim()) payload.note = formState.note.trim();
@@ -654,17 +722,23 @@ export function TransactionsClient({
         if (editingTransaction) {
           await putJSON<ApiItemResponse<Transaction>>(
             `/api/transactions/${editingTransaction._id}`,
-            payload
+            payload,
           );
         } else {
-          await postJSON<ApiItemResponse<Transaction>>("/api/transactions", payload);
+          await postJSON<ApiItemResponse<Transaction>>(
+            "/api/transactions",
+            payload,
+          );
         }
       }
       setModalOpen(false);
       setEditingTransaction(null);
       await loadTransactions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setIsSubmitting(false);
@@ -673,10 +747,15 @@ export function TransactionsClient({
 
   const handleArchive = async (transaction: Transaction) => {
     try {
-      await delJSON<ApiItemResponse<Transaction>>(`/api/transactions/${transaction._id}`);
+      await delJSON<ApiItemResponse<Transaction>>(
+        `/api/transactions/${transaction._id}`,
+      );
       await loadTransactions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   };
@@ -690,35 +769,45 @@ export function TransactionsClient({
     if (!transactionToDelete) return;
     setIsSubmitting(true);
     try {
-      if (transactionToDelete.kind === "transfer" && transactionToDelete.transferId) {
-        await delJSON<DeleteResponse>(`/api/transfers/${transactionToDelete.transferId}`);
+      if (
+        transactionToDelete.kind === "transfer" &&
+        transactionToDelete.transferId
+      ) {
+        await delJSON<DeleteResponse>(
+          `/api/transfers/${transactionToDelete.transferId}`,
+        );
       } else {
-        await delJSON<DeleteResponse>(`/api/transactions/${transactionToDelete._id}?hard=1`);
+        await delJSON<DeleteResponse>(
+          `/api/transactions/${transactionToDelete._id}?hard=1`,
+        );
       }
       setDeleteConfirmOpen(false);
       setTransactionToDelete(null);
       await loadTransactions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
-    [transactions]
+    [transactions],
   );
   const archivedTransactions = useMemo(
     () => transactions.filter((transaction) => transaction.isArchived),
-    [transactions]
+    [transactions],
   );
 
   const selectedTransactions = useMemo(
-    () => transactions.filter((transaction) => selectedIds.has(transaction._id)),
-    [transactions, selectedIds]
+    () =>
+      transactions.filter((transaction) => selectedIds.has(transaction._id)),
+    [transactions, selectedIds],
   );
 
   const toggleSelectAll = (rows: Transaction[], checked: boolean) => {
@@ -747,7 +836,9 @@ export function TransactionsClient({
     });
   };
 
-  const handleBulkAction = async (action: "archive" | "restore" | "deleteHard") => {
+  const handleBulkAction = async (
+    action: "archive" | "restore" | "deleteHard",
+  ) => {
     const targetIds = selectedTransactions
       .filter((transaction) => {
         if (action === "archive") return !transaction.isArchived;
@@ -759,14 +850,20 @@ export function TransactionsClient({
     if (!targetIds.length) return;
     setBulkSubmitting(true);
     try {
-      await postJSON<{ data: { updated?: number; deleted?: number } }>("/api/transactions/bulk", {
-        ids: targetIds,
-        action,
-      });
+      await postJSON<{ data: { updated?: number; deleted?: number } }>(
+        "/api/transactions/bulk",
+        {
+          ids: targetIds,
+          action,
+        },
+      );
       setSelectedIds(new Set());
       await loadTransactions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     } finally {
       setBulkSubmitting(false);
@@ -775,24 +872,36 @@ export function TransactionsClient({
 
   const handleRestore = async (transaction: Transaction) => {
     try {
-      await putJSON<ApiItemResponse<Transaction>>(`/api/transactions/${transaction._id}`, {
-        isArchived: false,
-      });
+      await putJSON<ApiItemResponse<Transaction>>(
+        `/api/transactions/${transaction._id}`,
+        {
+          isArchived: false,
+        },
+      );
       await loadTransactions();
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      const message =
+        err instanceof Error
+          ? err.message
+          : t(locale, "transactions_generic_error");
       setToast(message);
     }
   };
 
-  const renderTransactionsTable = (rows: Transaction[], variant: "active" | "archived") => (
+  const renderTransactionsTable = (
+    rows: Transaction[],
+    variant: "active" | "archived",
+  ) => (
     <div className="overflow-x-auto">
       <table className="table">
         <thead className="bg-base-200 text-base-content">
           <tr>
             <th>
               <SelectionToggle
-                checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))}
+                checked={
+                  rows.length > 0 &&
+                  rows.every((row) => selectedIds.has(row._id))
+                }
                 onChange={(next) => toggleSelectAll(rows, next)}
                 size="sm"
                 ariaLabel="Select all transactions"
@@ -823,38 +932,45 @@ export function TransactionsClient({
             const dateObj = new Date(transaction.date);
             const dateLabel = Number.isNaN(dateObj.getTime())
               ? transaction.date
-              : new Intl.DateTimeFormat(locale, { timeZone: "UTC" }).format(dateObj);
+              : new Intl.DateTimeFormat(locale, { timeZone: "UTC" }).format(
+                  dateObj,
+                );
             const isTransfer = transaction.kind === "transfer";
             const categoryLabel = isTransfer
               ? "—"
               : transaction.categoryId
-              ? categoryMap.get(transaction.categoryId) ?? t(locale, "transactions_uncategorized")
-              : t(locale, "transactions_uncategorized");
+                ? (categoryMap.get(transaction.categoryId) ??
+                  t(locale, "transactions_uncategorized"))
+                : t(locale, "transactions_uncategorized");
             const accountLabel = transaction.accountId
-              ? accountMap.get(transaction.accountId) ?? t(locale, "transactions_account_unassigned")
+              ? (accountMap.get(transaction.accountId) ??
+                t(locale, "transactions_account_unassigned"))
               : t(locale, "transactions_account_unassigned");
             const kindLabel =
               transaction.kind === "income"
                 ? t(locale, "category_kind_income")
                 : transaction.kind === "expense"
-                ? t(locale, "category_kind_expense")
-                : t(locale, "transactions_kind_transfer");
+                  ? t(locale, "category_kind_expense")
+                  : t(locale, "transactions_kind_transfer");
             const merchantLabel = isTransfer
               ? `${t(locale, "transactions_transfer_to_from")} ${
                   transaction.transferAccountId
-                    ? accountMap.get(transaction.transferAccountId) ?? t(locale, "transactions_account_unassigned")
+                    ? (accountMap.get(transaction.transferAccountId) ??
+                      t(locale, "transactions_account_unassigned"))
                     : t(locale, "transactions_account_unassigned")
                 }`
-              : (transaction.merchantId
+              : ((transaction.merchantId
                   ? merchantMap.get(transaction.merchantId)
                   : null) ??
                 transaction.merchantNameSnapshot ??
-                "-";
+                "-");
             const displayAmountMinor =
               isTransfer && transaction.transferSide === "out"
                 ? -transaction.amountMinor
                 : transaction.amountMinor;
-            const receiptUrl = isTransfer ? undefined : transaction.receiptUrls?.[0];
+            const receiptUrl = isTransfer
+              ? undefined
+              : transaction.receiptUrls?.[0];
 
             return (
               <tr key={transaction._id}>
@@ -942,7 +1058,9 @@ export function TransactionsClient({
         <PageHeader title={t(locale, "transactions_title")} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
-            <span className="opacity-70">{t(locale, "transactions_show_archived")}</span>
+            <span className="opacity-70">
+              {t(locale, "transactions_show_archived")}
+            </span>
             <input
               type="checkbox"
               className="toggle toggle-primary toggle-sm"
@@ -959,52 +1077,58 @@ export function TransactionsClient({
       {toast ? (
         <div className="alert alert-error flex items-center justify-between">
           <span>{toast}</span>
-          <button className="btn btn-ghost btn-xs" onClick={() => setToast(null)}>
+          <button
+            className="btn btn-ghost btn-xs"
+            onClick={() => setToast(null)}
+          >
             {t(locale, "transactions_dismiss")}
           </button>
         </div>
       ) : null}
 
-      <SurfaceCard>
-        <SurfaceCardBody className="space-y-3">
-          <div className="grid grid-cols-1 gap-3">
-            <AppFiltersBar
-              value={filters}
-              onChange={setFilters}
-              accounts={accounts.filter((account) => !account.isArchived).map((account) => ({ id: account._id, label: account.name }))}
-              categories={selectableCategories.map((category) => ({
-                id: category._id,
-                label: category.nameCustom ?? category.nameKey ?? t(locale, "category_fallback_name"),
-                emoji: category.emoji,
-              }))}
-              merchants={merchants.map((merchant) => ({ id: merchant._id, label: merchant.name }))}
-              tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
-              showKind
-              kindOptions={[
-                { id: "expense", label: t(locale, "category_kind_expense") },
-                { id: "income", label: t(locale, "category_kind_income") },
-                { id: "transfer", label: t(locale, "transactions_kind_transfer") },
-              ]}
-              kindValue={kindFilter ? [kindFilter] : []}
-              onKindChange={(ids) => setKindFilter(ids[0] ?? "")}
-              showSearch
-              searchValue={searchFilter}
-              onSearchChange={setSearchFilter}
-              searchPlaceholder={t(locale, "transactions_search_placeholder")}
-              categoryGroups={categoryGroups.map((group) => ({
-                id: group._id,
-                label: group.nameCustom ?? group.nameKey ?? "Group",
-              }))}
-              categoryGroupIdByOption={categoryGroupIdByOption}
-            />
-          </div>
-        </SurfaceCardBody>
-      </SurfaceCard>
+      <AppFiltersBar
+        value={filters}
+        onChange={setFilters}
+        accounts={accounts
+          .filter((account) => !account.isArchived)
+          .map((account) => ({ id: account._id, label: account.name }))}
+        categories={selectableCategories.map((category) => ({
+          id: category._id,
+          label:
+            category.nameCustom ??
+            category.nameKey ??
+            t(locale, "category_fallback_name"),
+          emoji: category.emoji,
+        }))}
+        merchants={merchants.map((merchant) => ({
+          id: merchant._id,
+          label: merchant.name,
+        }))}
+        tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
+        showKind
+        kindOptions={[
+          { id: "expense", label: t(locale, "category_kind_expense") },
+          { id: "income", label: t(locale, "category_kind_income") },
+          { id: "transfer", label: t(locale, "transactions_kind_transfer") },
+        ]}
+        kindValue={kindFilter ? [kindFilter] : []}
+        onKindChange={(ids) => setKindFilter(ids[0] ?? "")}
+        showSearch
+        searchValue={searchFilter}
+        onSearchChange={setSearchFilter}
+        searchPlaceholder={t(locale, "transactions_search_placeholder")}
+        categoryGroups={categoryGroups.map((group) => ({
+          id: group._id,
+          label: group.nameCustom ?? group.nameKey ?? "Group",
+        }))}
+        categoryGroupIdByOption={categoryGroupIdByOption}
+      />
 
       {selectedTransactions.length ? (
         <div className="alert flex flex-wrap items-center justify-between gap-3">
           <span>
-            {selectedTransactions.length} {t(locale, "transactions_bulk_selected")}
+            {selectedTransactions.length}{" "}
+            {t(locale, "transactions_bulk_selected")}
           </span>
           <div className="flex flex-wrap gap-2">
             <button
@@ -1036,7 +1160,9 @@ export function TransactionsClient({
         <SurfaceCardBody className="p-0">
           <div className="space-y-6 p-4 md:p-5">
             {loading ? (
-              <p className="text-sm opacity-70">{t(locale, "transactions_loading")}</p>
+              <p className="text-sm opacity-70">
+                {t(locale, "transactions_loading")}
+              </p>
             ) : null}
             {showArchived ? (
               <div className="space-y-6">
@@ -1062,7 +1188,10 @@ export function TransactionsClient({
 
       <Modal
         open={modalOpen}
-        title={t(locale, editingTransaction ? "transactions_edit" : "transactions_add")}
+        title={t(
+          locale,
+          editingTransaction ? "transactions_edit" : "transactions_add",
+        )}
         onClose={() => setModalOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -1072,7 +1201,9 @@ export function TransactionsClient({
               label={t(locale, "transactions_date")}
               type="date"
               value={formState.date}
-              onChange={(event) => setFormState({ ...formState, date: event.target.value })}
+              onChange={(event) =>
+                setFormState({ ...formState, date: event.target.value })
+              }
             />
             <TextField
               id="transaction-amount"
@@ -1080,7 +1211,9 @@ export function TransactionsClient({
               type="number"
               value={formState.amount}
               step="0.01"
-              onChange={(event) => setFormState({ ...formState, amount: event.target.value })}
+              onChange={(event) =>
+                setFormState({ ...formState, amount: event.target.value })
+              }
             />
             <label className="form-control w-full">
               <span className="label-text mb-1 text-sm font-medium">
@@ -1103,9 +1236,15 @@ export function TransactionsClient({
                     });
                   }}
                 >
-                  <option value="expense">{t(locale, "category_kind_expense")}</option>
-                  <option value="income">{t(locale, "category_kind_income")}</option>
-                  <option value="transfer">{t(locale, "transactions_kind_transfer")}</option>
+                  <option value="expense">
+                    {t(locale, "category_kind_expense")}
+                  </option>
+                  <option value="income">
+                    {t(locale, "category_kind_income")}
+                  </option>
+                  <option value="transfer">
+                    {t(locale, "transactions_kind_transfer")}
+                  </option>
                 </select>
               )}
             </label>
@@ -1123,7 +1262,9 @@ export function TransactionsClient({
                   })
                 }
               >
-                <option value="unassigned">{t(locale, "transactions_account_unassigned")}</option>
+                <option value="unassigned">
+                  {t(locale, "transactions_account_unassigned")}
+                </option>
                 {accounts
                   .filter((account) => !account.isArchived)
                   .map((account) => (
@@ -1148,7 +1289,9 @@ export function TransactionsClient({
                     })
                   }
                 >
-                  <option value="unassigned">{t(locale, "transactions_account_unassigned")}</option>
+                  <option value="unassigned">
+                    {t(locale, "transactions_account_unassigned")}
+                  </option>
                   {accounts
                     .filter((account) => !account.isArchived)
                     .map((account) => (
@@ -1167,42 +1310,55 @@ export function TransactionsClient({
                 <CategoryPicker
                   locale={locale}
                   categories={selectableCategories}
-                  value={formState.categoryId === "uncategorized" ? "" : formState.categoryId}
+                  value={
+                    formState.categoryId === "uncategorized"
+                      ? ""
+                      : formState.categoryId
+                  }
                   onChange={handleFormCategoryChange}
                   allowEmpty
                   emptyLabel={t(locale, "transactions_category_uncategorized")}
-                  placeholder={t(locale, "transactions_category_search_placeholder")}
+                  placeholder={t(
+                    locale,
+                    "transactions_category_search_placeholder",
+                  )}
                   showManageLink
                 />
               </label>
             ) : null}
 
             {formState.kind !== "transfer" ? (
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_merchant")}
-              </span>
-              <MerchantPicker
-                locale={locale}
-                merchants={merchants}
-                value={formState.merchantId ?? ""}
-                onChange={handleFormMerchantChange}
-                placeholder={t(locale, "transactions_merchant_placeholder")}
-                allowCreate
-                creating={creatingMerchant}
-                onCreateMerchant={createMerchant}
-                onLoadMerchants={() => void loadMerchants()}
-                loading={merchantsLoading}
-                showManageLink
-              />
-            </label>
+              <label className="form-control w-full">
+                <span className="label-text mb-1 text-sm font-medium">
+                  {t(locale, "transactions_merchant")}
+                </span>
+                <MerchantPicker
+                  locale={locale}
+                  merchants={merchants}
+                  value={formState.merchantId ?? ""}
+                  onChange={handleFormMerchantChange}
+                  placeholder={t(locale, "transactions_merchant_placeholder")}
+                  allowCreate
+                  creating={creatingMerchant}
+                  onCreateMerchant={createMerchant}
+                  onLoadMerchants={() => void loadMerchants()}
+                  loading={merchantsLoading}
+                  showManageLink
+                />
+              </label>
             ) : null}
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">Tags</span>
               <MultiSelectDropdown
-                items={tags.map((tag) => ({ id: tag._id, label: tag.name, color: tag.color ?? null }))}
+                items={tags.map((tag) => ({
+                  id: tag._id,
+                  label: tag.name,
+                  color: tag.color ?? null,
+                }))}
                 selectedIds={formState.tagIds}
-                onChange={(values) => setFormState({ ...formState, tagIds: values })}
+                onChange={(values) =>
+                  setFormState({ ...formState, tagIds: values })
+                }
                 placeholder="Select tags..."
               />
             </label>
@@ -1213,55 +1369,70 @@ export function TransactionsClient({
               <textarea
                 className="textarea textarea-bordered"
                 value={formState.note}
-                onChange={(event) => setFormState({ ...formState, note: event.target.value })}
+                onChange={(event) =>
+                  setFormState({ ...formState, note: event.target.value })
+                }
               />
             </label>
           </div>
 
           {formState.kind !== "transfer" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t(locale, "transactions_receipts")}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                className="file-input file-input-bordered w-full"
-                type="file"
-                onChange={handleReceiptUpload}
-                disabled={uploadingReceipt}
-              />
-              {uploadingReceipt ? (
-                <span className="text-xs opacity-60">{t(locale, "transactions_uploading")}</span>
-              ) : null}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">
+                {t(locale, "transactions_receipts")}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className="file-input file-input-bordered w-full"
+                  type="file"
+                  onChange={handleReceiptUpload}
+                  disabled={uploadingReceipt}
+                />
+                {uploadingReceipt ? (
+                  <span className="text-xs opacity-60">
+                    {t(locale, "transactions_uploading")}
+                  </span>
+                ) : null}
+              </div>
+              {formState.receiptUrls.length ? (
+                <ul className="space-y-2">
+                  {formState.receiptUrls.map((url, index) => (
+                    <li
+                      key={`${url}-${index}`}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <a
+                        className="text-sm break-all link link-hover"
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {url}
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => handleRemoveReceipt(index)}
+                      >
+                        {t(locale, "transactions_remove_receipt")}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm opacity-60">
+                  {t(locale, "transactions_receipts_empty")}
+                </p>
+              )}
             </div>
-            {formState.receiptUrls.length ? (
-              <ul className="space-y-2">
-                {formState.receiptUrls.map((url, index) => (
-                  <li key={`${url}-${index}`} className="flex items-center justify-between gap-2">
-                    <a
-                      className="text-sm break-all link link-hover"
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {url}
-                    </a>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-xs"
-                      onClick={() => handleRemoveReceipt(index)}
-                    >
-                      {t(locale, "transactions_remove_receipt")}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm opacity-60">{t(locale, "transactions_receipts_empty")}</p>
-            )}
-          </div>
           ) : null}
 
           <div className="flex justify-end gap-2">
-            <button className="btn btn-ghost" type="button" onClick={() => setModalOpen(false)}>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => setModalOpen(false)}
+            >
               {t(locale, "transactions_cancel")}
             </button>
             <SubmitButton isLoading={isSubmitting}>
@@ -1279,7 +1450,9 @@ export function TransactionsClient({
         onClose={() => setDeleteConfirmOpen(false)}
       >
         <div className="space-y-4">
-          <p className="text-sm opacity-80">{t(locale, "transactions_delete_warning")}</p>
+          <p className="text-sm opacity-80">
+            {t(locale, "transactions_delete_warning")}
+          </p>
           <div className="flex justify-end gap-2">
             <button
               className="btn btn-ghost"
@@ -1288,7 +1461,11 @@ export function TransactionsClient({
             >
               {t(locale, "transactions_cancel")}
             </button>
-            <SubmitButton isLoading={isSubmitting} onClick={handleDelete} type="button">
+            <SubmitButton
+              isLoading={isSubmitting}
+              onClick={handleDelete}
+              type="button"
+            >
               {t(locale, "transactions_delete_confirm")}
             </SubmitButton>
           </div>
@@ -1322,7 +1499,9 @@ export function TransactionsClient({
               </a>
             </>
           ) : (
-            <p className="text-sm opacity-70">{t(locale, "transactions_receipt_missing")}</p>
+            <p className="text-sm opacity-70">
+              {t(locale, "transactions_receipt_missing")}
+            </p>
           )}
         </div>
       </Modal>

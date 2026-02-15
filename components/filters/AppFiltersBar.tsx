@@ -2,7 +2,7 @@
 
 import React from "react";
 import { MultiSelectDropDown } from "@/components/shared/MultiSelectDropDown";
-import { UI_BORDER } from "@/components/ui/styles";
+import { FILTER_BORDER } from "@/components/ui/styles";
 import type {
   AppFiltersValue,
   DateRangePreset,
@@ -30,6 +30,7 @@ type AppFiltersBarProps = {
   searchPlaceholder?: string;
   categoryGroups?: Option[];
   categoryGroupIdByOption?: Record<string, string | null | undefined>;
+  showDateRange?: boolean;
 };
 
 function FilterField({
@@ -43,7 +44,9 @@ function FilterField({
 }) {
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <div className="text-[11px] font-semibold tracking-wide opacity-70">{label}</div>
+      <div className="text-[11px] font-semibold tracking-wide opacity-70">
+        {label}
+      </div>
       {children}
     </div>
   );
@@ -85,89 +88,122 @@ export function AppFiltersBar({
   searchPlaceholder = "Search transactions",
   categoryGroups = [],
   categoryGroupIdByOption,
+  showDateRange = true,
 }: AppFiltersBarProps) {
-  const boxGridColumnsClass = showKind || showSearch ? "lg:grid-cols-3" : "lg:grid-cols-4";
+  const boxGridColumnsClass =
+    showKind || showSearch ? "lg:grid-cols-3" : "lg:grid-cols-4";
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <div className={`w-full max-w-[320px] rounded-xl bg-white p-3 shadow-sm ${UI_BORDER}`}>
-          <FilterField label="Date Range" className="w-full">
-            <MultiSelectDropDown
-              mode="custom"
-              buttonLabel={dateRangeLabel(value.dateRange)}
-              triggerClassName="bg-white hover:bg-white"
-              onClear={() => onChange({ ...value, dateRange: { preset: "thisMonth" } })}
-              customPanel={
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      "thisWeek",
-                      "lastWeek",
-                      "thisMonth",
-                      "lastMonth",
-                      "thisYear",
-                      "lastYear",
-                      "allHistory",
-                    ] as DateRangePreset[]).map((preset) => (
-                      <button
-                        type="button"
-                        key={preset}
-                        className={`btn btn-sm ${value.dateRange.preset === preset ? "btn-primary" : "btn-ghost"}`}
-                        onClick={() => onChange({ ...value, dateRange: { preset } })}
-                      >
-                        {presetLabels[preset]}
-                      </button>
-                    ))}
-                  </div>
+      {showDateRange ? (
+        <div className="flex justify-end">
+          <div
+            className={`w-full max-w-[320px] rounded-xl bg-white p-3 shadow-sm ${FILTER_BORDER}`}
+          >
+            <FilterField label="Date Range" className="w-full">
+              <MultiSelectDropDown
+                mode="custom"
+                buttonLabel={dateRangeLabel(value.dateRange)}
+                triggerClassName="bg-white hover:bg-white"
+                onClear={() =>
+                  onChange({ ...value, dateRange: { preset: "thisMonth" } })
+                }
+                customPanel={
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          "thisWeek",
+                          "lastWeek",
+                          "thisMonth",
+                          "lastMonth",
+                          "thisYear",
+                          "lastYear",
+                          "allHistory",
+                        ] as DateRangePreset[]
+                      ).map((preset) => (
+                        <button
+                          type="button"
+                          key={preset}
+                          className={`btn btn-sm ${value.dateRange.preset === preset ? "btn-primary" : "btn-ghost"}`}
+                          onClick={() =>
+                            onChange({ ...value, dateRange: { preset } })
+                          }
+                        >
+                          {presetLabels[preset]}
+                        </button>
+                      ))}
+                    </div>
 
-                  <div className="border-t border-base-200 pt-3">
-                    <div className="mb-2 text-xs font-semibold opacity-70">Custom Range</div>
-                    <div className="flex gap-2">
-                      <input
-                        type="date"
-                        className="input input-bordered bg-white input-sm w-full"
-                        value={value.dateRange.preset === "custom" ? (value.dateRange.start ?? "") : ""}
-                        onChange={(event) =>
-                          onChange({
-                            ...value,
-                            dateRange: {
-                              preset: "custom",
-                              start: event.target.value,
-                              end: value.dateRange.preset === "custom" ? value.dateRange.end : "",
-                            },
-                          })
-                        }
-                      />
-                      <input
-                        type="date"
-                        className="input input-bordered bg-white input-sm w-full"
-                        value={value.dateRange.preset === "custom" ? (value.dateRange.end ?? "") : ""}
-                        onChange={(event) =>
-                          onChange({
-                            ...value,
-                            dateRange: {
-                              preset: "custom",
-                              start: value.dateRange.preset === "custom" ? value.dateRange.start : "",
-                              end: event.target.value,
-                            },
-                          })
-                        }
-                      />
+                    <div className="border-t border-base-200 pt-3">
+                      <div className="mb-2 text-xs font-semibold opacity-70">
+                        Custom Range
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          className="input input-bordered bg-white input-sm w-full"
+                          value={
+                            value.dateRange.preset === "custom"
+                              ? (value.dateRange.start ?? "")
+                              : ""
+                          }
+                          onChange={(event) =>
+                            onChange({
+                              ...value,
+                              dateRange: {
+                                preset: "custom",
+                                start: event.target.value,
+                                end:
+                                  value.dateRange.preset === "custom"
+                                    ? value.dateRange.end
+                                    : "",
+                              },
+                            })
+                          }
+                        />
+                        <input
+                          type="date"
+                          className="input input-bordered bg-white input-sm w-full"
+                          value={
+                            value.dateRange.preset === "custom"
+                              ? (value.dateRange.end ?? "")
+                              : ""
+                          }
+                          onChange={(event) =>
+                            onChange({
+                              ...value,
+                              dateRange: {
+                                preset: "custom",
+                                start:
+                                  value.dateRange.preset === "custom"
+                                    ? value.dateRange.start
+                                    : "",
+                                end: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              }
-            />
-          </FilterField>
+                }
+              />
+            </FilterField>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className={`rounded-xl bg-white p-4 shadow-sm ${UI_BORDER}`}>
-        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${boxGridColumnsClass}`}>
+      <div className={`rounded-xl bg-white p-4 shadow-sm ${FILTER_BORDER}`}>
+        <div
+          className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${boxGridColumnsClass}`}
+        >
           <FilterField label="Accounts" className="w-full">
             <MultiSelectDropDown
-              options={accounts.map((option) => ({ id: option.id, label: option.label }))}
+              options={accounts.map((option) => ({
+                id: option.id,
+                label: option.label,
+              }))}
               selectedIds={value.accountIds}
               onChange={(ids) => onChange({ ...value, accountIds: ids })}
               placeholder="All accounts"
@@ -191,7 +227,10 @@ export function AppFiltersBar({
 
           <FilterField label="Merchants" className="w-full">
             <MultiSelectDropDown
-              options={merchants.map((option) => ({ id: option.id, label: option.label }))}
+              options={merchants.map((option) => ({
+                id: option.id,
+                label: option.label,
+              }))}
               selectedIds={value.merchantIds}
               onChange={(ids) => onChange({ ...value, merchantIds: ids })}
               placeholder="All merchants"
@@ -200,7 +239,10 @@ export function AppFiltersBar({
 
           <FilterField label="Tags" className="w-full">
             <MultiSelectDropDown
-              options={tags.map((option) => ({ id: option.id, label: option.label }))}
+              options={tags.map((option) => ({
+                id: option.id,
+                label: option.label,
+              }))}
               selectedIds={value.tagIds}
               onChange={(ids) => onChange({ ...value, tagIds: ids })}
               placeholder="All tags"
@@ -210,7 +252,10 @@ export function AppFiltersBar({
           {showGroups && groups?.length ? (
             <FilterField label="Groups" className="w-full">
               <MultiSelectDropDown
-                options={groups.map((option) => ({ id: option.id, label: option.label }))}
+                options={groups.map((option) => ({
+                  id: option.id,
+                  label: option.label,
+                }))}
                 selectedIds={value.groupIds ?? []}
                 onChange={(ids) => onChange({ ...value, groupIds: ids })}
                 placeholder="All groups"
@@ -221,7 +266,10 @@ export function AppFiltersBar({
           {showKind ? (
             <FilterField label="Kind" className="w-full">
               <MultiSelectDropDown
-                options={kindOptions.map((option) => ({ id: option.id, label: option.label }))}
+                options={kindOptions.map((option) => ({
+                  id: option.id,
+                  label: option.label,
+                }))}
                 selectedIds={kindValue}
                 onChange={(ids) => onKindChange?.(ids)}
                 placeholder="Any kind"
