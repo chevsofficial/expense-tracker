@@ -1,11 +1,12 @@
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 
 export default function AboutSettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="About" />
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-3">
           <h2 className="font-semibold">Help</h2>
           <a className="btn btn-outline w-fit" href="#" target="_blank" rel="noreferrer">
@@ -14,7 +15,7 @@ export default function AboutSettingsPage() {
         </div>
       </div>
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-3">
           <h2 className="font-semibold">Contact Us</h2>
           <a
@@ -26,7 +27,7 @@ export default function AboutSettingsPage() {
         </div>
       </div>
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-3">
           <h2 className="font-semibold">Legal</h2>
           <div className="flex flex-wrap gap-2">

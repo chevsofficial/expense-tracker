@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -237,7 +238,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
         </div>
       ) : null}
 
-      <div className="card bg-base-100 shadow">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-6">
           {loading ? <p className="text-sm opacity-70">{t(locale, "merchants_loading")}</p> : null}
           <div>

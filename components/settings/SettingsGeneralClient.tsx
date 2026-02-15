@@ -6,6 +6,7 @@ import type { Locale } from "@/src/i18n/messages";
 import { ThemeContext } from "@/src/theme/ThemeProvider";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import { getJSON, putJSON } from "@/src/lib/apiClient";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
@@ -72,7 +73,7 @@ export function SettingsGeneralClient({
     <div className="space-y-6">
       <PageHeader title="General" />
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-4">
           <h2 className="font-semibold">Account Settings</h2>
 
@@ -157,7 +158,7 @@ export function SettingsGeneralClient({
         </div>
       </div>
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body">
           <h2 className="font-semibold">Language</h2>
           <p className="opacity-70 text-sm">Choose your preferred language.</p>
@@ -166,7 +167,7 @@ export function SettingsGeneralClient({
         </div>
       </div>
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-4">
           <h2 className="font-semibold">Currency</h2>
           <p className="text-sm opacity-70">Select the currency used to display amounts.</p>
@@ -190,7 +191,7 @@ export function SettingsGeneralClient({
         </div>
       </div>
 
-      <div className="card bg-base-200 border border-base-300">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body">
           <h2 className="font-semibold">Theme</h2>
           <div className="flex items-center justify-between">
