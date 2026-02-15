@@ -759,7 +759,7 @@ export function TransactionsClient({
             <th>
               <input
                 type="checkbox"
-                className="checkbox checkbox-sm rounded-md border border-base-300"
+                className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
                 checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))}
                 onChange={(event) => toggleSelectAll(rows, event.target.checked)}
               />
@@ -827,7 +827,7 @@ export function TransactionsClient({
                 <td>
                   <input
                     type="checkbox"
-                    className="checkbox checkbox-sm rounded-md border border-base-300"
+                    className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
                     checked={selectedIds.has(transaction._id)}
                     onChange={(event) => toggleSelectOne(transaction._id, event.target.checked)}
                   />

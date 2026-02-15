@@ -168,11 +168,11 @@ export function TagsClient({ locale }: { locale: Locale }) {
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
           <table className="table">
-            <thead><tr><th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(event) => toggleSelectAll(event.target.checked)} /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+            <thead><tr><th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(event) => toggleSelectAll(event.target.checked)} /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody>
               {rows.map((tag) => (
                 <tr key={tag._id}>
-                  <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedIds.has(tag._id)} onChange={(event) => toggleSelectOne(tag._id, event.target.checked)} /></td>
+                  <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedIds.has(tag._id)} onChange={(event) => toggleSelectOne(tag._id, event.target.checked)} /></td>
                   <td>{tag.name}</td>
                   <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
                   <td className="space-x-2">

@@ -100,7 +100,7 @@ export function MultiSelectDropdown({
           <label key={item.id} className="label cursor-pointer justify-start gap-2 rounded-md px-2 py-1">
             <input
               type="checkbox"
-              className="checkbox checkbox-sm rounded-md border border-base-300"
+              className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
               checked={selectedSet.has(item.id)}
               onChange={() => toggleSelection(item.id)}
             />

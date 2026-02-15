@@ -520,7 +520,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           <div className="card-body gap-4">
             {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={(showArchived ? groups : activeGroups).length > 0 && (showArchived ? groups : activeGroups).every((group) => selectedGroupIds.has(group._id))} onChange={(event) => toggleSelectMany((showArchived ? groups : activeGroups).map((group) => group._id), event.target.checked, setSelectedGroupIds)} /><h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2></div>
+              <div className="flex items-center gap-2"><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={(showArchived ? groups : activeGroups).length > 0 && (showArchived ? groups : activeGroups).every((group) => selectedGroupIds.has(group._id))} onChange={(event) => toggleSelectMany((showArchived ? groups : activeGroups).map((group) => group._id), event.target.checked, setSelectedGroupIds)} /><h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2></div>
               <button className="btn btn-primary btn-sm" onClick={() => setAddGroupOpen(true)}>
                 {t(locale, "add_group")}
               </button>
@@ -547,7 +547,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                           : "hover:bg-base-200"
                       }`}
                     >
-                      <input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
+                      <input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
                       <button
                         className="flex-1 text-left"
                         onClick={() => setSelectedGroupId(group._id)}
@@ -602,7 +602,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                           : "hover:bg-base-200"
                       }`}
                     >
-                      <input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
+                      <input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
                       <button
                         className="flex-1 text-left"
                         onClick={() => setSelectedGroupId(group._id)}
@@ -724,7 +724,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                 <table className="table">
                   <thead className="bg-base-200 text-base-content">
                     <tr>
-                      <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
+                      <th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
                       <th className="text-right">{t(locale, "categories_actions")}</th>
@@ -733,7 +733,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   <tbody>
                     {activeCategoriesForGroup.map((category) => (
                       <tr key={category._id}>
-                        <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
+                        <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
                         <td className="font-medium">{getCategoryLabel(category)}</td>
                         <td>
                           <span className="badge badge-outline">
@@ -783,7 +783,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     <table className="table">
                       <thead className="bg-base-200 text-base-content">
                         <tr>
-                          <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
+                          <th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
                           <th className="text-right">{t(locale, "categories_actions")}</th>
@@ -792,7 +792,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       <tbody>
                         {archivedCategoriesForGroup.map((category) => (
                           <tr key={category._id}>
-                            <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
+                            <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
                             <td className="font-medium">{getCategoryLabel(category)}</td>
                             <td>
                               <span className="badge badge-outline">
