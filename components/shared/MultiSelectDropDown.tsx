@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
-import { UI_BORDER, UI_RING } from "@/components/ui/styles";
+import { FILTER_BORDER, UI_RING } from "@/components/ui/styles";
 
 type Option = {
   id: string;
@@ -47,12 +47,14 @@ export function MultiSelectDropDown({
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return options;
-    return options.filter((item) => item.label.toLowerCase().includes(normalizedQuery));
+    return options.filter((item) =>
+      item.label.toLowerCase().includes(normalizedQuery),
+    );
   }, [options, query]);
 
   const selectedItems = useMemo(
     () => options.filter((item) => selectedSet.has(item.id)),
-    [options, selectedSet]
+    [options, selectedSet],
   );
 
   const groupedItems = useMemo(() => {
@@ -75,9 +77,17 @@ export function MultiSelectDropDown({
     });
 
     return groups
-      .map((group) => ({ id: group.id, label: group.label, options: groupedById.get(group.id) ?? [] }))
+      .map((group) => ({
+        id: group.id,
+        label: group.label,
+        options: groupedById.get(group.id) ?? [],
+      }))
       .filter((group) => group.options.length > 0)
-      .concat(ungrouped.length > 0 ? [{ id: "__ungrouped", label: "Ungrouped", options: ungrouped }] : []);
+      .concat(
+        ungrouped.length > 0
+          ? [{ id: "__ungrouped", label: "Ungrouped", options: ungrouped }]
+          : [],
+      );
   }, [filteredItems, grouped, groupIdByOption, groups]);
 
   const toggleSelection = (id: string) => {
@@ -101,7 +111,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className={`btn w-full justify-between min-h-10 h-10 bg-white hover:bg-white ${UI_BORDER} ${UI_RING} ${triggerClassName}`}
+        className={`btn w-full justify-between min-h-10 h-10 bg-white hover:bg-white ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -119,7 +129,10 @@ export function MultiSelectDropDown({
         ) : selectedItems.length <= 2 ? (
           <div className="flex flex-wrap gap-1">
             {selectedItems.map((item) => (
-              <span key={item.id} className="badge badge-sm badge-outline gap-1">
+              <span
+                key={item.id}
+                className="badge badge-sm badge-outline gap-1"
+              >
                 {item.color ? (
                   <span
                     className="inline-block h-2 w-2 rounded-full"
@@ -149,7 +162,7 @@ export function MultiSelectDropDown({
         <span className="text-xs opacity-60">▾</span>
       </div>
       <div
-        className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${UI_BORDER}`}
+        className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${FILTER_BORDER}`}
       >
         {mode === "custom" ? (
           customPanel
@@ -164,7 +177,9 @@ export function MultiSelectDropDown({
             {grouped
               ? groupedItems.map((group) => (
                   <div key={group.id}>
-                    <div className="px-3 pt-3 text-xs font-bold opacity-70">{group.label}</div>
+                    <div className="px-3 pt-3 text-xs font-bold opacity-70">
+                      {group.label}
+                    </div>
                     {group.options.map((item) => (
                       <label
                         key={item.id}
