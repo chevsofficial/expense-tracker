@@ -64,6 +64,13 @@ type Account = {
   isArchived?: boolean;
 };
 
+type CategoryGroup = {
+  _id: string;
+  nameCustom?: string;
+  nameKey?: string;
+  isArchived?: boolean;
+};
+
 type ApiListResponse<T> = { data: T[] };
 
 type ApiItemResponse<T> = { data: T };
@@ -149,6 +156,7 @@ export function TransactionsClient({
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
   const [filters, setFilters] = useState<AppFiltersValue>({
@@ -224,6 +232,14 @@ export function TransactionsClient({
         selectableCategories
       ),
     [formState.categoryId, selectableCategories]
+  );
+
+  const categoryGroupIdByOption = useMemo(
+    () =>
+      Object.fromEntries(
+        selectableCategories.map((category) => [category._id, category.groupId ?? null])
+      ),
+    [selectableCategories]
   );
 
   const isKindLocked = formState.kind !== "transfer" && Boolean(selectedCategoryKind);
@@ -309,6 +325,18 @@ export function TransactionsClient({
     }
   }, [locale]);
 
+  const loadCategoryGroups = useCallback(async () => {
+    try {
+      const response = await getJSON<ApiListResponse<CategoryGroup>>(
+        "/api/category-groups?includeArchived=false"
+      );
+      setCategoryGroups(response.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "transactions_generic_error");
+      setToast(message);
+    }
+  }, [locale]);
+
   const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -355,6 +383,10 @@ export function TransactionsClient({
   useEffect(() => {
     void loadTags();
   }, [loadTags]);
+
+  useEffect(() => {
+    void loadCategoryGroups();
+  }, [loadCategoryGroups]);
 
   useEffect(() => {
     if (initializedFromQuery.current) return;
@@ -947,36 +979,24 @@ export function TransactionsClient({
               }))}
               merchants={merchants.map((merchant) => ({ id: merchant._id, label: merchant.name }))}
               tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
+              showKind
+              kindOptions={[
+                { id: "expense", label: t(locale, "category_kind_expense") },
+                { id: "income", label: t(locale, "category_kind_income") },
+                { id: "transfer", label: t(locale, "transactions_kind_transfer") },
+              ]}
+              kindValue={kindFilter ? [kindFilter] : []}
+              onKindChange={(ids) => setKindFilter(ids[0] ?? "")}
+              showSearch
+              searchValue={searchFilter}
+              onSearchChange={setSearchFilter}
+              searchPlaceholder={t(locale, "transactions_search_placeholder")}
+              categoryGroups={categoryGroups.map((group) => ({
+                id: group._id,
+                label: group.nameCustom ?? group.nameKey ?? "Group",
+              }))}
+              categoryGroupIdByOption={categoryGroupIdByOption}
             />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4 lg:grid-cols-8">
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_kind")}
-                </span>
-                <select
-                  className="select select-bordered select-sm"
-                  value={kindFilter}
-                  onChange={(event) => setKindFilter(event.target.value)}
-                >
-                  <option value="">{t(locale, "transactions_filter_any")}</option>
-                  <option value="expense">{t(locale, "category_kind_expense")}</option>
-                  <option value="income">{t(locale, "category_kind_income")}</option>
-                  <option value="transfer">{t(locale, "transactions_kind_transfer")}</option>
-                </select>
-              </label>
-              <label className="form-control w-full md:col-span-2 lg:col-span-2">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_search")}
-                </span>
-                <input
-                  type="text"
-                  className="input input-bordered input-sm"
-                  value={searchFilter}
-                  onChange={(event) => setSearchFilter(event.target.value)}
-                  placeholder={t(locale, "transactions_search_placeholder")}
-                />
-              </label>
-            </div>
           </div>
         </SurfaceCardBody>
       </SurfaceCard>

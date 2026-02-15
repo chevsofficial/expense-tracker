@@ -22,6 +22,7 @@ import type { Tag } from "@/src/types/tag";
 
 type Account = { _id: string; name: string; isArchived?: boolean };
 type Merchant = { _id: string; name: string; isArchived?: boolean };
+type CategoryGroup = { _id: string; nameCustom?: string; nameKey?: string; isArchived?: boolean };
 
 type SummaryResponse = {
   data: {
@@ -42,6 +43,7 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
   const [categories, setCategories] = useState<Category[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [summary, setSummary] = useState<SummaryResponse["data"] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,16 +58,18 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
 
   const loadFilters = useCallback(async () => {
     try {
-      const [accountsResponse, categoriesResponse, merchantsResponse, tagsResponse] = await Promise.all([
+      const [accountsResponse, categoriesResponse, merchantsResponse, tagsResponse, groupsResponse] = await Promise.all([
         getJSON<ApiListResponse<Account>>("/api/accounts?includeArchived=false"),
         getJSON<ApiListResponse<Category>>("/api/categories?includeArchived=false"),
         getJSON<ApiListResponse<Merchant>>("/api/merchants?includeArchived=false"),
         getJSON<ApiListResponse<Tag>>("/api/tags?includeArchived=false"),
+        getJSON<ApiListResponse<CategoryGroup>>("/api/category-groups?includeArchived=false"),
       ]);
       setAccounts(accountsResponse.data);
       setCategories(categoriesResponse.data);
       setMerchants(merchantsResponse.data);
       setTags(tagsResponse.data);
+      setCategoryGroups(groupsResponse.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : t(locale, "dashboard_loading"));
     }
@@ -100,6 +104,14 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
   const groupBreakdown = useMemo(() => summary?.byGroup ?? { income: [], expense: [] }, [summary]);
   const tagSummaries = useMemo(() => summary?.tagSummaries ?? { income: [], expense: [] }, [summary]);
 
+  const categoryGroupIdByOption = useMemo(
+    () =>
+      Object.fromEntries(
+        categories.map((category) => [category._id, category.groupId ?? null])
+      ),
+    [categories]
+  );
+
   return (
     <section className="space-y-6">
       <PageHeader title={t(locale, "dashboard_title")} />
@@ -114,6 +126,11 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
         }))}
         merchants={merchants.map((merchant) => ({ id: merchant._id, label: merchant.name }))}
         tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
+        categoryGroups={categoryGroups.map((group) => ({
+          id: group._id,
+          label: group.nameCustom ?? group.nameKey ?? "Group",
+        }))}
+        categoryGroupIdByOption={categoryGroupIdByOption}
       />
       {error ? <div className="alert alert-error">{error}</div> : null}
       {loading && !summary ? <p className="text-sm opacity-70">{t(locale, "dashboard_loading")}</p> : null}

@@ -19,12 +19,30 @@ type AppFiltersBarProps = {
   tags: Option[];
   groups?: Option[];
   showGroups?: boolean;
+  showKind?: boolean;
+  kindValue?: string[];
+  kindOptions?: Option[];
+  onKindChange?: (nextIds: string[]) => void;
+  showSearch?: boolean;
+  searchValue?: string;
+  onSearchChange?: (nextValue: string) => void;
+  searchPlaceholder?: string;
+  categoryGroups?: Option[];
+  categoryGroupIdByOption?: Record<string, string | null | undefined>;
 };
 
-function FilterField({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+function FilterField({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={`flex flex-col gap-1 ${className}`}>
-      <div className="text-xs font-semibold opacity-70">{label}</div>
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <div className="text-[11px] font-semibold tracking-wide opacity-70">{label}</div>
       {children}
     </div>
   );
@@ -56,11 +74,23 @@ export function AppFiltersBar({
   tags,
   groups,
   showGroups = false,
+  showKind = false,
+  kindValue = [],
+  kindOptions = [],
+  onKindChange,
+  showSearch = false,
+  searchValue = "",
+  onSearchChange,
+  searchPlaceholder = "Search transactions",
+  categoryGroups = [],
+  categoryGroupIdByOption,
 }: AppFiltersBarProps) {
+  const boxGridColumnsClass = showKind || showSearch ? "lg:grid-cols-3" : "lg:grid-cols-4";
+
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm border border-base-200">
-      <div className="flex flex-wrap items-end gap-3">
-        <FilterField label="Date Range" className="min-w-[240px]">
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <FilterField label="Date Range" className="w-full max-w-[320px]">
           <MultiSelectDropDown
             mode="custom"
             buttonLabel={dateRangeLabel(value.dateRange)}
@@ -89,7 +119,7 @@ export function AppFiltersBar({
                 </div>
 
                 <div className="border-t border-base-200 pt-3">
-                  <div className="text-xs font-semibold opacity-70 mb-2">Custom Range</div>
+                  <div className="mb-2 text-xs font-semibold opacity-70">Custom Range</div>
                   <div className="flex gap-2">
                     <input
                       type="date"
@@ -127,58 +157,87 @@ export function AppFiltersBar({
             }
           />
         </FilterField>
+      </div>
 
-        <FilterField label="Accounts" className="min-w-[220px]">
-          <MultiSelectDropDown
-            options={accounts.map((option) => ({ id: option.id, label: option.label }))}
-            selectedIds={value.accountIds}
-            onChange={(ids) => onChange({ ...value, accountIds: ids })}
-            placeholder="All accounts"
-          />
-        </FilterField>
-
-        <FilterField label="Categories" className="min-w-[220px]">
-          <MultiSelectDropDown
-            options={categories.map((option) => ({
-              id: option.id,
-              label: `${option.emoji ? `${option.emoji} ` : ""}${option.label}`,
-            }))}
-            selectedIds={value.categoryIds}
-            onChange={(ids) => onChange({ ...value, categoryIds: ids })}
-            placeholder="All categories"
-          />
-        </FilterField>
-
-        <FilterField label="Merchants" className="min-w-[220px]">
-          <MultiSelectDropDown
-            options={merchants.map((option) => ({ id: option.id, label: option.label }))}
-            selectedIds={value.merchantIds}
-            onChange={(ids) => onChange({ ...value, merchantIds: ids })}
-            placeholder="All merchants"
-          />
-        </FilterField>
-
-        <FilterField label="Tags" className="min-w-[220px]">
-          <MultiSelectDropDown
-            options={tags.map((option) => ({ id: option.id, label: option.label }))}
-            selectedIds={value.tagIds}
-            onChange={(ids) => onChange({ ...value, tagIds: ids })}
-            placeholder="All tags"
-          />
-        </FilterField>
-
-        {showGroups && groups?.length ? (
-          <FilterField label="Groups" className="min-w-[220px]">
+      <div className="rounded-xl border border-base-200 bg-white p-4 shadow-sm">
+        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${boxGridColumnsClass}`}>
+          <FilterField label="Accounts" className="w-full">
             <MultiSelectDropDown
-              options={groups.map((option) => ({ id: option.id, label: option.label }))}
-              selectedIds={value.groupIds ?? []}
-              onChange={(ids) => onChange({ ...value, groupIds: ids })}
-              placeholder="All groups"
+              options={accounts.map((option) => ({ id: option.id, label: option.label }))}
+              selectedIds={value.accountIds}
+              onChange={(ids) => onChange({ ...value, accountIds: ids })}
+              placeholder="All accounts"
             />
           </FilterField>
-        ) : null}
+
+          <FilterField label="Categories" className="w-full">
+            <MultiSelectDropDown
+              options={categories.map((option) => ({
+                id: option.id,
+                label: `${option.emoji ? `${option.emoji} ` : ""}${option.label}`,
+              }))}
+              selectedIds={value.categoryIds}
+              onChange={(ids) => onChange({ ...value, categoryIds: ids })}
+              placeholder="All categories"
+              grouped
+              groups={categoryGroups}
+              groupIdByOption={categoryGroupIdByOption}
+            />
+          </FilterField>
+
+          <FilterField label="Merchants" className="w-full">
+            <MultiSelectDropDown
+              options={merchants.map((option) => ({ id: option.id, label: option.label }))}
+              selectedIds={value.merchantIds}
+              onChange={(ids) => onChange({ ...value, merchantIds: ids })}
+              placeholder="All merchants"
+            />
+          </FilterField>
+
+          <FilterField label="Tags" className="w-full">
+            <MultiSelectDropDown
+              options={tags.map((option) => ({ id: option.id, label: option.label }))}
+              selectedIds={value.tagIds}
+              onChange={(ids) => onChange({ ...value, tagIds: ids })}
+              placeholder="All tags"
+            />
+          </FilterField>
+
+          {showGroups && groups?.length ? (
+            <FilterField label="Groups" className="w-full">
+              <MultiSelectDropDown
+                options={groups.map((option) => ({ id: option.id, label: option.label }))}
+                selectedIds={value.groupIds ?? []}
+                onChange={(ids) => onChange({ ...value, groupIds: ids })}
+                placeholder="All groups"
+              />
+            </FilterField>
+          ) : null}
+
+          {showKind ? (
+            <FilterField label="Kind" className="w-full">
+              <MultiSelectDropDown
+                options={kindOptions.map((option) => ({ id: option.id, label: option.label }))}
+                selectedIds={kindValue}
+                onChange={(ids) => onKindChange?.(ids)}
+                placeholder="Any kind"
+              />
+            </FilterField>
+          ) : null}
+
+          {showSearch ? (
+            <FilterField label="Search" className="w-full">
+              <input
+                type="text"
+                className="input input-bordered bg-white w-full"
+                value={searchValue}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+                placeholder={searchPlaceholder}
+              />
+            </FilterField>
+          ) : null}
+        </div>
       </div>
     </div>
   );
 }
-

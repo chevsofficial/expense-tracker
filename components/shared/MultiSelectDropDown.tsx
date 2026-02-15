@@ -18,6 +18,9 @@ type MultiSelectDropDownProps = {
   customPanel?: React.ReactNode;
   buttonLabel?: string;
   onClear?: () => void;
+  grouped?: boolean;
+  groups?: Array<{ id: string; label: string }>;
+  groupIdByOption?: Record<string, string | null | undefined>;
 };
 
 export function MultiSelectDropDown({
@@ -29,6 +32,9 @@ export function MultiSelectDropDown({
   customPanel,
   buttonLabel,
   onClear,
+  grouped = false,
+  groups = [],
+  groupIdByOption,
 }: MultiSelectDropDownProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -45,6 +51,31 @@ export function MultiSelectDropDown({
     () => options.filter((item) => selectedSet.has(item.id)),
     [options, selectedSet]
   );
+
+  const groupedItems = useMemo(() => {
+    if (!grouped) return [];
+
+    const groupedById = new Map<string, Option[]>();
+    groups.forEach((group) => {
+      groupedById.set(group.id, []);
+    });
+
+    const ungrouped: Option[] = [];
+
+    filteredItems.forEach((item) => {
+      const groupId = groupIdByOption?.[item.id];
+      if (groupId && groupedById.has(groupId)) {
+        groupedById.get(groupId)?.push(item);
+        return;
+      }
+      ungrouped.push(item);
+    });
+
+    return groups
+      .map((group) => ({ id: group.id, label: group.label, options: groupedById.get(group.id) ?? [] }))
+      .filter((group) => group.options.length > 0)
+      .concat(ungrouped.length > 0 ? [{ id: "__ungrouped", label: "Ungrouped", options: ungrouped }] : []);
+  }, [filteredItems, grouped, groupIdByOption, groups]);
 
   const toggleSelection = (id: string) => {
     if (!onChange) return;
@@ -67,7 +98,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className="input input-bordered bg-base-100 flex min-h-10 w-full items-center gap-2 px-3"
+        className="btn btn-outline w-full justify-between min-h-10 h-10"
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -114,7 +145,7 @@ export function MultiSelectDropDown({
         ) : null}
         <span className="text-xs opacity-60">▾</span>
       </div>
-      <div className="dropdown-content z-[50] menu p-2 shadow bg-base-100 rounded-box w-full border border-base-200 max-h-72 overflow-auto">
+      <div className="dropdown-content z-[50] mt-2 rounded-xl border border-base-200 bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden">
         {mode === "custom" ? (
           customPanel
         ) : (
@@ -125,26 +156,52 @@ export function MultiSelectDropDown({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            {filteredItems.map((item) => (
-              <label
-                key={item.id}
-                className="label cursor-pointer justify-start gap-2 rounded-md px-2 py-1"
-              >
-                <SelectionToggle
-                  checked={selectedSet.has(item.id)}
-                  onChange={() => toggleSelection(item.id)}
-                  size="sm"
-                  ariaLabel={`Select ${item.label}`}
-                />
-                {item.color ? (
-                  <span
-                    className="inline-block h-3 w-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                ) : null}
-                <span>{item.label}</span>
-              </label>
-            ))}
+            {grouped
+              ? groupedItems.map((group) => (
+                  <div key={group.id}>
+                    <div className="px-3 pt-3 text-xs font-bold opacity-70">{group.label}</div>
+                    {group.options.map((item) => (
+                      <label
+                        key={item.id}
+                        className="label cursor-pointer justify-start gap-2 rounded-md px-2 py-1"
+                      >
+                        <SelectionToggle
+                          checked={selectedSet.has(item.id)}
+                          onChange={() => toggleSelection(item.id)}
+                          size="sm"
+                          ariaLabel={`Select ${item.label}`}
+                        />
+                        {item.color ? (
+                          <span
+                            className="inline-block h-3 w-3 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                        ) : null}
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                ))
+              : filteredItems.map((item) => (
+                  <label
+                    key={item.id}
+                    className="label cursor-pointer justify-start gap-2 rounded-md px-2 py-1"
+                  >
+                    <SelectionToggle
+                      checked={selectedSet.has(item.id)}
+                      onChange={() => toggleSelection(item.id)}
+                      size="sm"
+                      ariaLabel={`Select ${item.label}`}
+                    />
+                    {item.color ? (
+                      <span
+                        className="inline-block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                    ) : null}
+                    <span>{item.label}</span>
+                  </label>
+                ))}
           </>
         )}
       </div>
