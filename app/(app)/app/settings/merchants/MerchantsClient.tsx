@@ -7,7 +7,12 @@ import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
-import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
+import {
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
+} from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -247,25 +252,25 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
               {t(locale, "merchants_active")}
             </h2>
             {activeMerchants.length ? (
-              <div className="mt-3 overflow-x-auto">
-                <table className={TABLE_CLASS}>
-                  <thead className={THEAD_CLASS}>
-                    <tr className={TR_DIVIDER_CLASS}>
+              <div className={`mt-3 ${tableContainerClass}`}>
+                <table className={tableClass}>
+                  <thead className={tableHeadClass}>
+                    <tr>
                       <th><SelectionToggle checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(activeMerchants, next)} size="sm" ariaLabel="Select all active merchants" /></th>
                       <th>{t(locale, "merchants_name")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className={tableBodyDividerClass}>
                     {activeMerchants.map((merchant) => (
-                      <tr key={merchant._id} className={TR_DIVIDER_CLASS}>
-                        <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
-                        <td>{merchant.name}</td>
-                        <td>
+                      <tr key={merchant._id}>
+                        <td className="bg-base-100"><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
+                        <td className="bg-base-100">{merchant.name}</td>
+                        <td className="bg-base-100">
                           {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
                         </td>
-                        <td>
+                        <td className="bg-base-100">
                           <div className="flex flex-wrap gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -309,23 +314,23 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                 {t(locale, "merchants_archived")}
               </h2>
               {archivedMerchants.length ? (
-                <div className="mt-3 overflow-x-auto">
-                    <table className={TABLE_CLASS}>
-                      <thead className={THEAD_CLASS}>
-                      <tr className={TR_DIVIDER_CLASS}>
+                <div className={`mt-3 ${tableContainerClass}`}>
+                    <table className={tableClass}>
+                      <thead className={tableHeadClass}>
+                      <tr>
                         <th><SelectionToggle checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(archivedMerchants, next)} size="sm" ariaLabel="Select all archived merchants" /></th>
                         <th>{t(locale, "merchants_name")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={tableBodyDividerClass}>
                       {archivedMerchants.map((merchant) => (
-                        <tr key={merchant._id} className={TR_DIVIDER_CLASS}>
-                          <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
-                          <td>{merchant.name}</td>
-                          <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
-                          <td>
+                        <tr key={merchant._id}>
+                          <td className="bg-base-100"><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
+                          <td className="bg-base-100">{merchant.name}</td>
+                          <td className="bg-base-100">{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
+                          <td className="bg-base-100">
                             <div className="flex flex-wrap gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"

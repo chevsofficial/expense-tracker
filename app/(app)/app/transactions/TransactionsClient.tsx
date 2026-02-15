@@ -16,9 +16,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import {
-  TABLE_CLASS,
-  THEAD_CLASS,
-  TR_DIVIDER_CLASS,
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -897,10 +898,10 @@ export function TransactionsClient({
     rows: Transaction[],
     variant: "active" | "archived",
   ) => (
-    <div className="overflow-x-auto">
-      <table className={TABLE_CLASS}>
-        <thead className={THEAD_CLASS}>
-          <tr className={TR_DIVIDER_CLASS}>
+    <div className={tableContainerClass}>
+      <table className={tableClass}>
+        <thead className={tableHeadClass}>
+          <tr>
             <th>
               <SelectionToggle
                 checked={
@@ -923,9 +924,9 @@ export function TransactionsClient({
             <th>{t(locale, "transactions_actions")}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className={tableBodyDividerClass}>
           {rows.length === 0 ? (
-            <tr className={TR_DIVIDER_CLASS}>
+            <tr>
               <td colSpan={10} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")
@@ -978,8 +979,8 @@ export function TransactionsClient({
               : transaction.receiptUrls?.[0];
 
             return (
-              <tr key={transaction._id} className={TR_DIVIDER_CLASS}>
-                <td>
+              <tr key={transaction._id}>
+                <td className="bg-base-100">
                   <SelectionToggle
                     checked={selectedIds.has(transaction._id)}
                     onChange={(next) => toggleSelectOne(transaction._id, next)}
@@ -987,16 +988,16 @@ export function TransactionsClient({
                     ariaLabel="Select transaction"
                   />
                 </td>
-                <td>{dateLabel}</td>
-                <td>{formatCurrency(displayAmountMinor)}</td>
-                <td>
+                <td className="bg-base-100">{dateLabel}</td>
+                <td className="bg-base-100">{formatCurrency(displayAmountMinor)}</td>
+                <td className="bg-base-100">
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
-                <td>{categoryLabel}</td>
-                <td>{accountLabel}</td>
-                <td>{merchantLabel}</td>
-                <td>{transaction.note ?? "-"}</td>
-                <td>
+                <td className="bg-base-100">{categoryLabel}</td>
+                <td className="bg-base-100">{accountLabel}</td>
+                <td className="bg-base-100">{merchantLabel}</td>
+                <td className="bg-base-100">{transaction.note ?? "-"}</td>
+                <td className="bg-base-100">
                   {receiptUrl ? (
                     <button
                       className="btn btn-ghost btn-xs"
@@ -1011,7 +1012,7 @@ export function TransactionsClient({
                     "—"
                   )}
                 </td>
-                <td>
+                <td className="bg-base-100">
                   <div className="flex flex-wrap gap-2">
                     {variant === "active" ? (
                       <>

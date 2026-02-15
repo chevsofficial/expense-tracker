@@ -5,6 +5,12 @@ import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { PieChartWidget } from "@/components/charts/PieChartWidget";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+import {
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
+} from "@/components/ui/tableStyles";
 
 const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =>
   new Intl.NumberFormat(locale, {
@@ -71,19 +77,19 @@ export function GroupBreakdownWidget({
         ) : null}
 
         {rows.length > 0 && view === "table" ? (
-          <div className="max-h-[360px] overflow-auto">
-            <table className="table">
-              <thead className="bg-base-200">
+          <div className={`max-h-[360px] overflow-auto ${tableContainerClass}`}>
+            <table className={tableClass}>
+              <thead className={tableHeadClass}>
                 <tr>
                   <th>{t(locale, "dashboard_table_category")}</th>
                   <th className="text-right">{t(locale, "dashboard_table_amount")}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={tableBodyDividerClass}>
                 {rows.map((row) => (
                   <tr key={`${row.groupId ?? "ungrouped"}`}>
-                    <td>{row.groupName}</td>
-                    <td className="text-right">
+                    <td className="bg-base-100">{row.groupName}</td>
+                    <td className="bg-base-100 text-right">
                       {formatCurrency(locale, row.amountMinor, currency)}
                     </td>
                   </tr>

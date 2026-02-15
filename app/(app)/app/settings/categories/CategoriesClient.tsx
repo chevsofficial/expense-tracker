@@ -8,7 +8,12 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerDropdown } from "@/components/forms/EmojiPickerDropdown";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
-import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
+import {
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
+} from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -542,10 +547,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ) : null}
 
               {visibleGroups.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className={TABLE_CLASS}>
-                    <thead className={THEAD_CLASS}>
-                      <tr className={TR_DIVIDER_CLASS}>
+                <div className={tableContainerClass}>
+                  <table className={tableClass}>
+                    <thead className={tableHeadClass}>
+                      <tr>
                         <th className="w-10">
                           <SelectionToggle
                             checked={
@@ -567,10 +572,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                         <th className="text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={tableBodyDividerClass}>
                       {visibleGroups.map((group) => (
-                        <tr key={group._id} className={TR_DIVIDER_CLASS}>
-                          <td className="w-10">
+                        <tr key={group._id}>
+                          <td className="bg-base-100 w-10">
                             <SelectionToggle
                               checked={selectedGroupIds.has(group._id)}
                               onChange={(next) =>
@@ -580,7 +585,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                               ariaLabel={`Select group ${getDisplayName(group)}`}
                             />
                           </td>
-                          <td>
+                          <td className="bg-base-100">
                             <button
                               className={`text-left ${
                                 selectedGroupId === group._id ? "font-semibold" : ""
@@ -590,7 +595,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                               {getDisplayName(group)}
                             </button>
                           </td>
-                          <td>
+                          <td className="bg-base-100">
                             <div className="flex justify-end gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"
@@ -679,27 +684,27 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             ) : null}
 
             {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className={TABLE_CLASS}>
-                  <thead className={THEAD_CLASS}>
-                    <tr className={TR_DIVIDER_CLASS}>
+              <div className={tableContainerClass}>
+                <table className={tableClass}>
+                  <thead className={tableHeadClass}>
+                    <tr>
                       <th><SelectionToggle checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all categories" /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
                       <th className="text-right">{t(locale, "categories_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className={tableBodyDividerClass}>
                     {activeCategoriesForGroup.map((category) => (
-                      <tr key={category._id} className={TR_DIVIDER_CLASS}>
-                        <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
-                        <td className="font-medium">{getCategoryLabel(category)}</td>
-                        <td>
+                      <tr key={category._id}>
+                        <td className="bg-base-100"><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
+                        <td className="bg-base-100 font-medium">{getCategoryLabel(category)}</td>
+                        <td className="bg-base-100">
                           <span className="badge badge-outline">
                             {kindLabels[normalizeKind(category.kind)]}
                           </span>
                         </td>
-                        <td className="text-right">
+                        <td className="bg-base-100 text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -738,27 +743,27 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     {t(locale, "categories_no_archived_categories")}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className={TABLE_CLASS}>
-                      <thead className={THEAD_CLASS}>
-                        <tr className={TR_DIVIDER_CLASS}>
+                  <div className={tableContainerClass}>
+                    <table className={tableClass}>
+                      <thead className={tableHeadClass}>
+                        <tr>
                           <th><SelectionToggle checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all archived categories" /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
                           <th className="text-right">{t(locale, "categories_actions")}</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className={tableBodyDividerClass}>
                         {archivedCategoriesForGroup.map((category) => (
-                          <tr key={category._id} className={TR_DIVIDER_CLASS}>
-                            <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
-                            <td className="font-medium">{getCategoryLabel(category)}</td>
-                            <td>
+                          <tr key={category._id}>
+                            <td className="bg-base-100"><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
+                            <td className="bg-base-100 font-medium">{getCategoryLabel(category)}</td>
+                            <td className="bg-base-100">
                               <span className="badge badge-outline">
                                 {kindLabels[normalizeKind(category.kind)]}
                               </span>
                             </td>
-                            <td className="text-right">
+                            <td className="bg-base-100 text-right">
                               <div className="flex justify-end gap-2">
                                 <button
                                   className="btn btn-ghost btn-xs"
