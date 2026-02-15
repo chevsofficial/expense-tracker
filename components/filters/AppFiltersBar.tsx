@@ -2,7 +2,7 @@
 
 import React from "react";
 import { MultiSelectDropDown } from "@/components/shared/MultiSelectDropDown";
-import { FILTER_BORDER } from "@/components/ui/styles";
+import { CHIP_CLASS, CHIP_CLASS_SM } from "@/components/ui/uiClasses";
 import type {
   AppFiltersValue,
   DateRangePreset,
@@ -98,7 +98,7 @@ export function AppFiltersBar({
       {showDateRange ? (
         <div className="flex justify-end">
           <div
-            className={`w-full max-w-[320px] rounded-xl bg-white p-3 shadow-sm ${FILTER_BORDER}`}
+            className={`w-full max-w-[320px] ${CHIP_CLASS_SM}`}
           >
             <FilterField label="Date Range" className="w-full">
               <MultiSelectDropDown
@@ -194,7 +194,7 @@ export function AppFiltersBar({
         </div>
       ) : null}
 
-      <div className={`rounded-xl bg-white p-4 shadow-sm ${FILTER_BORDER}`}>
+      <div className={CHIP_CLASS}>
         <div
           className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${boxGridColumnsClass}`}
         >
@@ -281,7 +281,7 @@ export function AppFiltersBar({
             <FilterField label="Search" className="w-full">
               <input
                 type="text"
-                className="input input-bordered bg-white w-full"
+                className="input input-bordered bg-white border border-neutral-300 rounded-lg w-full"
                 value={searchValue}
                 onChange={(event) => onSearchChange?.(event.target.value)}
                 placeholder={searchPlaceholder}

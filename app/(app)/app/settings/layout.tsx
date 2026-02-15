@@ -1,11 +1,12 @@
 import { SettingsSideNav } from "@/components/settings/SettingsSideNav";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex gap-6">
       <aside className="w-64 shrink-0">
         <div className="sticky top-4">
-          <div className="card bg-base-200 border border-base-300">
+          <div className={CHIP_CLASS_NO_PADDING}>
             <div className="card-body p-3">
               <h2 className="section-title px-2 py-1 text-lg">Settings</h2>
               <SettingsSideNav />

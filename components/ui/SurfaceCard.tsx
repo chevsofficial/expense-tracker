@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 
 type SurfaceCardProps = {
   children: ReactNode;
@@ -6,11 +7,7 @@ type SurfaceCardProps = {
 };
 
 export function SurfaceCard({ children, className = "" }: SurfaceCardProps) {
-  return (
-    <div className={`bg-base-200 border border-base-300 rounded-xl ${className}`.trim()}>
-      {children}
-    </div>
-  );
+  return <div className={`${CHIP_CLASS_NO_PADDING} ${className}`.trim()}>{children}</div>;
 }
 
 export function SurfaceCardBody({ children, className = "" }: SurfaceCardProps) {

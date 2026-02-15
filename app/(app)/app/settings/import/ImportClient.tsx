@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { postJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import type { Locale } from "@/src/i18n/messages";
 
 type ParsedRow = Record<string, string>;
@@ -160,7 +161,7 @@ export function ImportClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <PageHeader title={t(locale, "import_title")} />
 
-      <div className="card bg-base-100 shadow">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-4">
           <h2 className="text-sm font-semibold uppercase opacity-60">
             {t(locale, "import_export_title")}
@@ -194,7 +195,7 @@ export function ImportClient({ locale }: { locale: Locale }) {
         </div>
       </div>
 
-      <div className="card bg-base-100 shadow">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="form-control w-full">

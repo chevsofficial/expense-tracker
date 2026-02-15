@@ -7,6 +7,7 @@ import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerDropdown } from "@/components/forms/EmojiPickerDropdown";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -517,7 +518,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px,1fr]">
-        <div className="card bg-base-100 shadow">
+        <div className={CHIP_CLASS_NO_PADDING}>
           <div className="card-body gap-4">
             {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex items-center justify-between">
@@ -685,7 +686,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           </div>
         </div>
 
-        <div className="card bg-base-100 shadow">
+        <div className={CHIP_CLASS_NO_PADDING}>
           <div className="card-body gap-4">
             {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex flex-wrap items-center justify-between gap-2">

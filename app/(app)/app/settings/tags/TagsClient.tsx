@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import type { Locale } from "@/src/i18n/messages";
 import type { Tag } from "@/src/types/tag";
@@ -165,7 +166,7 @@ export function TagsClient({ locale }: { locale: Locale }) {
           </div>
         </div>
       ) : null}
-      <div className="card bg-base-100 shadow">
+      <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
           <table className="table">
