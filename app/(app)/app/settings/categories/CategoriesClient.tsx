@@ -8,6 +8,7 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerDropdown } from "@/components/forms/EmojiPickerDropdown";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
+import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -109,7 +110,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   );
 
   const activeGroups = useMemo(() => groups.filter((group) => !group.isArchived), [groups]);
-  const archivedGroups = useMemo(() => groups.filter((group) => group.isArchived), [groups]);
+  const visibleGroups = useMemo(() => (showArchived ? groups : activeGroups), [showArchived, groups, activeGroups]);
 
   const categoriesForGroup = useMemo(() => {
     if (!selectedGroupId) return [];
@@ -532,156 +533,112 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             ) : null}
             {error ? <p className="text-sm text-error">{error}</p> : null}
             <div className="flex flex-col gap-2">
-              {activeGroups.length === 0 && !loading ? (
-                <p className="text-sm opacity-70">{t(locale, "categories_no_groups")}</p>
+              {visibleGroups.length === 0 && !loading ? (
+                <p className="text-sm opacity-70">
+                  {showArchived
+                    ? t(locale, "categories_no_archived_groups")
+                    : t(locale, "categories_no_groups")}
+                </p>
               ) : null}
-              {showArchived ? (
-                <>
-                  <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
-                    {t(locale, "categories_active_groups")}
-                  </p>
-                  {activeGroups.map((group) => (
-                    <div
-                      key={group._id}
-                      className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
-                        selectedGroupId === group._id
-                          ? "bg-base-200 font-medium"
-                          : "hover:bg-base-200"
-                      }`}
-                    >
-                      <SelectionToggle checked={selectedGroupIds.has(group._id)} onChange={(next) => toggleSelectMany([group._id], next, setSelectedGroupIds)} size="sm" ariaLabel={`Select ${getDisplayName(group)}`} />
-                      <button
-                        className="flex-1 text-left"
-                        onClick={() => setSelectedGroupId(group._id)}
-                      >
-                        {getDisplayName(group)}
-                      </button>
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openRenameModal(group);
-                          }}
-                        >
-                          {t(locale, "categories_rename")}
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openArchiveGroupModal(group);
-                          }}
-                        >
-                          {t(locale, "categories_archive")}
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-xs text-error"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openDeleteGroupModal(group);
-                          }}
-                        >
-                          {t(locale, "categories_delete")}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="pt-2 text-xs font-semibold uppercase tracking-wide opacity-60">
-                    {t(locale, "categories_archived_groups")}
-                  </p>
-                  {archivedGroups.length === 0 ? (
-                    <p className="text-sm opacity-70">
-                      {t(locale, "categories_no_archived_groups")}
-                    </p>
-                  ) : null}
-                  {archivedGroups.map((group) => (
-                    <div
-                      key={group._id}
-                      className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
-                        selectedGroupId === group._id
-                          ? "bg-base-200 font-medium"
-                          : "hover:bg-base-200"
-                      }`}
-                    >
-                      <SelectionToggle checked={selectedGroupIds.has(group._id)} onChange={(next) => toggleSelectMany([group._id], next, setSelectedGroupIds)} size="sm" ariaLabel={`Select ${getDisplayName(group)}`} />
-                      <button
-                        className="flex-1 text-left"
-                        onClick={() => setSelectedGroupId(group._id)}
-                      >
-                        {getDisplayName(group)}
-                      </button>
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleRestoreGroup(group);
-                          }}
-                        >
-                          {t(locale, "categories_restore")}
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-xs text-error"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openDeleteGroupModal(group);
-                          }}
-                        >
-                          {t(locale, "categories_delete")}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                activeGroups.map((group) => (
-                  <div
-                    key={group._id}
-                    className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition ${
-                      selectedGroupId === group._id
-                        ? "bg-base-200 font-medium"
-                        : "hover:bg-base-200"
-                    }`}
-                  >
-                    <button
-                      className="flex-1 text-left"
-                      onClick={() => setSelectedGroupId(group._id)}
-                    >
-                      {getDisplayName(group)}
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openRenameModal(group);
-                        }}
-                      >
-                        {t(locale, "categories_rename")}
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-xs"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openArchiveGroupModal(group);
-                        }}
-                      >
-                        {t(locale, "categories_archive")}
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-xs text-error"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openDeleteGroupModal(group);
-                        }}
-                      >
-                        {t(locale, "categories_delete")}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+
+              {visibleGroups.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className={TABLE_CLASS}>
+                    <thead className={THEAD_CLASS}>
+                      <tr className={TR_DIVIDER_CLASS}>
+                        <th className="w-10">
+                          <SelectionToggle
+                            checked={
+                              visibleGroups.length > 0 &&
+                              visibleGroups.every((group) => selectedGroupIds.has(group._id))
+                            }
+                            onChange={(next) =>
+                              toggleSelectMany(
+                                visibleGroups.map((group) => group._id),
+                                next,
+                                setSelectedGroupIds,
+                              )
+                            }
+                            size="sm"
+                            ariaLabel="Select all groups"
+                          />
+                        </th>
+                        <th>Name</th>
+                        <th className="text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleGroups.map((group) => (
+                        <tr key={group._id} className={TR_DIVIDER_CLASS}>
+                          <td className="w-10">
+                            <SelectionToggle
+                              checked={selectedGroupIds.has(group._id)}
+                              onChange={(next) =>
+                                toggleSelectMany([group._id], next, setSelectedGroupIds)
+                              }
+                              size="sm"
+                              ariaLabel={`Select group ${getDisplayName(group)}`}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              className={`text-left ${
+                                selectedGroupId === group._id ? "font-semibold" : ""
+                              }`}
+                              onClick={() => setSelectedGroupId(group._id)}
+                            >
+                              {getDisplayName(group)}
+                            </button>
+                          </td>
+                          <td>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openRenameModal(group);
+                                }}
+                              >
+                                {t(locale, "categories_rename")}
+                              </button>
+                              {group.isArchived ? (
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleRestoreGroup(group);
+                                  }}
+                                >
+                                  {t(locale, "categories_restore")}
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openArchiveGroupModal(group);
+                                  }}
+                                >
+                                  {t(locale, "categories_archive")}
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-ghost btn-xs text-error"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openDeleteGroupModal(group);
+                                }}
+                              >
+                                {t(locale, "categories_delete")}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -723,9 +680,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
             {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="table">
-                  <thead className="bg-base-200 text-base-content">
-                    <tr>
+                <table className={TABLE_CLASS}>
+                  <thead className={THEAD_CLASS}>
+                    <tr className={TR_DIVIDER_CLASS}>
                       <th><SelectionToggle checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all categories" /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
@@ -734,7 +691,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   </thead>
                   <tbody>
                     {activeCategoriesForGroup.map((category) => (
-                      <tr key={category._id}>
+                      <tr key={category._id} className={TR_DIVIDER_CLASS}>
                         <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                         <td className="font-medium">{getCategoryLabel(category)}</td>
                         <td>
@@ -782,9 +739,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="table">
-                      <thead className="bg-base-200 text-base-content">
-                        <tr>
+                    <table className={TABLE_CLASS}>
+                      <thead className={THEAD_CLASS}>
+                        <tr className={TR_DIVIDER_CLASS}>
                           <th><SelectionToggle checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all archived categories" /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
@@ -793,7 +750,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       </thead>
                       <tbody>
                         {archivedCategoriesForGroup.map((category) => (
-                          <tr key={category._id}>
+                          <tr key={category._id} className={TR_DIVIDER_CLASS}>
                             <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                             <td className="font-medium">{getCategoryLabel(category)}</td>
                             <td>

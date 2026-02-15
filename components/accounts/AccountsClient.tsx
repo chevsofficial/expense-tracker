@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -189,16 +190,16 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_empty")}</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="table">
-                  <thead className="bg-base-200 text-base-content">
-                    <tr>
+                <table className={TABLE_CLASS}>
+                  <thead className={THEAD_CLASS}>
+                    <tr className={TR_DIVIDER_CLASS}>
                       <th>{t(locale, "accounts_name")}</th>
                       <th className="text-right">{t(locale, "accounts_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {activeAccounts.map((account) => (
-                      <tr key={account._id}>
+                      <tr key={account._id} className={TR_DIVIDER_CLASS}>
                         <td className="font-medium">{account.name}</td>
                         <td className="text-right">
                           <div className="flex justify-end gap-2">
@@ -245,16 +246,16 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                 <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_archived_empty")}</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="table">
-                    <thead className="bg-base-200 text-base-content">
-                      <tr>
+                  <table className={TABLE_CLASS}>
+                    <thead className={THEAD_CLASS}>
+                      <tr className={TR_DIVIDER_CLASS}>
                         <th>{t(locale, "accounts_name")}</th>
                         <th className="text-right">{t(locale, "accounts_actions")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {archivedAccounts.map((account) => (
-                        <tr key={account._id}>
+                        <tr key={account._id} className={TR_DIVIDER_CLASS}>
                           <td className="font-medium">{account.name}</td>
                           <td className="text-right">
                             <div className="flex justify-end gap-2">

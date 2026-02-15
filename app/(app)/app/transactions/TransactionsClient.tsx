@@ -15,6 +15,11 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
+import {
+  TABLE_CLASS,
+  THEAD_CLASS,
+  TR_DIVIDER_CLASS,
+} from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
@@ -893,9 +898,9 @@ export function TransactionsClient({
     variant: "active" | "archived",
   ) => (
     <div className="overflow-x-auto">
-      <table className="table">
-        <thead className="bg-base-200 text-base-content">
-          <tr>
+      <table className={TABLE_CLASS}>
+        <thead className={THEAD_CLASS}>
+          <tr className={TR_DIVIDER_CLASS}>
             <th>
               <SelectionToggle
                 checked={
@@ -908,19 +913,19 @@ export function TransactionsClient({
               />
             </th>
             <th>{t(locale, "transactions_date")}</th>
-            <th>{t(locale, "transactions_merchant")}</th>
-            <th>{t(locale, "transactions_note")}</th>
+            <th>{t(locale, "transactions_amount")}</th>
+            <th>{t(locale, "transactions_kind")}</th>
             <th>{t(locale, "transactions_category")}</th>
             <th>{t(locale, "transactions_account")}</th>
-            <th>{t(locale, "transactions_kind")}</th>
-            <th>{t(locale, "transactions_amount")}</th>
+            <th>{t(locale, "transactions_merchant")}</th>
+            <th>{t(locale, "transactions_note")}</th>
             <th>{t(locale, "transactions_receipt")}</th>
             <th>{t(locale, "transactions_actions")}</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr>
+            <tr className={TR_DIVIDER_CLASS}>
               <td colSpan={10} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")
@@ -973,7 +978,7 @@ export function TransactionsClient({
               : transaction.receiptUrls?.[0];
 
             return (
-              <tr key={transaction._id}>
+              <tr key={transaction._id} className={TR_DIVIDER_CLASS}>
                 <td>
                   <SelectionToggle
                     checked={selectedIds.has(transaction._id)}
@@ -983,14 +988,14 @@ export function TransactionsClient({
                   />
                 </td>
                 <td>{dateLabel}</td>
-                <td>{merchantLabel}</td>
-                <td>{transaction.note ?? "-"}</td>
-                <td>{categoryLabel}</td>
-                <td>{accountLabel}</td>
+                <td>{formatCurrency(displayAmountMinor)}</td>
                 <td>
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
-                <td>{formatCurrency(displayAmountMinor)}</td>
+                <td>{categoryLabel}</td>
+                <td>{accountLabel}</td>
+                <td>{merchantLabel}</td>
+                <td>{transaction.note ?? "-"}</td>
                 <td>
                   {receiptUrl ? (
                     <button

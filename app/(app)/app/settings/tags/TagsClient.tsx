@@ -7,6 +7,7 @@ import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
+import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import type { Locale } from "@/src/i18n/messages";
 import type { Tag } from "@/src/types/tag";
@@ -169,11 +170,11 @@ export function TagsClient({ locale }: { locale: Locale }) {
       <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
-          <table className="table">
-            <thead><tr><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+          <table className={TABLE_CLASS}>
+            <thead className={THEAD_CLASS}><tr className={TR_DIVIDER_CLASS}><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody>
               {rows.map((tag) => (
-                <tr key={tag._id}>
+                <tr key={tag._id} className={TR_DIVIDER_CLASS}>
                   <td><SelectionToggle checked={selectedIds.has(tag._id)} onChange={(next) => toggleSelectOne(tag._id, next)} size="sm" ariaLabel={`Select ${tag.name}`} /></td>
                   <td>{tag.name}</td>
                   <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
