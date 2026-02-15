@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
+import { UI_BORDER, UI_RING } from "@/components/ui/styles";
 
 type Option = {
   id: string;
@@ -18,6 +19,7 @@ type MultiSelectDropDownProps = {
   customPanel?: React.ReactNode;
   buttonLabel?: string;
   onClear?: () => void;
+  triggerClassName?: string;
   grouped?: boolean;
   groups?: Array<{ id: string; label: string }>;
   groupIdByOption?: Record<string, string | null | undefined>;
@@ -32,6 +34,7 @@ export function MultiSelectDropDown({
   customPanel,
   buttonLabel,
   onClear,
+  triggerClassName = "",
   grouped = false,
   groups = [],
   groupIdByOption,
@@ -98,7 +101,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className="btn btn-outline w-full justify-between min-h-10 h-10"
+        className={`btn w-full justify-between min-h-10 h-10 bg-white hover:bg-white ${UI_BORDER} ${UI_RING} ${triggerClassName}`}
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -145,7 +148,9 @@ export function MultiSelectDropDown({
         ) : null}
         <span className="text-xs opacity-60">▾</span>
       </div>
-      <div className="dropdown-content z-[50] mt-2 rounded-xl border border-base-200 bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden">
+      <div
+        className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${UI_BORDER}`}
+      >
         {mode === "custom" ? (
           customPanel
         ) : (
