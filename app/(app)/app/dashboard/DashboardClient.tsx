@@ -98,7 +98,7 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
 
   return (
     <section className="space-y-6">
-      <PageHeader title={t(locale, "dashboard_title")} subtitle={t(locale, "dashboard_subtitle")} />
+      <PageHeader title={t(locale, "dashboard_title")} />
       <DashboardFilterBar
         locale={locale}
         accounts={accounts}

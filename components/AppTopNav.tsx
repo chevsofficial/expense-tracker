@@ -26,18 +26,12 @@ export function AppTopNav({
   const linkClass = (href: string) => {
     const active = isActive(href);
     return [
-      "relative px-3 py-2 text-sm",
-      "font-light",
+      "px-3 py-2 text-lg font-light rounded-none",
       "transition-colors",
-      active ? "text-primary" : "text-[#7b93a4]",
-      "hover:text-primary",
+      active ? "text-primary border-b-2 border-primary" : "text-[#7b93a4]",
+      "hover:text-primary hover:bg-transparent",
     ].join(" ");
   };
-
-  const underlineClass = (href: string) =>
-    isActive(href)
-      ? "after:content-[''] after:absolute after:left-2 after:right-2 after:-bottom-1 after:h-[2px] after:bg-primary"
-      : "";
 
   return (
     <div className="navbar bg-white text-base-content border-b border-base-300">
@@ -73,7 +67,7 @@ export function AppTopNav({
           <li>
             <Link
               href="/app/dashboard"
-              className={`${linkClass("/app/dashboard")} ${underlineClass("/app/dashboard")}`}
+              className={linkClass("/app/dashboard") }
             >
               {dashboardLabel}
             </Link>
@@ -81,7 +75,7 @@ export function AppTopNav({
           <li>
             <Link
               href="/app/accounts"
-              className={`${linkClass("/app/accounts")} ${underlineClass("/app/accounts")}`}
+              className={linkClass("/app/accounts") }
             >
               {accountsLabel}
             </Link>
@@ -89,7 +83,7 @@ export function AppTopNav({
           <li>
             <Link
               href="/app/transactions"
-              className={`${linkClass("/app/transactions")} ${underlineClass("/app/transactions")}`}
+              className={linkClass("/app/transactions") }
             >
               {transactionsLabel}
             </Link>
@@ -97,7 +91,7 @@ export function AppTopNav({
           <li>
             <Link
               href="/app/settings"
-              className={`${linkClass("/app/settings")} ${underlineClass("/app/settings")}`}
+              className={linkClass("/app/settings") }
             >
               Settings
             </Link>

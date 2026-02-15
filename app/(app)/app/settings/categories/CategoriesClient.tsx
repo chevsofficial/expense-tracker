@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { EmojiPickerDropdown } from "@/components/forms/EmojiPickerDropdown";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -51,6 +52,8 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   const [toast, setToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set());
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
 
   const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -432,6 +435,51 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     }
   };
 
+
+  const toggleSelectMany = (
+    ids: string[],
+    checked: boolean,
+    setter: (value: Set<string> | ((current: Set<string>) => Set<string>)) => void
+  ) => {
+    setter((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => {
+        if (checked) next.add(id); else next.delete(id);
+      });
+      return next;
+    });
+  };
+
+  const handleBulkGroups = async (action: "archive" | "unarchive" | "delete") => {
+    if (!selectedGroupIds.size) return;
+    if (action === "delete" && !window.confirm(`Delete ${selectedGroupIds.size} items? This cannot be undone.`)) return;
+    setIsSubmitting(true);
+    try {
+      await postJSON<{ data: { updated?: number; deleted?: number } }>("/api/category-groups/bulk", { action, ids: Array.from(selectedGroupIds) });
+      setSelectedGroupIds(new Set());
+      await loadData();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkCategories = async (action: "archive" | "unarchive" | "delete") => {
+    if (!selectedCategoryIds.size) return;
+    if (action === "delete" && !window.confirm(`Delete ${selectedCategoryIds.size} items? This cannot be undone.`)) return;
+    setIsSubmitting(true);
+    try {
+      await postJSON<{ data: { updated?: number; deleted?: number } }>("/api/categories/bulk", { action, ids: Array.from(selectedCategoryIds) });
+      setSelectedCategoryIds(new Set());
+      await loadData();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openAddCategoryModal = () => {
     const selectedActiveGroup =
       selectedGroupId && !selectedGroup?.isArchived ? selectedGroupId : activeGroups[0]?._id;
@@ -444,7 +492,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title={t(locale, "categories_title_page")} subtitle={t(locale, "categories_subtitle")} />
+        <PageHeader title={t(locale, "categories_title_page")} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -470,8 +518,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px,1fr]">
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-4">
+            {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2>
+              <div className="flex items-center gap-2"><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={(showArchived ? groups : activeGroups).length > 0 && (showArchived ? groups : activeGroups).every((group) => selectedGroupIds.has(group._id))} onChange={(event) => toggleSelectMany((showArchived ? groups : activeGroups).map((group) => group._id), event.target.checked, setSelectedGroupIds)} /><h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2></div>
               <button className="btn btn-primary btn-sm" onClick={() => setAddGroupOpen(true)}>
                 {t(locale, "add_group")}
               </button>
@@ -498,6 +547,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                           : "hover:bg-base-200"
                       }`}
                     >
+                      <input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
                       <button
                         className="flex-1 text-left"
                         onClick={() => setSelectedGroupId(group._id)}
@@ -552,6 +602,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                           : "hover:bg-base-200"
                       }`}
                     >
+                      <input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedGroupIds.has(group._id)} onChange={(event) => { event.stopPropagation(); toggleSelectMany([group._id], event.target.checked, setSelectedGroupIds); }} />
                       <button
                         className="flex-1 text-left"
                         onClick={() => setSelectedGroupId(group._id)}
@@ -635,8 +686,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
         <div className="card bg-base-100 shadow">
           <div className="card-body gap-4">
+            {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">{t(locale, "categories_title")}</h2>
+              <h2 className="text-lg font-semibold">{t(locale, "categories_title")}</h2>{selectedCategoryIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3 mt-2"><span>{selectedCategoryIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkCategories("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkCategories("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkCategories("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
               <button
                 className="btn btn-primary btn-sm"
                 onClick={openAddCategoryModal}
@@ -672,6 +724,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                 <table className="table">
                   <thead className="bg-base-200 text-base-content">
                     <tr>
+                      <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
                       <th className="text-right">{t(locale, "categories_actions")}</th>
@@ -680,6 +733,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   <tbody>
                     {activeCategoriesForGroup.map((category) => (
                       <tr key={category._id}>
+                        <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
                         <td className="font-medium">{getCategoryLabel(category)}</td>
                         <td>
                           <span className="badge badge-outline">
@@ -729,6 +783,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     <table className="table">
                       <thead className="bg-base-200 text-base-content">
                         <tr>
+                          <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(event) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), event.target.checked, setSelectedCategoryIds)} /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
                           <th className="text-right">{t(locale, "categories_actions")}</th>
@@ -737,6 +792,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       <tbody>
                         {archivedCategoriesForGroup.map((category) => (
                           <tr key={category._id}>
+                            <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedCategoryIds.has(category._id)} onChange={(event) => toggleSelectMany([category._id], event.target.checked, setSelectedCategoryIds)} /></td>
                             <td className="font-medium">{getCategoryLabel(category)}</td>
                             <td>
                               <span className="badge badge-outline">
@@ -886,13 +942,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             onChange={(event) => setNewCategoryName(event.target.value)}
             placeholder={t(locale, "categories_category_placeholder")}
           />
-          <TextField
-            id="new-category-emoji"
-            label={t(locale, "categories_emoji_label")}
-            value={newCategoryEmoji}
-            onChange={(event) => setNewCategoryEmoji(event.target.value)}
-            placeholder={t(locale, "categories_emoji_placeholder")}
-          />
+          <label className="form-control w-full">
+            <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
+            <EmojiPickerDropdown value={newCategoryEmoji} onChange={setNewCategoryEmoji} />
+          </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
               {t(locale, "categories_group_label")}
@@ -952,13 +1005,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             value={editCategoryName}
             onChange={(event) => setEditCategoryName(event.target.value)}
           />
-          <TextField
-            id="edit-category-emoji"
-            label={t(locale, "categories_emoji_label")}
-            value={editCategoryEmoji}
-            onChange={(event) => setEditCategoryEmoji(event.target.value)}
-            placeholder={t(locale, "categories_emoji_placeholder")}
-          />
+          <label className="form-control w-full">
+            <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
+            <EmojiPickerDropdown value={editCategoryEmoji} onChange={setEditCategoryEmoji} />
+          </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
               {t(locale, "categories_group_label")}

@@ -4,6 +4,7 @@ import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { DateRangePicker, type DateRangeValue } from "@/components/shared/DateRangePicker";
+import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
 import type { Category } from "@/src/types/category";
 
 type Account = {
@@ -133,21 +134,12 @@ export function DashboardFilterBar({
 
           <label className="form-control w-full sm:w-auto">
             <span className="label-text mb-1 text-sm font-medium">Tags</span>
-            <select
-              className="select select-bordered w-full sm:w-auto"
-              multiple
-              value={selectedTagIds}
-              onChange={(event) => {
-                const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-                onTagIdsChange(values);
-              }}
-            >
-              {tags.map((tag) => (
-                <option key={tag._id} value={tag._id}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              items={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
+              selectedIds={selectedTagIds}
+              onChange={onTagIdsChange}
+              placeholder="Tags"
+            />
           </label>
         </div>
       </SurfaceCardBody>

@@ -26,6 +26,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
   const [toast, setToast] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingMerchant, setEditingMerchant] = useState<Merchant | null>(null);
@@ -146,6 +147,40 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     }
   };
 
+
+  const toggleSelectOne = (id: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (rows: Merchant[], checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      rows.forEach((row) => {
+        if (checked) next.add(row._id); else next.delete(row._id);
+      });
+      return next;
+    });
+  };
+
+  const handleBulkAction = async (action: "archive" | "unarchive" | "delete") => {
+    if (!selectedIds.size) return;
+    if (action === "delete" && !window.confirm(`Delete ${selectedIds.size} items? This cannot be undone.`)) return;
+    setIsSubmitting(true);
+    try {
+      await postJSON<{ data: { updated?: number; deleted?: number } }>("/api/merchants/bulk", { action, ids: Array.from(selectedIds) });
+      setSelectedIds(new Set());
+      await loadMerchants();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t(locale, "merchants_generic_error");
+      setToast(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const handleRestore = async (merchant: Merchant) => {
     setIsSubmitting(true);
     try {
@@ -164,7 +199,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title={t(locale, "merchants_title")} subtitle={t(locale, "merchants_subtitle")} />
+        <PageHeader title={t(locale, "merchants_title")} />
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             {t(locale, "merchants_add")}
@@ -190,6 +225,17 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
         </div>
       ) : null}
 
+      {selectedIds.size ? (
+        <div className="alert flex flex-wrap items-center justify-between gap-3">
+          <span>{selectedIds.size} selected</span>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkAction("archive")} disabled={isSubmitting}>Archive selected</button>
+            {showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkAction("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}
+            <button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkAction("delete")} disabled={isSubmitting}>Delete selected</button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="card bg-base-100 shadow">
         <div className="card-body space-y-6">
           {loading ? <p className="text-sm opacity-70">{t(locale, "merchants_loading")}</p> : null}
@@ -202,6 +248,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                 <table className="table">
                   <thead className="bg-base-200 text-base-content">
                     <tr>
+                      <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(event) => toggleSelectAll(activeMerchants, event.target.checked)} /></th>
                       <th>{t(locale, "merchants_name")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
@@ -210,6 +257,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                   <tbody>
                     {activeMerchants.map((merchant) => (
                       <tr key={merchant._id}>
+                        <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedIds.has(merchant._id)} onChange={(event) => toggleSelectOne(merchant._id, event.target.checked)} /></td>
                         <td>{merchant.name}</td>
                         <td>
                           {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
@@ -262,6 +310,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <table className="table">
                       <thead className="bg-base-200 text-base-content">
                       <tr>
+                        <th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(event) => toggleSelectAll(archivedMerchants, event.target.checked)} /></th>
                         <th>{t(locale, "merchants_name")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
@@ -270,6 +319,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <tbody>
                       {archivedMerchants.map((merchant) => (
                         <tr key={merchant._id}>
+                          <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedIds.has(merchant._id)} onChange={(event) => toggleSelectOne(merchant._id, event.target.checked)} /></td>
                           <td>{merchant.name}</td>
                           <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
                           <td>
