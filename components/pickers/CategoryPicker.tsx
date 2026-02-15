@@ -21,6 +21,11 @@ type CategoryPickerProps = {
 const getCategoryName = (locale: Locale, category?: Category | null) =>
   category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name");
 
+const getCategoryLabel = (locale: Locale, category?: Category | null) => {
+  const name = getCategoryName(locale, category);
+  return category?.emoji ? `${category.emoji} ${name}` : name;
+};
+
 export function CategoryPicker({
   locale,
   categories,
@@ -39,7 +44,7 @@ export function CategoryPicker({
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
     categories.forEach((category) => {
-      map.set(category._id, getCategoryName(locale, category));
+      map.set(category._id, getCategoryLabel(locale, category));
     });
     return map;
   }, [categories, locale]);
@@ -146,7 +151,7 @@ export function CategoryPicker({
                 setQuery("");
               }}
             >
-              {getCategoryName(locale, category)}
+              {getCategoryLabel(locale, category)}
             </button>
           </li>
         ))}
@@ -168,7 +173,7 @@ export function CategoryPicker({
                 setQuery("");
               }}
             >
-              {getCategoryName(locale, category)}
+              {getCategoryLabel(locale, category)}
             </button>
           </li>
         ))}

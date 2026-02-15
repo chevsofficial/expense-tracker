@@ -21,6 +21,7 @@ export function TagsClient({ locale }: { locale: Locale }) {
   const [toast, setToast] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -107,10 +108,43 @@ export function TagsClient({ locale }: { locale: Locale }) {
 
   const rows = showArchived ? tags : activeTags;
 
+  const toggleSelectOne = (id: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      rows.forEach((row) => {
+        if (checked) next.add(row._id); else next.delete(row._id);
+      });
+      return next;
+    });
+  };
+
+  const handleBulkAction = async (action: "archive" | "unarchive" | "delete") => {
+    if (!selectedIds.size) return;
+    if (action === "delete" && !window.confirm(`Delete ${selectedIds.size} items? This cannot be undone.`)) return;
+    setIsSubmitting(true);
+    try {
+      await postJSON<{ data: { updated?: number; deleted?: number } }>("/api/tags/bulk", { action, ids: Array.from(selectedIds) });
+      setSelectedIds(new Set());
+      await loadTags();
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : "Failed to apply bulk action");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title="Tags" subtitle="Manage transaction tags" />
+        <PageHeader title="Tags" />
         <div className="flex items-center gap-3">
           <button className="btn btn-primary btn-sm" onClick={openAdd}>Add tag</button>
           <label className="flex items-center gap-2 text-sm">
@@ -120,14 +154,25 @@ export function TagsClient({ locale }: { locale: Locale }) {
         </div>
       </div>
       {toast ? <div className="alert alert-error">{toast}</div> : null}
+      {selectedIds.size ? (
+        <div className="alert flex flex-wrap items-center justify-between gap-3">
+          <span>{selectedIds.size} selected</span>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkAction("archive")} disabled={isSubmitting}>Archive selected</button>
+            {showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkAction("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}
+            <button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkAction("delete")} disabled={isSubmitting}>Delete selected</button>
+          </div>
+        </div>
+      ) : null}
       <div className="card bg-base-100 shadow">
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
           <table className="table">
-            <thead><tr><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+            <thead><tr><th><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(event) => toggleSelectAll(event.target.checked)} /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody>
               {rows.map((tag) => (
                 <tr key={tag._id}>
+                  <td><input type="checkbox" className="checkbox checkbox-sm rounded-md border border-base-300" checked={selectedIds.has(tag._id)} onChange={(event) => toggleSelectOne(tag._id, event.target.checked)} /></td>
                   <td>{tag.name}</td>
                   <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
                   <td className="space-x-2">

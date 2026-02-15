@@ -152,7 +152,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title={t(locale, "accounts_title")} subtitle={t(locale, "accounts_subtitle")} />
+        <PageHeader title={t(locale, "accounts_title")} />
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn btn-primary btn-sm" onClick={openAdd}>
             {t(locale, "accounts_add")}

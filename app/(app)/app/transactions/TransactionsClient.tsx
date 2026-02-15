@@ -16,11 +16,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
-import { formatRangeLabel, getPresetRange } from "@/src/utils/dateRange";
+import { getPresetRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
@@ -192,8 +193,10 @@ export function TransactionsClient({
   }));
 
   const categoryName = useCallback(
-    (category?: Category | null) =>
-      category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name"),
+    (category?: Category | null) => {
+      const name = category?.nameCustom?.trim() || category?.nameKey || t(locale, "category_fallback_name");
+      return category?.emoji ? `${category.emoji} ${name}` : name;
+    },
     [locale]
   );
 
@@ -669,7 +672,6 @@ export function TransactionsClient({
     }
   };
 
-  const formattedDateRange = useMemo(() => formatRangeLabel(dateRange, locale), [dateRange, locale]);
 
   const activeTransactions = useMemo(
     () => transactions.filter((transaction) => !transaction.isArchived),
@@ -757,7 +759,7 @@ export function TransactionsClient({
             <th>
               <input
                 type="checkbox"
-                className="checkbox checkbox-sm"
+                className="checkbox checkbox-sm rounded-md border border-base-300"
                 checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))}
                 onChange={(event) => toggleSelectAll(rows, event.target.checked)}
               />
@@ -825,7 +827,7 @@ export function TransactionsClient({
                 <td>
                   <input
                     type="checkbox"
-                    className="checkbox checkbox-sm"
+                    className="checkbox checkbox-sm rounded-md border border-base-300"
                     checked={selectedIds.has(transaction._id)}
                     onChange={(event) => toggleSelectOne(transaction._id, event.target.checked)}
                   />
@@ -903,7 +905,7 @@ export function TransactionsClient({
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <PageHeader title={t(locale, "transactions_title")} subtitle={formattedDateRange} />
+        <PageHeader title={t(locale, "transactions_title")} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
             <span className="opacity-70">{t(locale, "transactions_show_archived")}</span>
@@ -1005,19 +1007,12 @@ export function TransactionsClient({
               </label>
               <label className="form-control w-full">
                 <span className="label-text mb-1 text-sm font-medium">Tags</span>
-                <select
-                  className="select select-bordered select-sm"
-                  multiple
-                  value={tagFilters}
-                  onChange={(event) => {
-                    const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-                    setTagFilters(values);
-                  }}
-                >
-                  {tags.map((tag) => (
-                    <option key={tag._id} value={tag._id}>{tag.name}</option>
-                  ))}
-                </select>
+                <MultiSelectDropdown
+                  items={tags.map((tag) => ({ id: tag._id, label: tag.name, color: tag.color ?? null }))}
+                  selectedIds={tagFilters}
+                  onChange={setTagFilters}
+                  placeholder="Tags"
+                />
               </label>
               
               <label className="form-control w-full md:col-span-2 lg:col-span-2">
@@ -1235,19 +1230,12 @@ export function TransactionsClient({
             ) : null}
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">Tags</span>
-              <select
-                className="select select-bordered"
-                multiple
-                value={formState.tagIds}
-                onChange={(event) => {
-                  const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-                  setFormState({ ...formState, tagIds: values });
-                }}
-              >
-                {tags.map((tag) => (
-                  <option key={tag._id} value={tag._id}>{tag.name}</option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                items={tags.map((tag) => ({ id: tag._id, label: tag.name, color: tag.color ?? null }))}
+                selectedIds={formState.tagIds}
+                onChange={(values) => setFormState({ ...formState, tagIds: values })}
+                placeholder="Select tags..."
+              />
             </label>
             <label className="form-control w-full md:col-span-2">
               <span className="label-text mb-1 text-sm font-medium">

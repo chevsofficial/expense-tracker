@@ -158,7 +158,7 @@ export function ImportClient({ locale }: { locale: Locale }) {
 
   return (
     <section className="space-y-6">
-      <PageHeader title={t(locale, "import_title")} subtitle={t(locale, "import_subtitle")} />
+      <PageHeader title={t(locale, "import_title")} />
 
       <div className="card bg-base-100 shadow">
         <div className="card-body space-y-4">
