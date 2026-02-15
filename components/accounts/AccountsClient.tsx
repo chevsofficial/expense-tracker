@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
-import { TABLE_CLASS, THEAD_CLASS, TR_DIVIDER_CLASS } from "@/components/ui/tableStyles";
+import {
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
+} from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -189,19 +194,19 @@ export function AccountsClient({ locale }: { locale: Locale }) {
             {activeAccounts.length === 0 ? (
               <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_empty")}</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className={TABLE_CLASS}>
-                  <thead className={THEAD_CLASS}>
-                    <tr className={TR_DIVIDER_CLASS}>
+              <div className={tableContainerClass}>
+                <table className={tableClass}>
+                  <thead className={tableHeadClass}>
+                    <tr>
                       <th>{t(locale, "accounts_name")}</th>
                       <th className="text-right">{t(locale, "accounts_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className={tableBodyDividerClass}>
                     {activeAccounts.map((account) => (
-                      <tr key={account._id} className={TR_DIVIDER_CLASS}>
-                        <td className="font-medium">{account.name}</td>
-                        <td className="text-right">
+                      <tr key={account._id}>
+                        <td className="bg-base-100 font-medium">{account.name}</td>
+                        <td className="bg-base-100 text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -245,19 +250,19 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               {archivedAccounts.length === 0 ? (
                 <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_archived_empty")}</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className={TABLE_CLASS}>
-                    <thead className={THEAD_CLASS}>
-                      <tr className={TR_DIVIDER_CLASS}>
+                <div className={tableContainerClass}>
+                  <table className={tableClass}>
+                    <thead className={tableHeadClass}>
+                      <tr>
                         <th>{t(locale, "accounts_name")}</th>
                         <th className="text-right">{t(locale, "accounts_actions")}</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={tableBodyDividerClass}>
                       {archivedAccounts.map((account) => (
-                        <tr key={account._id} className={TR_DIVIDER_CLASS}>
-                          <td className="font-medium">{account.name}</td>
-                          <td className="text-right">
+                        <tr key={account._id}>
+                          <td className="bg-base-100 font-medium">{account.name}</td>
+                          <td className="bg-base-100 text-right">
                             <div className="flex justify-end gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"

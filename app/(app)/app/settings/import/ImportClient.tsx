@@ -2,6 +2,12 @@
 
 import { useMemo, useState, type ChangeEvent } from "react";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import {
+  tableBodyDividerClass,
+  tableClass,
+  tableContainerClass,
+  tableHeadClass,
+} from "@/components/ui/tableStyles";
 import { postJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -297,20 +303,20 @@ export function ImportClient({ locale }: { locale: Locale }) {
               <h3 className="text-sm font-semibold uppercase opacity-60">
                 {t(locale, "import_preview")}
               </h3>
-              <div className="mt-3 overflow-x-auto">
-                <table className="table">
-                  <thead className="bg-base-200 text-base-content">
+              <div className={`mt-3 ${tableContainerClass}`}>
+                <table className={tableClass}>
+                  <thead className={tableHeadClass}>
                     <tr>
                       {headers.map((header) => (
                         <th key={header}>{header}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className={tableBodyDividerClass}>
                     {previewRows.map((row, index) => (
                       <tr key={`${index}`}>
                         {headers.map((header) => (
-                          <td key={`${index}-${header}`}>{row[header]}</td>
+                          <td key={`${index}-${header}`} className="bg-base-100">{row[header]}</td>
                         ))}
                       </tr>
                     ))}

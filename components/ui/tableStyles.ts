@@ -1,8 +1,9 @@
-export const TABLE_CLASS = "table w-full bg-white";
+export const tableClass = "table w-full";
 
-export const THEAD_CLASS =
-  "bg-white text-xs font-semibold text-neutral-700";
+export const tableContainerClass =
+  "overflow-x-auto rounded-xl bg-base-100 p-0 shadow-sm border border-base-300";
 
-export const TR_DIVIDER_CLASS = "border-b border-neutral-200";
+export const tableBodyDividerClass =
+  "[&>tr:not(:last-child)>td]:border-b [&>tr:not(:last-child)>td]:border-base-300";
 
-export const TD_CLASS = "py-3";
+export const tableHeadClass = "bg-base-100 text-neutral-700";
