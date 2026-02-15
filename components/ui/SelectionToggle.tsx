@@ -29,20 +29,24 @@ export function SelectionToggle({
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
       className={[
-        "inline-flex items-center justify-center rounded-md",
+        "inline-flex items-center justify-center",
         dims,
-        "bg-white",
-        "border border-neutral-300",
-        "hover:border-neutral-400",
+        "rounded-md",
         "transition-colors",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-        checked ? "bg-primary border-primary" : "",
+        "border",                 // thin border (1px)
+        checked
+          ? "bg-primary border-primary"
+          : "bg-white border-black",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         className,
       ].join(" ")}
     >
-      {/* Optional: minimal check */}
-      <span className={checked ? "text-primary-content text-xs leading-none" : "text-transparent"}>
+      <span
+        className={[
+          "text-xs leading-none",
+          checked ? "text-white" : "text-transparent",
+        ].join(" ")}
+      >
         ✓
       </span>
     </button>
