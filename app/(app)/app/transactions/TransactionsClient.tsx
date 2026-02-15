@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
+import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
@@ -757,11 +758,11 @@ export function TransactionsClient({
         <thead className="bg-base-200 text-base-content">
           <tr>
             <th>
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
+              <SelectionToggle
                 checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))}
-                onChange={(event) => toggleSelectAll(rows, event.target.checked)}
+                onChange={(next) => toggleSelectAll(rows, next)}
+                size="sm"
+                ariaLabel="Select all transactions"
               />
             </th>
             <th>{t(locale, "transactions_date")}</th>
@@ -825,11 +826,11 @@ export function TransactionsClient({
             return (
               <tr key={transaction._id}>
                 <td>
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
+                  <SelectionToggle
                     checked={selectedIds.has(transaction._id)}
-                    onChange={(event) => toggleSelectOne(transaction._id, event.target.checked)}
+                    onChange={(next) => toggleSelectOne(transaction._id, next)}
+                    size="sm"
+                    ariaLabel="Select transaction"
                   />
                 </td>
                 <td>{dateLabel}</td>
