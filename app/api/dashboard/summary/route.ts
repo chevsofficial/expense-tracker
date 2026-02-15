@@ -10,8 +10,11 @@ const querySchema = z
     startDate: z.string().refine(isYmd, "Invalid start date").optional(),
     endDate: z.string().refine(isYmd, "Invalid end date").optional(),
     accountId: z.string().optional(),
+    accountIds: z.string().optional(),
     categoryId: z.string().optional(),
+    categoryIds: z.string().optional(),
     merchantId: z.string().optional(),
+    merchantIds: z.string().optional(),
     tagIds: z.array(z.string()).optional(),
   })
   .refine(
@@ -31,6 +34,12 @@ const parseOptionalId = (value?: string) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 };
+
+const parseIdList = (value?: string) =>
+  (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
 const summarizeTotals = (rows: Array<{ _id: { kind: "income" | "expense" }; total: number }>) => {
   let incomeMinor = 0;
@@ -82,8 +91,11 @@ export async function GET(request: NextRequest) {
     startDate: params.get("startDate") ?? undefined,
     endDate: params.get("endDate") ?? undefined,
     accountId: params.get("accountId") ?? undefined,
+    accountIds: params.get("accountIds") ?? undefined,
     categoryId: params.get("categoryId") ?? undefined,
+    categoryIds: params.get("categoryIds") ?? undefined,
     merchantId: params.get("merchantId") ?? undefined,
+    merchantIds: params.get("merchantIds") ?? undefined,
     tagIds: params.getAll("tagIds"),
   });
   if (!parsed.success) {
@@ -98,13 +110,25 @@ export async function GET(request: NextRequest) {
   const accountId = parseOptionalId(parsed.data.accountId);
   const categoryId = parseOptionalId(parsed.data.categoryId);
   const merchantId = parseOptionalId(parsed.data.merchantId);
+  const accountIds = [
+    ...(accountId ? [accountId] : []),
+    ...parseIdList(parsed.data.accountIds),
+  ];
+  const categoryIds = [
+    ...(categoryId ? [categoryId] : []),
+    ...parseIdList(parsed.data.categoryIds),
+  ];
+  const merchantIds = [
+    ...(merchantId ? [merchantId] : []),
+    ...parseIdList(parsed.data.merchantIds),
+  ];
   const tagIds = (parsed.data.tagIds ?? []).map(parseOptionalId).filter((value): value is string => Boolean(value));
 
   const rangeFilter = buildTxFilter({
     workspaceId: auth.workspace.id,
-    accountIds: accountId ? [accountId] : undefined,
-    categoryIds: categoryId ? [categoryId] : undefined,
-    merchantIds: merchantId ? [merchantId] : undefined,
+    accountIds: accountIds.length ? accountIds : undefined,
+    categoryIds: categoryIds.length ? categoryIds : undefined,
+    merchantIds: merchantIds.length ? merchantIds : undefined,
     tagIds: tagIds.length ? tagIds : undefined,
     start: startDate,
     end: endExclusive,
@@ -132,9 +156,9 @@ export async function GET(request: NextRequest) {
     {
       $match: buildTxFilter({
         workspaceId: auth.workspace.id,
-        accountIds: accountId ? [accountId] : undefined,
-        categoryIds: categoryId ? [categoryId] : undefined,
-        merchantIds: merchantId ? [merchantId] : undefined,
+        accountIds: accountIds.length ? accountIds : undefined,
+        categoryIds: categoryIds.length ? categoryIds : undefined,
+        merchantIds: merchantIds.length ? merchantIds : undefined,
         tagIds: tagIds.length ? tagIds : undefined,
         end: endExclusive,
       }),
@@ -157,9 +181,9 @@ export async function GET(request: NextRequest) {
         {
           $match: buildTxFilter({
             workspaceId: auth.workspace.id,
-            accountIds: accountId ? [accountId] : undefined,
-            categoryIds: categoryId ? [categoryId] : undefined,
-            merchantIds: merchantId ? [merchantId] : undefined,
+            accountIds: accountIds.length ? accountIds : undefined,
+            categoryIds: categoryIds.length ? categoryIds : undefined,
+            merchantIds: merchantIds.length ? merchantIds : undefined,
             tagIds: tagIds.length ? tagIds : undefined,
             end: startDate,
           }),

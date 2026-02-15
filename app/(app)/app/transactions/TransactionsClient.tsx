@@ -18,15 +18,16 @@ import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
+import { AppFiltersBar } from "@/components/filters/AppFiltersBar";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
-import { DateRangePicker } from "@/components/shared/DateRangePicker";
-import { getPresetRange } from "@/src/utils/dateRange";
+import { resolveDateRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
 import type { Tag } from "@/src/types/tag";
+import type { AppFiltersValue } from "@/src/types/filters";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
 
 type TransactionKind = "income" | "expense" | "transfer";
@@ -150,12 +151,14 @@ export function TransactionsClient({
   const [tags, setTags] = useState<Tag[]>([]);
   const [merchantsLoading, setMerchantsLoading] = useState(false);
   const [creatingMerchant, setCreatingMerchant] = useState(false);
-  const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
+  const [filters, setFilters] = useState<AppFiltersValue>({
+    dateRange: { preset: "thisMonth" },
+    accountIds: [],
+    categoryIds: [],
+    merchantIds: [],
+    tagIds: [],
+  });
   const [kindFilter, setKindFilter] = useState<string>("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [merchantFilter, setMerchantFilter] = useState<string>("");
-  const [accountFilter, setAccountFilter] = useState<string>("");
-  const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [searchFilter, setSearchFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -310,14 +313,15 @@ export function TransactionsClient({
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (dateRange.start) params.set("startDate", dateRange.start);
-      if (dateRange.end) params.set("endDate", dateRange.end);
+      const resolvedRange = resolveDateRange(filters.dateRange);
+      if (resolvedRange.start) params.set("startDate", resolvedRange.start);
+      if (resolvedRange.end) params.set("endDate", resolvedRange.end);
       if (kindFilter) params.set("kind", kindFilter);
-      if (categoryFilter) params.set("categoryId", categoryFilter);
-      if (merchantFilter) params.set("merchantId", merchantFilter);
-      if (accountFilter) params.set("accountId", accountFilter);
+      if (filters.categoryIds.length) params.set("categoryIds", filters.categoryIds.join(","));
+      if (filters.merchantIds.length) params.set("merchantIds", filters.merchantIds.join(","));
+      if (filters.accountIds.length) params.set("accountIds", filters.accountIds.join(","));
       if (searchFilter) params.set("q", searchFilter);
-      tagFilters.forEach((tagId) => params.append("tagIds", tagId));
+      filters.tagIds.forEach((tagId) => params.append("tagIds", tagId));
       params.set("includeArchived", String(showArchived));
 
       const response = await getJSON<TransactionsResponse>(`/api/transactions?${params}`);
@@ -330,15 +334,10 @@ export function TransactionsClient({
     }
   }, [
     locale,
-    dateRange.end,
-    dateRange.start,
+    filters,
     showArchived,
     kindFilter,
-    categoryFilter,
-    merchantFilter,
-    accountFilter,
     searchFilter,
-    tagFilters,
   ]);
 
   useEffect(() => {
@@ -371,25 +370,31 @@ export function TransactionsClient({
     const paramTagIds = searchParams.getAll("tagIds");
 
     if (paramStartDate || paramEndDate) {
-      setDateRange({
-        start: paramStartDate || null,
-        end: paramEndDate || null,
-      });
+      setFilters((current) => ({
+        ...current,
+        dateRange: { preset: "custom", start: paramStartDate ?? undefined, end: paramEndDate ?? undefined },
+      }));
     } else if (paramMonth && /^\d{4}-\d{2}$/.test(paramMonth)) {
       const [yearRaw, monthRaw] = paramMonth.split("-");
       const year = Number(yearRaw);
       const monthIndex = Number(monthRaw) - 1;
       const start = new Date(Date.UTC(year, monthIndex, 1)).toISOString().slice(0, 10);
       const end = new Date(Date.UTC(year, monthIndex + 1, 0)).toISOString().slice(0, 10);
-      setDateRange({ start, end });
+      setFilters((current) => ({ ...current, dateRange: { preset: "custom", start, end } }));
     }
     if (paramKind) setKindFilter(paramKind);
-    if (paramCategory) setCategoryFilter(paramCategory);
-    if (paramMerchant) setMerchantFilter(paramMerchant);
-    if (paramAccount) setAccountFilter(paramAccount);
+    if (paramCategory) setFilters((current) => ({ ...current, categoryIds: [paramCategory] }));
+    if (paramMerchant) setFilters((current) => ({ ...current, merchantIds: [paramMerchant] }));
+    if (paramAccount) setFilters((current) => ({ ...current, accountIds: [paramAccount] }));
+    const paramCategoryIds = searchParams.get("categoryIds")?.split(",").filter(Boolean) ?? [];
+    const paramMerchantIds = searchParams.get("merchantIds")?.split(",").filter(Boolean) ?? [];
+    const paramAccountIds = searchParams.get("accountIds")?.split(",").filter(Boolean) ?? [];
+    if (paramCategoryIds.length) setFilters((current) => ({ ...current, categoryIds: paramCategoryIds }));
+    if (paramMerchantIds.length) setFilters((current) => ({ ...current, merchantIds: paramMerchantIds }));
+    if (paramAccountIds.length) setFilters((current) => ({ ...current, accountIds: paramAccountIds }));
     if (paramQuery) setSearchFilter(paramQuery);
     if (paramArchived) setShowArchived(paramArchived === "true");
-    if (paramTagIds.length) setTagFilters(paramTagIds);
+    if (paramTagIds.length) setFilters((current) => ({ ...current, tagIds: paramTagIds }));
 
     initializedFromQuery.current = true;
   }, [searchParams]);
@@ -397,25 +402,21 @@ export function TransactionsClient({
   useEffect(() => {
     if (!initializedFromQuery.current) return;
     const params = new URLSearchParams();
-    if (dateRange.start) params.set("startDate", dateRange.start);
-    if (dateRange.end) params.set("endDate", dateRange.end);
+    const resolvedRange = resolveDateRange(filters.dateRange);
+    if (resolvedRange.start) params.set("startDate", resolvedRange.start);
+    if (resolvedRange.end) params.set("endDate", resolvedRange.end);
     if (kindFilter) params.set("kind", kindFilter);
-    if (categoryFilter) params.set("categoryId", categoryFilter);
-    if (merchantFilter) params.set("merchantId", merchantFilter);
-    if (accountFilter) params.set("accountId", accountFilter);
+    if (filters.categoryIds.length) params.set("categoryIds", filters.categoryIds.join(","));
+    if (filters.merchantIds.length) params.set("merchantIds", filters.merchantIds.join(","));
+    if (filters.accountIds.length) params.set("accountIds", filters.accountIds.join(","));
     if (searchFilter) params.set("q", searchFilter);
-    tagFilters.forEach((tagId) => params.append("tagIds", tagId));
+    filters.tagIds.forEach((tagId) => params.append("tagIds", tagId));
     params.set("includeArchived", String(showArchived));
     router.replace(`/app/transactions?${params.toString()}`);
   }, [
-    dateRange.end,
-    dateRange.start,
+    filters,
     kindFilter,
-    categoryFilter,
-    merchantFilter,
-    accountFilter,
     searchFilter,
-    tagFilters,
     showArchived,
     router,
   ]);
@@ -935,7 +936,18 @@ export function TransactionsClient({
       <SurfaceCard>
         <SurfaceCardBody className="space-y-3">
           <div className="grid grid-cols-1 gap-3">
-            <DateRangePicker locale={locale} value={dateRange} onChange={setDateRange} />
+            <AppFiltersBar
+              value={filters}
+              onChange={setFilters}
+              accounts={accounts.filter((account) => !account.isArchived).map((account) => ({ id: account._id, label: account.name }))}
+              categories={selectableCategories.map((category) => ({
+                id: category._id,
+                label: category.nameCustom ?? category.nameKey ?? t(locale, "category_fallback_name"),
+                emoji: category.emoji,
+              }))}
+              merchants={merchants.map((merchant) => ({ id: merchant._id, label: merchant.name }))}
+              tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
+            />
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4 lg:grid-cols-8">
               <label className="form-control w-full">
                 <span className="label-text mb-1 text-sm font-medium">
@@ -952,70 +964,6 @@ export function TransactionsClient({
                   <option value="transfer">{t(locale, "transactions_kind_transfer")}</option>
                 </select>
               </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_category")}
-                </span>
-                <CategoryPicker
-                  locale={locale}
-                  categories={selectableCategories}
-                  value={categoryFilter}
-                  onChange={setCategoryFilter}
-                  allowEmpty
-                  emptyLabel={t(locale, "transactions_filter_any")}
-                  placeholder={t(locale, "transactions_filter_any")}
-                  showManageLink
-                />
-              </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_merchant")}
-                </span>
-                <MerchantPicker
-                  locale={locale}
-                  merchants={merchants}
-                  value={merchantFilter}
-                  onChange={setMerchantFilter}
-                  placeholder={t(locale, "transactions_filter_any")}
-                  allowEmpty
-                  emptyLabel={t(locale, "transactions_filter_any")}
-                  allowCreate
-                  creating={creatingMerchant}
-                  onCreateMerchant={createMerchant}
-                  onLoadMerchants={() => void loadMerchants()}
-                  loading={merchantsLoading}
-                  showManageLink
-                />
-              </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_account")}
-                </span>
-                <select
-                  className="select select-bordered select-sm"
-                  value={accountFilter}
-                  onChange={(event) => setAccountFilter(event.target.value)}
-                >
-                  <option value="">{t(locale, "transactions_filter_any")}</option>
-                  {accounts
-                    .filter((account) => !account.isArchived)
-                    .map((account) => (
-                      <option key={account._id} value={account._id}>
-                        {account.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">Tags</span>
-                <MultiSelectDropdown
-                  items={tags.map((tag) => ({ id: tag._id, label: tag.name, color: tag.color ?? null }))}
-                  selectedIds={tagFilters}
-                  onChange={setTagFilters}
-                  placeholder="Tags"
-                />
-              </label>
-              
               <label className="form-control w-full md:col-span-2 lg:col-span-2">
                 <span className="label-text mb-1 text-sm font-medium">
                   {t(locale, "transactions_search")}

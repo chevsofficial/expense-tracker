@@ -1,4 +1,5 @@
 import type { Locale } from "@/src/i18n/messages";
+import type { DateRangeValue } from "@/src/types/filters";
 import { isYmd, toYmdUtc, ymdToUtcDate } from "@/src/utils/dateOnly";
 
 export type DateRange = { start: string | null; end: string | null };
@@ -96,5 +97,20 @@ export function shiftRange(range: DateRange, direction: -1 | 1): DateRange {
   return {
     start: toYmdUtc(addUtcDays(startDate, shiftDays)),
     end: toYmdUtc(addUtcDays(endDate, shiftDays)),
+  };
+}
+
+export function resolveDateRange(value: DateRangeValue): { start?: string; end?: string } {
+  if (value.preset === "custom") {
+    return {
+      ...(value.start ? { start: value.start } : {}),
+      ...(value.end ? { end: value.end } : {}),
+    };
+  }
+
+  const range = getPresetRange(value.preset);
+  return {
+    ...(range.start ? { start: range.start } : {}),
+    ...(range.end ? { end: range.end } : {}),
   };
 }
