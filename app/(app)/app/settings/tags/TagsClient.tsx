@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -168,11 +169,11 @@ export function TagsClient({ locale }: { locale: Locale }) {
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
           <table className="table">
-            <thead><tr><th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(event) => toggleSelectAll(event.target.checked)} /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+            <thead><tr><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody>
               {rows.map((tag) => (
                 <tr key={tag._id}>
-                  <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedIds.has(tag._id)} onChange={(event) => toggleSelectOne(tag._id, event.target.checked)} /></td>
+                  <td><SelectionToggle checked={selectedIds.has(tag._id)} onChange={(next) => toggleSelectOne(tag._id, next)} size="sm" ariaLabel={`Select ${tag.name}`} /></td>
                   <td>{tag.name}</td>
                   <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
                   <td className="space-x-2">

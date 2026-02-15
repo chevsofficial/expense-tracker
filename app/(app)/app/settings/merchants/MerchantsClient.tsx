@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -248,7 +249,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                 <table className="table">
                   <thead className="bg-base-200 text-base-content">
                     <tr>
-                      <th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(event) => toggleSelectAll(activeMerchants, event.target.checked)} /></th>
+                      <th><SelectionToggle checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(activeMerchants, next)} size="sm" ariaLabel="Select all active merchants" /></th>
                       <th>{t(locale, "merchants_name")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
@@ -257,7 +258,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                   <tbody>
                     {activeMerchants.map((merchant) => (
                       <tr key={merchant._id}>
-                        <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedIds.has(merchant._id)} onChange={(event) => toggleSelectOne(merchant._id, event.target.checked)} /></td>
+                        <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                         <td>{merchant.name}</td>
                         <td>
                           {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
@@ -310,7 +311,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <table className="table">
                       <thead className="bg-base-200 text-base-content">
                       <tr>
-                        <th><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(event) => toggleSelectAll(archivedMerchants, event.target.checked)} /></th>
+                        <th><SelectionToggle checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(archivedMerchants, next)} size="sm" ariaLabel="Select all archived merchants" /></th>
                         <th>{t(locale, "merchants_name")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
@@ -319,7 +320,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <tbody>
                       {archivedMerchants.map((merchant) => (
                         <tr key={merchant._id}>
-                          <td><input type="checkbox" className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success" checked={selectedIds.has(merchant._id)} onChange={(event) => toggleSelectOne(merchant._id, event.target.checked)} /></td>
+                          <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                           <td>{merchant.name}</td>
                           <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
                           <td>

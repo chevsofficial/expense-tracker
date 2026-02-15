@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { SelectionToggle } from "@/components/ui/SelectionToggle";
 
 type MultiSelectItem = {
   id: string;
@@ -98,11 +99,11 @@ export function MultiSelectDropdown({
         />
         {filteredItems.map((item) => (
           <label key={item.id} className="label cursor-pointer justify-start gap-2 rounded-md px-2 py-1">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-sm rounded-lg border-2 border-black bg-white checked:bg-primary checked:border-primary checked:checkbox-success"
+            <SelectionToggle
               checked={selectedSet.has(item.id)}
               onChange={() => toggleSelection(item.id)}
+              size="sm"
+              ariaLabel={`Select ${item.label}`}
             />
             {item.color ? (
               <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
