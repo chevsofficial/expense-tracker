@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
   const categoryParam = params.get("categoryId");
   const categoryIdsParam = params.get("categoryIds");
   const merchantParam = params.get("merchantId");
+  const merchantIdsParam = params.get("merchantIds");
   const accountParam = params.get("accountId");
   const accountIdsParam = params.get("accountIds");
   const tagIdsParams = params.getAll("tagIds");
@@ -131,6 +132,20 @@ export async function GET(request: NextRequest) {
       return errorResponse("Invalid merchant id", 400);
     }
     filter.merchantId = merchantId;
+  }
+
+  if (merchantIdsParam) {
+    const ids = merchantIdsParam
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const parsedIds = ids
+      .map((value) => parseObjectId(value))
+      .filter((value): value is NonNullable<typeof value> => Boolean(value));
+    if (parsedIds.length !== ids.length) {
+      return errorResponse("Invalid merchant ids", 400);
+    }
+    filter.merchantId = { $in: parsedIds };
   }
 
   if (accountParam) {

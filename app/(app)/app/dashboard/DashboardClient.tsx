@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
-import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { AppFiltersBar } from "@/components/filters/AppFiltersBar";
 import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 import { CategoryBreakdownWidget } from "@/components/dashboard/widgets/CategoryBreakdownWidget";
 import { MerchantBreakdownWidget } from "@/components/dashboard/widgets/MerchantBreakdownWidget";
@@ -15,7 +15,8 @@ import { TotalIncomeCard } from "@/components/dashboard/widgets/TotalIncomeCard"
 import { TotalExpensesCard } from "@/components/dashboard/widgets/TotalExpensesCard";
 import { TagBreakdownWidget, type TagBreakdownRow } from "@/components/dashboard/widgets/TagBreakdownWidget";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { getPresetRange } from "@/src/utils/dateRange";
+import { resolveDateRange } from "@/src/utils/dateRange";
+import type { AppFiltersValue } from "@/src/types/filters";
 import type { Category } from "@/src/types/category";
 import type { Tag } from "@/src/types/tag";
 
@@ -45,11 +46,13 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [dateRange, setDateRange] = useState(() => getPresetRange("thisMonth"));
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
-  const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [filters, setFilters] = useState<AppFiltersValue>({
+    dateRange: { preset: "thisMonth" },
+    accountIds: [],
+    categoryIds: [],
+    merchantIds: [],
+    tagIds: [],
+  });
 
   const loadFilters = useCallback(async () => {
     try {
@@ -73,12 +76,13 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (dateRange.start) params.set("startDate", dateRange.start);
-      if (dateRange.end) params.set("endDate", dateRange.end);
-      if (selectedAccountId) params.set("accountId", selectedAccountId);
-      if (selectedCategoryId) params.set("categoryId", selectedCategoryId);
-      if (selectedMerchantId) params.set("merchantId", selectedMerchantId);
-      selectedTagIds.forEach((tagId) => params.append("tagIds", tagId));
+      const resolvedRange = resolveDateRange(filters.dateRange);
+      if (resolvedRange.start) params.set("startDate", resolvedRange.start);
+      if (resolvedRange.end) params.set("endDate", resolvedRange.end);
+      if (filters.accountIds.length) params.set("accountIds", filters.accountIds.join(","));
+      if (filters.categoryIds.length) params.set("categoryIds", filters.categoryIds.join(","));
+      if (filters.merchantIds.length) params.set("merchantIds", filters.merchantIds.join(","));
+      filters.tagIds.forEach((tagId) => params.append("tagIds", tagId));
       const response = await getJSON<SummaryResponse>(`/api/dashboard/summary?${params}`);
       setSummary(response.data);
     } catch (err) {
@@ -86,7 +90,7 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
     } finally {
       setLoading(false);
     }
-  }, [dateRange.end, dateRange.start, locale, selectedAccountId, selectedCategoryId, selectedMerchantId, selectedTagIds]);
+  }, [filters, locale]);
 
   useEffect(() => { void loadFilters(); }, [loadFilters]);
   useEffect(() => { void loadSummary(); }, [loadSummary]);
@@ -99,22 +103,17 @@ export function DashboardClient({ locale, defaultCurrency }: { locale: Locale; d
   return (
     <section className="space-y-6">
       <PageHeader title={t(locale, "dashboard_title")} />
-      <DashboardFilterBar
-        locale={locale}
-        accounts={accounts}
-        categories={categories}
-        merchants={merchants}
-        tags={tags}
-        dateRange={dateRange}
-        onDateRangeChange={setDateRange}
-        selectedAccountId={selectedAccountId}
-        onAccountChange={setSelectedAccountId}
-        selectedCategoryId={selectedCategoryId}
-        onCategoryChange={setSelectedCategoryId}
-        selectedMerchantId={selectedMerchantId}
-        onMerchantChange={setSelectedMerchantId}
-        selectedTagIds={selectedTagIds}
-        onTagIdsChange={setSelectedTagIds}
+      <AppFiltersBar
+        value={filters}
+        onChange={setFilters}
+        accounts={accounts.map((account) => ({ id: account._id, label: account.name }))}
+        categories={categories.map((category) => ({
+          id: category._id,
+          label: category.nameCustom ?? category.nameKey ?? t(locale, "category_fallback_name"),
+          emoji: category.emoji,
+        }))}
+        merchants={merchants.map((merchant) => ({ id: merchant._id, label: merchant.name }))}
+        tags={tags.map((tag) => ({ id: tag._id, label: tag.name }))}
       />
       {error ? <div className="alert alert-error">{error}</div> : null}
       {loading && !summary ? <p className="text-sm opacity-70">{t(locale, "dashboard_loading")}</p> : null}
