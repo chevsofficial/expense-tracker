@@ -12,13 +12,13 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import {
   tableBodyDividerClass,
   tableClass,
-  tableContainerClass,
   tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
@@ -898,7 +898,7 @@ export function TransactionsClient({
     rows: Transaction[],
     variant: "active" | "archived",
   ) => (
-    <div className={tableContainerClass}>
+    <DataTable>
       <table className={tableClass}>
         <thead className={tableHeadClass}>
           <tr>
@@ -980,7 +980,7 @@ export function TransactionsClient({
 
             return (
               <tr key={transaction._id}>
-                <td className="bg-base-100">
+                <td>
                   <SelectionToggle
                     checked={selectedIds.has(transaction._id)}
                     onChange={(next) => toggleSelectOne(transaction._id, next)}
@@ -988,16 +988,16 @@ export function TransactionsClient({
                     ariaLabel="Select transaction"
                   />
                 </td>
-                <td className="bg-base-100">{dateLabel}</td>
-                <td className="bg-base-100">{formatCurrency(displayAmountMinor)}</td>
-                <td className="bg-base-100">
+                <td>{dateLabel}</td>
+                <td>{formatCurrency(displayAmountMinor)}</td>
+                <td>
                   <span className="badge badge-ghost">{kindLabel}</span>
                 </td>
-                <td className="bg-base-100">{categoryLabel}</td>
-                <td className="bg-base-100">{accountLabel}</td>
-                <td className="bg-base-100">{merchantLabel}</td>
-                <td className="bg-base-100">{transaction.note ?? "-"}</td>
-                <td className="bg-base-100">
+                <td>{categoryLabel}</td>
+                <td>{accountLabel}</td>
+                <td>{merchantLabel}</td>
+                <td>{transaction.note ?? "-"}</td>
+                <td>
                   {receiptUrl ? (
                     <button
                       className="btn btn-ghost btn-xs"
@@ -1012,7 +1012,7 @@ export function TransactionsClient({
                     "—"
                   )}
                 </td>
-                <td className="bg-base-100">
+                <td>
                   <div className="flex flex-wrap gap-2">
                     {variant === "active" ? (
                       <>
@@ -1055,7 +1055,7 @@ export function TransactionsClient({
           })}
         </tbody>
       </table>
-    </div>
+    </DataTable>
   );
 
   return (
