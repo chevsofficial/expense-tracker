@@ -10,6 +10,8 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableHeadClass,
@@ -550,7 +552,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                 <DataTable>
                   <table className={tableClass}>
                     <thead className={tableHeadClass}>
-                      <tr>
+                      <tr className={THEAD_TR_CLASS}>
                         <th className="w-10">
                           <SelectionToggle
                             checked={
@@ -574,7 +576,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     </thead>
                     <tbody className={tableBodyDividerClass}>
                       {visibleGroups.map((group) => (
-                        <tr key={group._id}>
+                        <tr key={group._id} className={TBODY_TR_CLASS}>
                           <td className=" w-10">
                             <SelectionToggle
                               checked={selectedGroupIds.has(group._id)}
@@ -687,7 +689,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               <DataTable>
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
-                    <tr>
+                    <tr className={THEAD_TR_CLASS}>
                       <th><SelectionToggle checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all categories" /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
@@ -696,7 +698,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   </thead>
                   <tbody className={tableBodyDividerClass}>
                     {activeCategoriesForGroup.map((category) => (
-                      <tr key={category._id}>
+                      <tr key={category._id} className={TBODY_TR_CLASS}>
                         <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                         <td className=" font-medium">{getCategoryLabel(category)}</td>
                         <td>
@@ -746,7 +748,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   <DataTable>
                     <table className={tableClass}>
                       <thead className={tableHeadClass}>
-                        <tr>
+                        <tr className={THEAD_TR_CLASS}>
                           <th><SelectionToggle checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all archived categories" /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
@@ -755,7 +757,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       </thead>
                       <tbody className={tableBodyDividerClass}>
                         {archivedCategoriesForGroup.map((category) => (
-                          <tr key={category._id}>
+                          <tr key={category._id} className={TBODY_TR_CLASS}>
                             <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                             <td className=" font-medium">{getCategoryLabel(category)}</td>
                             <td>

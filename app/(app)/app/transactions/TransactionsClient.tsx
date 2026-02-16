@@ -17,6 +17,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableHeadClass,
@@ -901,7 +903,7 @@ export function TransactionsClient({
     <DataTable>
       <table className={tableClass}>
         <thead className={tableHeadClass}>
-          <tr>
+          <tr className={THEAD_TR_CLASS}>
             <th>
               <SelectionToggle
                 checked={
@@ -926,7 +928,7 @@ export function TransactionsClient({
         </thead>
         <tbody className={tableBodyDividerClass}>
           {rows.length === 0 ? (
-            <tr>
+            <tr className="border-b border-neutral-200 last:border-b-0">
               <td colSpan={10} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")
@@ -979,7 +981,7 @@ export function TransactionsClient({
               : transaction.receiptUrls?.[0];
 
             return (
-              <tr key={transaction._id}>
+              <tr key={transaction._id} className={TBODY_TR_CLASS}>
                 <td>
                   <SelectionToggle
                     checked={selectedIds.has(transaction._id)}

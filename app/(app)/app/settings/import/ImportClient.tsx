@@ -3,6 +3,8 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableContainerClass,
@@ -306,7 +308,7 @@ export function ImportClient({ locale }: { locale: Locale }) {
               <div className={`mt-3 ${tableContainerClass}`}>
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
-                    <tr>
+                    <tr className={THEAD_TR_CLASS}>
                       {headers.map((header) => (
                         <th key={header}>{header}</th>
                       ))}
@@ -314,9 +316,9 @@ export function ImportClient({ locale }: { locale: Locale }) {
                   </thead>
                   <tbody className={tableBodyDividerClass}>
                     {previewRows.map((row, index) => (
-                      <tr key={`${index}`}>
+                      <tr key={`${index}`} className={TBODY_TR_CLASS}>
                         {headers.map((header) => (
-                          <td key={`${index}-${header}`} className="bg-base-100">{row[header]}</td>
+                          <td key={`${index}-${header}`} className="bg-transparent">{row[header]}</td>
                         ))}
                       </tr>
                     ))}
