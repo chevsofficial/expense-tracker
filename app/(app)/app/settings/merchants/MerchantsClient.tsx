@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
@@ -10,7 +11,6 @@ import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBodyDividerClass,
   tableClass,
-  tableContainerClass,
   tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -252,7 +252,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
               {t(locale, "merchants_active")}
             </h2>
             {activeMerchants.length ? (
-              <div className={`mt-3 ${tableContainerClass}`}>
+              <DataTable className="mt-3">
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
                     <tr>
@@ -265,12 +265,12 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                   <tbody className={tableBodyDividerClass}>
                     {activeMerchants.map((merchant) => (
                       <tr key={merchant._id}>
-                        <td className="bg-base-100"><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
-                        <td className="bg-base-100">{merchant.name}</td>
-                        <td className="bg-base-100">
+                        <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
+                        <td>{merchant.name}</td>
+                        <td>
                           {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
                         </td>
-                        <td className="bg-base-100">
+                        <td>
                           <div className="flex flex-wrap gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -302,7 +302,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTable>
             ) : (
               <p className="mt-2 text-sm opacity-60">{t(locale, "merchants_no_items")}</p>
             )}
@@ -314,7 +314,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                 {t(locale, "merchants_archived")}
               </h2>
               {archivedMerchants.length ? (
-                <div className={`mt-3 ${tableContainerClass}`}>
+                <DataTable className="mt-3">
                     <table className={tableClass}>
                       <thead className={tableHeadClass}>
                       <tr>
@@ -327,10 +327,10 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <tbody className={tableBodyDividerClass}>
                       {archivedMerchants.map((merchant) => (
                         <tr key={merchant._id}>
-                          <td className="bg-base-100"><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
-                          <td className="bg-base-100">{merchant.name}</td>
-                          <td className="bg-base-100">{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
-                          <td className="bg-base-100">
+                          <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
+                          <td>{merchant.name}</td>
+                          <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
+                          <td>
                             <div className="flex flex-wrap gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"
@@ -354,7 +354,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTable>
               ) : (
                 <p className="mt-2 text-sm opacity-60">{t(locale, "merchants_no_archived")}</p>
               )}

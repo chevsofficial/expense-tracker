@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
   tableBodyDividerClass,
   tableClass,
-  tableContainerClass,
   tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
@@ -194,7 +194,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
             {activeAccounts.length === 0 ? (
               <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_empty")}</p>
             ) : (
-              <div className={tableContainerClass}>
+              <DataTable className="mt-3">
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
                     <tr>
@@ -205,8 +205,8 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                   <tbody className={tableBodyDividerClass}>
                     {activeAccounts.map((account) => (
                       <tr key={account._id}>
-                        <td className="bg-base-100 font-medium">{account.name}</td>
-                        <td className="bg-base-100 text-right">
+                        <td className=" font-medium">{account.name}</td>
+                        <td className=" text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -238,7 +238,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTable>
             )}
           </div>
 
@@ -250,7 +250,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               {archivedAccounts.length === 0 ? (
                 <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_archived_empty")}</p>
               ) : (
-                <div className={tableContainerClass}>
+                <DataTable className="mt-3">
                   <table className={tableClass}>
                     <thead className={tableHeadClass}>
                       <tr>
@@ -261,8 +261,8 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                     <tbody className={tableBodyDividerClass}>
                       {archivedAccounts.map((account) => (
                         <tr key={account._id}>
-                          <td className="bg-base-100 font-medium">{account.name}</td>
-                          <td className="bg-base-100 text-right">
+                          <td className=" font-medium">{account.name}</td>
+                          <td className=" text-right">
                             <div className="flex justify-end gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"
@@ -285,7 +285,7 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTable>
               )}
             </div>
           ) : null}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
@@ -10,7 +11,6 @@ import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBodyDividerClass,
   tableClass,
-  tableContainerClass,
   tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -175,16 +175,16 @@ export function TagsClient({ locale }: { locale: Locale }) {
       <div className={CHIP_CLASS_NO_PADDING}>
         <div className="card-body">
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
-          <div className={tableContainerClass}>
+          <DataTable>
             <table className={tableClass}>
             <thead className={tableHeadClass}><tr><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody className={tableBodyDividerClass}>
               {rows.map((tag) => (
                 <tr key={tag._id}>
-                  <td className="bg-base-100"><SelectionToggle checked={selectedIds.has(tag._id)} onChange={(next) => toggleSelectOne(tag._id, next)} size="sm" ariaLabel={`Select ${tag.name}`} /></td>
-                  <td className="bg-base-100">{tag.name}</td>
-                  <td className="bg-base-100"><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
-                  <td className="bg-base-100 space-x-2">
+                  <td><SelectionToggle checked={selectedIds.has(tag._id)} onChange={(next) => toggleSelectOne(tag._id, next)} size="sm" ariaLabel={`Select ${tag.name}`} /></td>
+                  <td>{tag.name}</td>
+                  <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>
+                  <td className=" space-x-2">
                     <button className="btn btn-ghost btn-xs" onClick={() => openEdit(tag)}>Edit</button>
                     {tag.archivedAt ? (
                       <button className="btn btn-ghost btn-xs" onClick={() => void setArchived(tag, false)}>Unarchive</button>
@@ -197,7 +197,7 @@ export function TagsClient({ locale }: { locale: Locale }) {
               ))}
             </tbody>
             </table>
-          </div>
+          </DataTable>
           {showArchived && archivedTags.length === 0 ? <p className="text-sm opacity-70">No archived tags.</p> : null}
         </div>
       </div>

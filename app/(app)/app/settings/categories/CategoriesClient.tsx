@@ -2,16 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { EmojiPickerDropdown } from "@/components/forms/EmojiPickerDropdown";
+import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBodyDividerClass,
   tableClass,
-  tableContainerClass,
   tableHeadClass,
 } from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -547,7 +547,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ) : null}
 
               {visibleGroups.length > 0 ? (
-                <div className={tableContainerClass}>
+                <DataTable>
                   <table className={tableClass}>
                     <thead className={tableHeadClass}>
                       <tr>
@@ -575,7 +575,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     <tbody className={tableBodyDividerClass}>
                       {visibleGroups.map((group) => (
                         <tr key={group._id}>
-                          <td className="bg-base-100 w-10">
+                          <td className=" w-10">
                             <SelectionToggle
                               checked={selectedGroupIds.has(group._id)}
                               onChange={(next) =>
@@ -585,7 +585,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                               ariaLabel={`Select group ${getDisplayName(group)}`}
                             />
                           </td>
-                          <td className="bg-base-100">
+                          <td>
                             <button
                               className={`text-left ${
                                 selectedGroupId === group._id ? "font-semibold" : ""
@@ -595,7 +595,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                               {getDisplayName(group)}
                             </button>
                           </td>
-                          <td className="bg-base-100">
+                          <td>
                             <div className="flex justify-end gap-2">
                               <button
                                 className="btn btn-ghost btn-xs"
@@ -642,7 +642,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTable>
               ) : null}
             </div>
           </div>
@@ -684,7 +684,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             ) : null}
 
             {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
-              <div className={tableContainerClass}>
+              <DataTable>
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
                     <tr>
@@ -697,14 +697,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   <tbody className={tableBodyDividerClass}>
                     {activeCategoriesForGroup.map((category) => (
                       <tr key={category._id}>
-                        <td className="bg-base-100"><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
-                        <td className="bg-base-100 font-medium">{getCategoryLabel(category)}</td>
-                        <td className="bg-base-100">
+                        <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
+                        <td className=" font-medium">{getCategoryLabel(category)}</td>
+                        <td>
                           <span className="badge badge-outline">
                             {kindLabels[normalizeKind(category.kind)]}
                           </span>
                         </td>
-                        <td className="bg-base-100 text-right">
+                        <td className=" text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               className="btn btn-ghost btn-xs"
@@ -730,7 +730,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTable>
             ) : null}
 
             {showArchived && selectedGroupId ? (
@@ -743,7 +743,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                     {t(locale, "categories_no_archived_categories")}
                   </div>
                 ) : (
-                  <div className={tableContainerClass}>
+                  <DataTable>
                     <table className={tableClass}>
                       <thead className={tableHeadClass}>
                         <tr>
@@ -756,14 +756,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       <tbody className={tableBodyDividerClass}>
                         {archivedCategoriesForGroup.map((category) => (
                           <tr key={category._id}>
-                            <td className="bg-base-100"><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
-                            <td className="bg-base-100 font-medium">{getCategoryLabel(category)}</td>
-                            <td className="bg-base-100">
+                            <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
+                            <td className=" font-medium">{getCategoryLabel(category)}</td>
+                            <td>
                               <span className="badge badge-outline">
                                 {kindLabels[normalizeKind(category.kind)]}
                               </span>
                             </td>
-                            <td className="bg-base-100 text-right">
+                            <td className=" text-right">
                               <div className="flex justify-end gap-2">
                                 <button
                                   className="btn btn-ghost btn-xs"
@@ -783,7 +783,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </DataTable>
                 )}
               </div>
             ) : null}
@@ -908,7 +908,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           />
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
-            <EmojiPickerDropdown value={newCategoryEmoji} onChange={setNewCategoryEmoji} />
+            <EmojiPickerPopover value={newCategoryEmoji} onChange={setNewCategoryEmoji} />
           </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
@@ -971,7 +971,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           />
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
-            <EmojiPickerDropdown value={editCategoryEmoji} onChange={setEditCategoryEmoji} />
+            <EmojiPickerPopover value={editCategoryEmoji} onChange={setEditCategoryEmoji} />
           </label>
           <label className="form-control w-full">
             <span className="label-text mb-1 text-sm font-medium">
