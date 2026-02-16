@@ -6,6 +6,8 @@ import type { Locale } from "@/src/i18n/messages";
 import { PieChartWidget } from "@/components/charts/PieChartWidget";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableContainerClass,
@@ -80,16 +82,16 @@ export function MerchantBreakdownWidget({
           <div className={`max-h-[360px] overflow-auto ${tableContainerClass}`}>
             <table className={tableClass}>
               <thead className={tableHeadClass}>
-                <tr>
+                <tr className={THEAD_TR_CLASS}>
                   <th>{t(locale, "dashboard_table_merchant")}</th>
                   <th className="text-right">{t(locale, "dashboard_table_amount")}</th>
                 </tr>
               </thead>
               <tbody className={tableBodyDividerClass}>
                 {rows.map((row) => (
-                  <tr key={`${row.id ?? "unassigned"}`}>
-                    <td className="bg-base-100">{row.name}</td>
-                    <td className="bg-base-100 text-right">
+                  <tr key={`${row.id ?? "unassigned"}`} className={TBODY_TR_CLASS}>
+                    <td className="bg-transparent">{row.name}</td>
+                    <td className="bg-transparent text-right">
                       {formatCurrency(locale, row.amountMinor, currency)}
                     </td>
                   </tr>

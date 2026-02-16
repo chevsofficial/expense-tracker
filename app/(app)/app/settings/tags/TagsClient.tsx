@@ -9,6 +9,8 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableHeadClass,
@@ -177,10 +179,10 @@ export function TagsClient({ locale }: { locale: Locale }) {
           {loading ? <p className="text-sm opacity-70">Loading…</p> : null}
           <DataTable>
             <table className={tableClass}>
-            <thead className={tableHeadClass}><tr><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
+            <thead className={tableHeadClass}><tr className={THEAD_TR_CLASS}><th><SelectionToggle checked={rows.length > 0 && rows.every((row) => selectedIds.has(row._id))} onChange={(next) => toggleSelectAll(next)} size="sm" ariaLabel="Select all tags" /></th><th>Name</th><th>Color</th><th>Actions</th></tr></thead>
             <tbody className={tableBodyDividerClass}>
               {rows.map((tag) => (
-                <tr key={tag._id}>
+                <tr key={tag._id} className={TBODY_TR_CLASS}>
                   <td><SelectionToggle checked={selectedIds.has(tag._id)} onChange={(next) => toggleSelectOne(tag._id, next)} size="sm" ariaLabel={`Select ${tag.name}`} /></td>
                   <td>{tag.name}</td>
                   <td><span className="inline-block h-4 w-4 rounded-full border" style={{ backgroundColor: tag.color || "transparent" }} /></td>

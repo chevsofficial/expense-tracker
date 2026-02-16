@@ -6,6 +6,8 @@ import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
+  TBODY_TR_CLASS,
+  THEAD_TR_CLASS,
   tableBodyDividerClass,
   tableClass,
   tableHeadClass,
@@ -197,14 +199,14 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               <DataTable className="mt-3">
                 <table className={tableClass}>
                   <thead className={tableHeadClass}>
-                    <tr>
+                    <tr className={THEAD_TR_CLASS}>
                       <th>{t(locale, "accounts_name")}</th>
                       <th className="text-right">{t(locale, "accounts_actions")}</th>
                     </tr>
                   </thead>
                   <tbody className={tableBodyDividerClass}>
                     {activeAccounts.map((account) => (
-                      <tr key={account._id}>
+                      <tr key={account._id} className={TBODY_TR_CLASS}>
                         <td className=" font-medium">{account.name}</td>
                         <td className=" text-right">
                           <div className="flex justify-end gap-2">
@@ -253,14 +255,14 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                 <DataTable className="mt-3">
                   <table className={tableClass}>
                     <thead className={tableHeadClass}>
-                      <tr>
+                      <tr className={THEAD_TR_CLASS}>
                         <th>{t(locale, "accounts_name")}</th>
                         <th className="text-right">{t(locale, "accounts_actions")}</th>
                       </tr>
                     </thead>
                     <tbody className={tableBodyDividerClass}>
                       {archivedAccounts.map((account) => (
-                        <tr key={account._id}>
+                        <tr key={account._id} className={TBODY_TR_CLASS}>
                           <td className=" font-medium">{account.name}</td>
                           <td className=" text-right">
                             <div className="flex justify-end gap-2">
