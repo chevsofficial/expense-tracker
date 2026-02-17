@@ -3,13 +3,11 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableContainerClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 import { postJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -306,17 +304,17 @@ export function ImportClient({ locale }: { locale: Locale }) {
                 {t(locale, "import_preview")}
               </h3>
               <div className={`mt-3 ${tableContainerClass}`}>
-                <table className={tableClass}>
+                <table className={tableBaseClass}>
                   <thead className={tableHeadClass}>
-                    <tr className={THEAD_TR_CLASS}>
+                    <tr>
                       {headers.map((header) => (
                         <th key={header}>{header}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className={tableBodyDividerClass}>
+                  <tbody className={tableBodyClass}>
                     {previewRows.map((row, index) => (
-                      <tr key={`${index}`} className={TBODY_TR_CLASS}>
+                      <tr key={`${index}`}>
                         {headers.map((header) => (
                           <td key={`${index}-${header}`} className="bg-transparent">{row[header]}</td>
                         ))}
