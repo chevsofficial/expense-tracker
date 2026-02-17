@@ -28,6 +28,7 @@ import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
 import { AppFiltersBar } from "@/components/filters/AppFiltersBar";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
+import { formGrid, formGridFull, labelBase, selectBase, textareaBase } from "@/components/ui/formStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { resolveDateRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
@@ -1193,7 +1194,7 @@ export function TransactionsClient({
         onClose={() => setModalOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className={formGrid}>
             <TextField
               id="transaction-date"
               label={t(locale, "transactions_date")}
@@ -1213,45 +1214,12 @@ export function TransactionsClient({
                 setFormState({ ...formState, amount: event.target.value })
               }
             />
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
-                {t(locale, "transactions_kind")}
-              </span>
-              {isKindLocked ? (
-                <div className="badge badge-outline h-10 w-fit px-4 text-sm font-medium">
-                  {selectedCategoryKind === "income"
-                    ? t(locale, "category_kind_income")
-                    : t(locale, "category_kind_expense")}
-                </div>
-              ) : (
-                <select
-                  className="select select-bordered"
-                  value={formState.kind}
-                  onChange={(event) => {
-                    setFormState({
-                      ...formState,
-                      kind: event.target.value as TransactionKind,
-                    });
-                  }}
-                >
-                  <option value="expense">
-                    {t(locale, "category_kind_expense")}
-                  </option>
-                  <option value="income">
-                    {t(locale, "category_kind_income")}
-                  </option>
-                  <option value="transfer">
-                    {t(locale, "transactions_kind_transfer")}
-                  </option>
-                </select>
-              )}
-            </label>
-            <label className="form-control w-full">
-              <span className="label-text mb-1 text-sm font-medium">
+            <label className="w-full">
+              <span className={labelBase}>
                 {t(locale, "transactions_account")}
               </span>
               <select
-                className="select select-bordered"
+                className={selectBase}
                 value={formState.accountId}
                 onChange={(event) =>
                   setFormState({
@@ -1272,37 +1240,9 @@ export function TransactionsClient({
                   ))}
               </select>
             </label>
-            {formState.kind === "transfer" ? (
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
-                  {t(locale, "transactions_transfer_to")}
-                </span>
-                <select
-                  className="select select-bordered"
-                  value={formState.transferToAccountId}
-                  onChange={(event) =>
-                    setFormState({
-                      ...formState,
-                      transferToAccountId: event.target.value,
-                    })
-                  }
-                >
-                  <option value="unassigned">
-                    {t(locale, "transactions_account_unassigned")}
-                  </option>
-                  {accounts
-                    .filter((account) => !account.isArchived)
-                    .map((account) => (
-                      <option key={account._id} value={account._id}>
-                        {account.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            ) : null}
             {formState.kind !== "transfer" ? (
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
+              <label className="w-full">
+                <span className={labelBase}>
                   {t(locale, "transactions_category")}
                 </span>
                 <CategoryPicker
@@ -1324,10 +1264,9 @@ export function TransactionsClient({
                 />
               </label>
             ) : null}
-
             {formState.kind !== "transfer" ? (
-              <label className="form-control w-full">
-                <span className="label-text mb-1 text-sm font-medium">
+              <label className="w-full">
+                <span className={labelBase}>
                   {t(locale, "transactions_merchant")}
                 </span>
                 <MerchantPicker
@@ -1345,8 +1284,69 @@ export function TransactionsClient({
                 />
               </label>
             ) : null}
-            <label className="form-control w-full md:col-span-2">
-              <span className="label-text mb-1 text-sm font-medium">Tags</span>
+            <label className="w-full">
+              <span className={labelBase}>
+                {t(locale, "transactions_kind")}
+              </span>
+              {isKindLocked ? (
+                <div className="badge badge-outline h-10 w-fit px-4 text-sm font-medium">
+                  {selectedCategoryKind === "income"
+                    ? t(locale, "category_kind_income")
+                    : t(locale, "category_kind_expense")}
+                </div>
+              ) : (
+                <select
+                  className={selectBase}
+                  value={formState.kind}
+                  onChange={(event) => {
+                    setFormState({
+                      ...formState,
+                      kind: event.target.value as TransactionKind,
+                    });
+                  }}
+                >
+                  <option value="expense">
+                    {t(locale, "category_kind_expense")}
+                  </option>
+                  <option value="income">
+                    {t(locale, "category_kind_income")}
+                  </option>
+                  <option value="transfer">
+                    {t(locale, "transactions_kind_transfer")}
+                  </option>
+                </select>
+              )}
+            </label>
+            {formState.kind === "transfer" ? (
+              <label className="w-full">
+                <span className={labelBase}>
+                  {t(locale, "transactions_transfer_to")}
+                </span>
+                <select
+                  className={selectBase}
+                  value={formState.transferToAccountId}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      transferToAccountId: event.target.value,
+                    })
+                  }
+                >
+                  <option value="unassigned">
+                    {t(locale, "transactions_account_unassigned")}
+                  </option>
+                  {accounts
+                    .filter((account) => !account.isArchived)
+                    .map((account) => (
+                      <option key={account._id} value={account._id}>
+                        {account.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            ) : null}
+            <label className={`w-full ${formGridFull}`}>
+              <span className={labelBase}>Tags</span>
               <MultiSelectDropdown
                 items={tags.map((tag) => ({
                   id: tag._id,
@@ -1360,12 +1360,12 @@ export function TransactionsClient({
                 placeholder="Select tags..."
               />
             </label>
-            <label className="form-control w-full md:col-span-2">
-              <span className="label-text mb-1 text-sm font-medium">
+            <label className={`w-full ${formGridFull}`}>
+              <span className={labelBase}>
                 {t(locale, "transactions_note")}
               </span>
               <textarea
-                className="textarea textarea-bordered"
+                className={textareaBase}
                 value={formState.note}
                 onChange={(event) =>
                   setFormState({ ...formState, note: event.target.value })
@@ -1375,7 +1375,7 @@ export function TransactionsClient({
           </div>
 
           {formState.kind !== "transfer" ? (
-            <div className="space-y-2">
+            <div className={`space-y-2 ${formGridFull}`}>
               <p className="text-sm font-medium">
                 {t(locale, "transactions_receipts")}
               </p>

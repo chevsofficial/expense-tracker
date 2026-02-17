@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { FILTER_BORDER, UI_RING } from "@/components/ui/styles";
+import { fieldBase } from "@/components/ui/formStyles";
 
 type Option = {
   id: string;
@@ -169,7 +170,7 @@ export function MultiSelectDropDown({
         ) : (
           <>
             <input
-              className="input input-sm input-bordered w-full mb-2"
+              className={`${fieldBase} mb-2`}
               placeholder={`Search ${placeholder.toLowerCase()}...`}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
