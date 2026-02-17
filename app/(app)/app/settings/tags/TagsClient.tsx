@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageActions } from "@/components/ui/PageActions";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -153,13 +154,13 @@ export function TagsClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader title="Tags" />
-        <div className="flex items-center gap-3">
-          <button className="btn btn-primary btn-sm" onClick={openAdd}>Add tag</button>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="toggle toggle-sm" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-            Show archived
-          </label>
-        </div>
+        <PageActions
+          addLabel="Add tag"
+          onAdd={openAdd}
+          showArchived={showArchived}
+          onToggleArchived={setShowArchived}
+          archivedLabel="Show archived"
+        />
       </div>
       {toast ? <div className="alert alert-error">{toast}</div> : null}
       {selectedIds.size ? (

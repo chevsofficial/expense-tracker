@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageActions } from "@/components/ui/PageActions";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -208,20 +209,13 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader title={t(locale, "merchants_title")} />
-        <div className="flex flex-wrap items-center gap-3">
-          <button className="btn btn-primary btn-sm" onClick={openAdd}>
-            {t(locale, "merchants_add")}
-          </button>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            {t(locale, "merchants_show_archived")}
-          </label>
-        </div>
+        <PageActions
+          addLabel={t(locale, "merchants_add")}
+          onAdd={openAdd}
+          showArchived={showArchived}
+          onToggleArchived={setShowArchived}
+          archivedLabel={t(locale, "merchants_show_archived")}
+        />
       </div>
 
       {toast ? (

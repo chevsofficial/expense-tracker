@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageActions } from "@/components/ui/PageActions";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import {
@@ -1062,22 +1063,13 @@ export function TransactionsClient({
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader title={t(locale, "transactions_title")} />
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <span className="opacity-70">
-              {t(locale, "transactions_show_archived")}
-            </span>
-            <input
-              type="checkbox"
-              className="toggle toggle-primary toggle-sm"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-          </label>
-          <button className="btn btn-primary btn-sm" onClick={openAddModal}>
-            {t(locale, "transactions_add")}
-          </button>
-        </div>
+        <PageActions
+          addLabel={t(locale, "transactions_add")}
+          onAdd={openAddModal}
+          showArchived={showArchived}
+          onToggleArchived={setShowArchived}
+          archivedLabel={t(locale, "transactions_show_archived")}
+        />
       </div>
 
       {toast ? (
