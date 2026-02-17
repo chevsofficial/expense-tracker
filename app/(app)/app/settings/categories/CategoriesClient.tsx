@@ -9,6 +9,7 @@ import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { addButtonClass } from "@/components/ui/buttonStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { formGrid, labelBase, selectBase } from "@/components/ui/formStyles";
 import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
@@ -894,6 +895,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
         onClose={() => setAddCategoryOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleCreateCategory}>
+          <div className={formGrid}>
           <TextField
             id="new-category-name"
             label={t(locale, "categories_category_name")}
@@ -901,16 +903,16 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             onChange={(event) => setNewCategoryName(event.target.value)}
             placeholder={t(locale, "categories_category_placeholder")}
           />
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
+          <label className="w-full">
+            <span className={labelBase}>{t(locale, "categories_emoji_label")}</span>
             <EmojiPickerPopover value={newCategoryEmoji} onChange={setNewCategoryEmoji} />
           </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
+          <label className="w-full">
+            <span className={labelBase}>
               {t(locale, "categories_group_label")}
             </span>
             <select
-              className="select select-bordered w-full"
+              className={selectBase}
               value={newCategoryGroupId}
               onChange={(event) => setNewCategoryGroupId(event.target.value)}
             >
@@ -921,12 +923,12 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ))}
             </select>
           </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
+          <label className="w-full">
+            <span className={labelBase}>
               {t(locale, "categories_kind_label")}
             </span>
             <select
-              className="select select-bordered w-full"
+              className={selectBase}
               value={newCategoryKind}
               onChange={(event) => setNewCategoryKind(event.target.value as CategoryFormKind)}
             >
@@ -937,6 +939,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ))}
             </select>
           </label>
+          </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -958,22 +961,23 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
         onClose={() => setEditCategoryOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleEditCategory}>
+          <div className={formGrid}>
           <TextField
             id="edit-category-name"
             label={t(locale, "categories_category_name")}
             value={editCategoryName}
             onChange={(event) => setEditCategoryName(event.target.value)}
           />
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">{t(locale, "categories_emoji_label")}</span>
+          <label className="w-full">
+            <span className={labelBase}>{t(locale, "categories_emoji_label")}</span>
             <EmojiPickerPopover value={editCategoryEmoji} onChange={setEditCategoryEmoji} />
           </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
+          <label className="w-full">
+            <span className={labelBase}>
               {t(locale, "categories_group_label")}
             </span>
             <select
-              className="select select-bordered w-full"
+              className={selectBase}
               value={editCategoryGroupId}
               onChange={(event) => setEditCategoryGroupId(event.target.value)}
             >
@@ -984,12 +988,12 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ))}
             </select>
           </label>
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
+          <label className="w-full">
+            <span className={labelBase}>
               {t(locale, "categories_kind_label")}
             </span>
             <select
-              className="select select-bordered w-full"
+              className={selectBase}
               value={editCategoryKind}
               onChange={(event) => setEditCategoryKind(event.target.value as CategoryFormKind)}
             >
@@ -1000,6 +1004,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
               ))}
             </select>
           </label>
+          </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"

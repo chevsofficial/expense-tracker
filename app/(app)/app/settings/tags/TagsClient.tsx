@@ -8,6 +8,7 @@ import { PageActions } from "@/components/ui/PageActions";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { formGrid } from "@/components/ui/formStyles";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBaseClass,
@@ -205,8 +206,10 @@ export function TagsClient({ locale }: { locale: Locale }) {
 
       <Modal open={editOpen} title={editingTag ? "Edit tag" : "Add tag"} onClose={() => setEditOpen(false)}>
         <form className="space-y-3" onSubmit={handleSave}>
+          <div className={formGrid}>
           <TextField id="tag-name" label="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
           <TextField id="tag-color" label="Color" type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} />
+          </div>
           <div className="flex justify-end">
             <SubmitButton isLoading={isSubmitting}>{editingTag ? "Save" : "Add"}</SubmitButton>
           </div>

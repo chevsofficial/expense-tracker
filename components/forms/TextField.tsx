@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { fieldBase, labelBase } from "@/components/ui/formStyles";
 
 type TextFieldProps = {
   id: string;
@@ -23,9 +24,13 @@ export function TextField({
   step,
   inputClassName = "",
 }: TextFieldProps) {
+  const classes = [fieldBase, inputClassName, error ? "border-error" : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <label className="form-control w-full">
-      <span className="label-text mb-1 text-sm font-medium">{label}</span>
+    <label className="w-full">
+      <span className={labelBase}>{label}</span>
       <input
         id={id}
         type={type}
@@ -33,7 +38,7 @@ export function TextField({
         onChange={onChange}
         placeholder={placeholder}
         step={step}
-        className={`input input-bordered w-full ${inputClassName} ${error ? "input-error" : ""}`}
+        className={classes}
       />
       {error ? <span className="mt-1 text-xs text-error">{error}</span> : null}
     </label>

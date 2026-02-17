@@ -8,6 +8,7 @@ import { PageActions } from "@/components/ui/PageActions";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { formGrid, labelBase, fieldBase } from "@/components/ui/formStyles";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBaseClass,
@@ -363,18 +364,19 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
         onClose={() => setEditOpen(false)}
       >
         <form className="space-y-4" onSubmit={handleSave}>
+          <div className={formGrid}>
           <TextField
             id="merchant-name"
             label={t(locale, "merchants_name")}
             value={editName}
             onChange={(event) => setEditName(event.target.value)}
           />
-          <label className="form-control w-full">
-            <span className="label-text mb-1 text-sm font-medium">
+          <label className="w-full">
+            <span className={labelBase}>
               {t(locale, "merchants_aliases")}
             </span>
             <input
-              className="input input-bordered w-full"
+              className={fieldBase}
               value={editAliases}
               onChange={(event) => setEditAliases(event.target.value)}
               placeholder={t(locale, "merchants_aliases_placeholder")}
@@ -383,6 +385,7 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
               {t(locale, "merchants_aliases_helper")}
             </span>
           </label>
+          </div>
           <div className="flex justify-end gap-2">
             <button className="btn btn-ghost" type="button" onClick={() => setEditOpen(false)}>
               {t(locale, "transactions_cancel")}

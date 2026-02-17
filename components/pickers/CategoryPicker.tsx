@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
+import { fieldBase } from "@/components/ui/formStyles";
 
 type CategoryPickerProps = {
   locale: Locale;
@@ -95,7 +96,7 @@ export function CategoryPicker({
     >
       <button
         type="button"
-        className="input input-bordered flex w-full items-center justify-between text-left"
+        className={`${fieldBase} flex items-center justify-between text-left`}
         onClick={() => {
           if (disabled) return;
           setDropdownOpen(true);
@@ -111,7 +112,7 @@ export function CategoryPicker({
       <ul className="menu dropdown-content z-[50] w-full rounded-box bg-base-100 p-2 shadow">
         <li>
           <input
-            className="input input-sm input-bordered w-full"
+            className={fieldBase}
             placeholder={t(locale, "transactions_category_search_placeholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}

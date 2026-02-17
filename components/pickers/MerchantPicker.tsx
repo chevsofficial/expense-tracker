@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
+import { fieldBase } from "@/components/ui/formStyles";
 
 export type MerchantPickerMerchant = {
   _id: string;
@@ -104,7 +105,7 @@ export function MerchantPicker({
     >
       <button
         type="button"
-        className="input input-bordered flex w-full items-center justify-between text-left"
+        className={`${fieldBase} flex items-center justify-between text-left`}
         onClick={() => {
           if (disabled) return;
           setDropdownOpen(true);
@@ -120,7 +121,7 @@ export function MerchantPicker({
       </button>
       <div className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow">
         <input
-          className="input input-sm input-bordered w-full"
+          className={fieldBase}
           placeholder={t(locale, "transactions_merchant_placeholder")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
