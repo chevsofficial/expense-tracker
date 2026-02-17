@@ -7,7 +7,7 @@ import {
   tableBodyClass,
   tableContainerClass,
   tableHeadClass,
-} from "@/src/ui/tableStyles";
+} from "@/components/ui/tableStyles";
 import { postJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import { PageHeader } from "@/components/ui/PageHeader";

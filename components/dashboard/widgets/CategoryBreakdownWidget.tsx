@@ -10,7 +10,7 @@ import {
   tableBodyClass,
   tableContainerClass,
   tableHeadClass,
-} from "@/src/ui/tableStyles";
+} from "@/components/ui/tableStyles";
 
 const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =>
   new Intl.NumberFormat(locale, {

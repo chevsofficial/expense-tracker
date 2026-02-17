@@ -12,7 +12,7 @@ import {
   tableBaseClass,
   tableBodyClass,
   tableHeadClass,
-} from "@/src/ui/tableStyles";
+} from "@/components/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import type { Locale } from "@/src/i18n/messages";
 import type { Tag } from "@/src/types/tag";
