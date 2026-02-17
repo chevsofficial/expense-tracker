@@ -20,7 +20,7 @@ export function DataTable({
           {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </div>
       ) : null}
-      <div className="overflow-x-auto bg-transparent">{children}</div>
+      <div className="overflow-x-auto w-full">{children}</div>
     </section>
   );
 }

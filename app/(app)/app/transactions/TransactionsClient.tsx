@@ -17,12 +17,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
@@ -901,9 +899,9 @@ export function TransactionsClient({
     variant: "active" | "archived",
   ) => (
     <DataTable>
-      <table className={tableClass}>
+      <table className={tableBaseClass}>
         <thead className={tableHeadClass}>
-          <tr className={THEAD_TR_CLASS}>
+          <tr>
             <th>
               <SelectionToggle
                 checked={
@@ -926,7 +924,7 @@ export function TransactionsClient({
             <th>{t(locale, "transactions_actions")}</th>
           </tr>
         </thead>
-        <tbody className={tableBodyDividerClass}>
+        <tbody className={tableBodyClass}>
           {rows.length === 0 ? (
             <tr className="border-b border-neutral-200 last:border-b-0">
               <td colSpan={10} className="py-6 text-center text-sm opacity-70">
@@ -981,7 +979,7 @@ export function TransactionsClient({
               : transaction.receiptUrls?.[0];
 
             return (
-              <tr key={transaction._id} className={TBODY_TR_CLASS}>
+              <tr key={transaction._id}>
                 <td>
                   <SelectionToggle
                     checked={selectedIds.has(transaction._id)}

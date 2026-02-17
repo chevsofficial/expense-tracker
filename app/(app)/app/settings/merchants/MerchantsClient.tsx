@@ -9,12 +9,10 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -255,18 +253,18 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
             </h2>
             {activeMerchants.length ? (
               <DataTable className="mt-3">
-                <table className={tableClass}>
+                <table className={tableBaseClass}>
                   <thead className={tableHeadClass}>
-                    <tr className={THEAD_TR_CLASS}>
+                    <tr>
                       <th><SelectionToggle checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(activeMerchants, next)} size="sm" ariaLabel="Select all active merchants" /></th>
                       <th>{t(locale, "merchants_name")}</th>
                       <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className={tableBodyDividerClass}>
+                  <tbody className={tableBodyClass}>
                     {activeMerchants.map((merchant) => (
-                      <tr key={merchant._id} className={TBODY_TR_CLASS}>
+                      <tr key={merchant._id}>
                         <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                         <td>{merchant.name}</td>
                         <td>
@@ -317,18 +315,18 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
               </h2>
               {archivedMerchants.length ? (
                 <DataTable className="mt-3">
-                    <table className={tableClass}>
+                    <table className={tableBaseClass}>
                       <thead className={tableHeadClass}>
-                      <tr className={THEAD_TR_CLASS}>
+                      <tr>
                         <th><SelectionToggle checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(archivedMerchants, next)} size="sm" ariaLabel="Select all archived merchants" /></th>
                         <th>{t(locale, "merchants_name")}</th>
                         <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
                       </tr>
                     </thead>
-                    <tbody className={tableBodyDividerClass}>
+                    <tbody className={tableBodyClass}>
                       {archivedMerchants.map((merchant) => (
-                        <tr key={merchant._id} className={TBODY_TR_CLASS}>
+                        <tr key={merchant._id}>
                           <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                           <td>{merchant.name}</td>
                           <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>

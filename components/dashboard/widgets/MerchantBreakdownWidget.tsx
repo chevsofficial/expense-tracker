@@ -6,13 +6,11 @@ import type { Locale } from "@/src/i18n/messages";
 import { PieChartWidget } from "@/components/charts/PieChartWidget";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableContainerClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 
 const formatCurrency = (locale: Locale, amountMinor: number, currency: string) =>
   new Intl.NumberFormat(locale, {
@@ -80,16 +78,16 @@ export function MerchantBreakdownWidget({
 
         {rows.length > 0 && view === "table" ? (
           <div className={`max-h-[360px] overflow-auto ${tableContainerClass}`}>
-            <table className={tableClass}>
+            <table className={tableBaseClass}>
               <thead className={tableHeadClass}>
-                <tr className={THEAD_TR_CLASS}>
+                <tr>
                   <th>{t(locale, "dashboard_table_merchant")}</th>
                   <th className="text-right">{t(locale, "dashboard_table_amount")}</th>
                 </tr>
               </thead>
-              <tbody className={tableBodyDividerClass}>
+              <tbody className={tableBodyClass}>
                 {rows.map((row) => (
-                  <tr key={`${row.id ?? "unassigned"}`} className={TBODY_TR_CLASS}>
+                  <tr key={`${row.id ?? "unassigned"}`}>
                     <td className="bg-transparent">{row.name}</td>
                     <td className="bg-transparent text-right">
                       {formatCurrency(locale, row.amountMinor, currency)}

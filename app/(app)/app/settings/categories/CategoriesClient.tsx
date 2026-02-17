@@ -10,12 +10,10 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
@@ -550,9 +548,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
               {visibleGroups.length > 0 ? (
                 <DataTable>
-                  <table className={tableClass}>
+                  <table className={tableBaseClass}>
                     <thead className={tableHeadClass}>
-                      <tr className={THEAD_TR_CLASS}>
+                      <tr>
                         <th className="w-10">
                           <SelectionToggle
                             checked={
@@ -574,9 +572,9 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                         <th className="text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className={tableBodyDividerClass}>
+                    <tbody className={tableBodyClass}>
                       {visibleGroups.map((group) => (
-                        <tr key={group._id} className={TBODY_TR_CLASS}>
+                        <tr key={group._id}>
                           <td className=" w-10">
                             <SelectionToggle
                               checked={selectedGroupIds.has(group._id)}
@@ -687,18 +685,18 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
             {selectedGroupId && activeCategoriesForGroup.length > 0 ? (
               <DataTable>
-                <table className={tableClass}>
+                <table className={tableBaseClass}>
                   <thead className={tableHeadClass}>
-                    <tr className={THEAD_TR_CLASS}>
+                    <tr>
                       <th><SelectionToggle checked={activeCategoriesForGroup.length > 0 && activeCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(activeCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all categories" /></th>
                       <th>{t(locale, "categories_name")}</th>
                       <th>{t(locale, "categories_kind")}</th>
                       <th className="text-right">{t(locale, "categories_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className={tableBodyDividerClass}>
+                  <tbody className={tableBodyClass}>
                     {activeCategoriesForGroup.map((category) => (
-                      <tr key={category._id} className={TBODY_TR_CLASS}>
+                      <tr key={category._id}>
                         <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                         <td className=" font-medium">{getCategoryLabel(category)}</td>
                         <td>
@@ -746,18 +744,18 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                   </div>
                 ) : (
                   <DataTable>
-                    <table className={tableClass}>
+                    <table className={tableBaseClass}>
                       <thead className={tableHeadClass}>
-                        <tr className={THEAD_TR_CLASS}>
+                        <tr>
                           <th><SelectionToggle checked={archivedCategoriesForGroup.length > 0 && archivedCategoriesForGroup.every((category) => selectedCategoryIds.has(category._id))} onChange={(next) => toggleSelectMany(archivedCategoriesForGroup.map((category) => category._id), next, setSelectedCategoryIds)} size="sm" ariaLabel="Select all archived categories" /></th>
                           <th>{t(locale, "categories_name")}</th>
                           <th>{t(locale, "categories_kind")}</th>
                           <th className="text-right">{t(locale, "categories_actions")}</th>
                         </tr>
                       </thead>
-                      <tbody className={tableBodyDividerClass}>
+                      <tbody className={tableBodyClass}>
                         {archivedCategoriesForGroup.map((category) => (
-                          <tr key={category._id} className={TBODY_TR_CLASS}>
+                          <tr key={category._id}>
                             <td><SelectionToggle checked={selectedCategoryIds.has(category._id)} onChange={(next) => toggleSelectMany([category._id], next, setSelectedCategoryIds)} size="sm" ariaLabel={`Select ${getCategoryLabel(category)}`} /></td>
                             <td className=" font-medium">{getCategoryLabel(category)}</td>
                             <td>

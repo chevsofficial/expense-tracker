@@ -6,12 +6,10 @@ import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
-  TBODY_TR_CLASS,
-  THEAD_TR_CLASS,
-  tableBodyDividerClass,
-  tableClass,
+  tableBaseClass,
+  tableBodyClass,
   tableHeadClass,
-} from "@/components/ui/tableStyles";
+} from "@/src/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
@@ -197,16 +195,16 @@ export function AccountsClient({ locale }: { locale: Locale }) {
               <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_empty")}</p>
             ) : (
               <DataTable className="mt-3">
-                <table className={tableClass}>
+                <table className={tableBaseClass}>
                   <thead className={tableHeadClass}>
-                    <tr className={THEAD_TR_CLASS}>
+                    <tr>
                       <th>{t(locale, "accounts_name")}</th>
                       <th className="text-right">{t(locale, "accounts_actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className={tableBodyDividerClass}>
+                  <tbody className={tableBodyClass}>
                     {activeAccounts.map((account) => (
-                      <tr key={account._id} className={TBODY_TR_CLASS}>
+                      <tr key={account._id}>
                         <td className=" font-medium">{account.name}</td>
                         <td className=" text-right">
                           <div className="flex justify-end gap-2">
@@ -253,16 +251,16 @@ export function AccountsClient({ locale }: { locale: Locale }) {
                 <p className="mt-3 text-sm opacity-70">{t(locale, "accounts_archived_empty")}</p>
               ) : (
                 <DataTable className="mt-3">
-                  <table className={tableClass}>
+                  <table className={tableBaseClass}>
                     <thead className={tableHeadClass}>
-                      <tr className={THEAD_TR_CLASS}>
+                      <tr>
                         <th>{t(locale, "accounts_name")}</th>
                         <th className="text-right">{t(locale, "accounts_actions")}</th>
                       </tr>
                     </thead>
-                    <tbody className={tableBodyDividerClass}>
+                    <tbody className={tableBodyClass}>
                       {archivedAccounts.map((account) => (
-                        <tr key={account._id} className={TBODY_TR_CLASS}>
+                        <tr key={account._id}>
                           <td className=" font-medium">{account.name}</td>
                           <td className=" text-right">
                             <div className="flex justify-end gap-2">
