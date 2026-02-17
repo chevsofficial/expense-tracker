@@ -9,7 +9,7 @@ import {
   tableBaseClass,
   tableBodyClass,
   tableHeadClass,
-} from "@/src/ui/tableStyles";
+} from "@/components/ui/tableStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
