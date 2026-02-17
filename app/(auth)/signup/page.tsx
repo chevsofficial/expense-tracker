@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +18,8 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center p-6 bg-base-100 text-base-content">
       <div className="card bg-base-100 shadow-xl w-full max-w-md">
         <div className="card-body">
-          <h1 className="page-title text-2xl">Sign in</h1>
-          <p className="opacity-70">We’ll email you a magic link.</p>
+          <h1 className="page-title text-2xl">Create your account</h1>
+          <p className="opacity-70">We’ll email you a secure magic link to get started.</p>
 
           <form className="mt-4 space-y-3" onSubmit={onSubmit}>
             <input
