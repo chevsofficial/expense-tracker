@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageActions } from "@/components/ui/PageActions";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
+import { addButtonClass } from "@/components/ui/buttonStyles";
 import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
@@ -501,17 +503,13 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader title={t(locale, "categories_title_page")} />
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            {t(locale, "show_archived")}
-          </label>
-        </div>
+        <PageActions
+          addLabel={t(locale, "add_group")}
+          onAdd={() => setAddGroupOpen(true)}
+          showArchived={showArchived}
+          onToggleArchived={setShowArchived}
+          archivedLabel={t(locale, "show_archived")}
+        />
       </div>
 
       {toast ? (
@@ -528,10 +526,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           <div className="card-body gap-4">
             {selectedGroupIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3"><span>{selectedGroupIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkGroups("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkGroups("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><SelectionToggle checked={(showArchived ? groups : activeGroups).length > 0 && (showArchived ? groups : activeGroups).every((group) => selectedGroupIds.has(group._id))} onChange={(next) => toggleSelectMany((showArchived ? groups : activeGroups).map((group) => group._id), next, setSelectedGroupIds)} size="sm" ariaLabel="Select all groups" /><h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2></div>
-              <button className="btn btn-primary btn-sm" onClick={() => setAddGroupOpen(true)}>
-                {t(locale, "add_group")}
-              </button>
+              <h2 className="text-lg font-semibold">{t(locale, "groups_title")}</h2>
             </div>
             {loading ? (
               <p className="text-sm opacity-70">{t(locale, "categories_loading_groups")}</p>
@@ -654,7 +649,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">{t(locale, "categories_title")}</h2>{selectedCategoryIds.size ? (<div className="alert flex flex-wrap items-center justify-between gap-3 mt-2"><span>{selectedCategoryIds.size} selected</span><div className="flex gap-2"><button className="btn btn-ghost btn-sm" onClick={() => void handleBulkCategories("archive")} disabled={isSubmitting}>Archive selected</button>{showArchived ? <button className="btn btn-ghost btn-sm" onClick={() => void handleBulkCategories("unarchive")} disabled={isSubmitting}>Unarchive selected</button> : null}<button className="btn btn-ghost btn-sm text-error" onClick={() => void handleBulkCategories("delete")} disabled={isSubmitting}>Delete selected</button></div></div>) : null}
               <button
-                className="btn btn-primary btn-sm"
+                className={addButtonClass}
                 onClick={openAddCategoryModal}
                 disabled={!selectedGroupId || selectedGroup?.isArchived}
               >

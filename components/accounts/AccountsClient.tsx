@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Modal } from "@/components/ui/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageActions } from "@/components/ui/PageActions";
 import { SurfaceCard, SurfaceCardBody } from "@/components/ui/SurfaceCard";
 import {
   tableBaseClass,
@@ -159,20 +160,13 @@ export function AccountsClient({ locale }: { locale: Locale }) {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader title={t(locale, "accounts_title")} />
-        <div className="flex flex-wrap items-center gap-3">
-          <button className="btn btn-primary btn-sm" onClick={openAdd}>
-            {t(locale, "accounts_add")}
-          </button>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="toggle toggle-sm"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            {t(locale, "accounts_show_archived")}
-          </label>
-        </div>
+        <PageActions
+          addLabel={t(locale, "accounts_add")}
+          onAdd={openAdd}
+          showArchived={showArchived}
+          onToggleArchived={setShowArchived}
+          archivedLabel={t(locale, "accounts_show_archived")}
+        />
       </div>
 
       {toast ? (
