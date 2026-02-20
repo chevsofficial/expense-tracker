@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SelectionToggle } from "@/components/ui/SelectionToggle";
+import { ChevronDown } from "@/components/ui/icons/ChevronDown";
 import { FILTER_BORDER, UI_RING } from "@/components/ui/styles";
 import { fieldBase } from "@/components/ui/formStyles";
 
@@ -112,7 +113,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className={`${fieldBase} flex min-h-10 h-10 items-center justify-between text-left ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
+        className={`${fieldBase} flex h-10 min-h-10 items-center justify-between bg-white text-left ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -160,20 +161,7 @@ export function MultiSelectDropDown({
             Clear
           </button>
         ) : null}
-        <svg
-          className="h-4 w-4 shrink-0 text-neutral-500"
-          viewBox="0 0 20 20"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 8l4 4 4-4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
       </div>
       <div
         className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${FILTER_BORDER}`}
