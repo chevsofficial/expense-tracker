@@ -107,7 +107,20 @@ export function CategoryPicker({
         <span className={selectedCategoryLabel ? "" : "opacity-60"}>
           {selectedCategoryLabel || placeholder || t(locale, "transactions_category_search_placeholder")}
         </span>
-        <span className="text-xs opacity-60">▾</span>
+        <svg
+          className="h-4 w-4 shrink-0 text-neutral-500"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 8l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
       <ul className="menu dropdown-content z-[50] w-full rounded-box bg-base-100 p-2 shadow">
         <li>

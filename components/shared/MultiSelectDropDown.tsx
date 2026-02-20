@@ -112,7 +112,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className={`btn w-full justify-between min-h-10 h-10 bg-white hover:bg-white ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
+        className={`${fieldBase} flex min-h-10 h-10 items-center justify-between text-left ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -160,7 +160,20 @@ export function MultiSelectDropDown({
             Clear
           </button>
         ) : null}
-        <span className="text-xs opacity-60">▾</span>
+        <svg
+          className="h-4 w-4 shrink-0 text-neutral-500"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M6 8l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
       <div
         className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${FILTER_BORDER}`}
