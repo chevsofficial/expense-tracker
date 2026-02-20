@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import { fieldBase } from "@/components/ui/formStyles";
+import { ChevronDown } from "@/components/ui/icons/ChevronDown";
 
 export type MerchantPickerMerchant = {
   _id: string;
@@ -117,20 +118,7 @@ export function MerchantPicker({
         disabled={disabled}
       >
         <span className={selectedMerchantLabel ? "" : "opacity-60"}>{displayLabel}</span>
-        <svg
-          className="h-4 w-4 shrink-0 text-neutral-500"
-          viewBox="0 0 20 20"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 8l4 4 4-4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
       </button>
       <div className="menu dropdown-content w-full rounded-box bg-base-100 p-2 shadow">
         <input

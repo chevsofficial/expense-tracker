@@ -6,6 +6,7 @@ import { t } from "@/src/i18n/t";
 import type { Locale } from "@/src/i18n/messages";
 import type { Category } from "@/src/types/category";
 import { fieldBase } from "@/components/ui/formStyles";
+import { ChevronDown } from "@/components/ui/icons/ChevronDown";
 
 type CategoryPickerProps = {
   locale: Locale;
@@ -107,20 +108,7 @@ export function CategoryPicker({
         <span className={selectedCategoryLabel ? "" : "opacity-60"}>
           {selectedCategoryLabel || placeholder || t(locale, "transactions_category_search_placeholder")}
         </span>
-        <svg
-          className="h-4 w-4 shrink-0 text-neutral-500"
-          viewBox="0 0 20 20"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 8l4 4 4-4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
       </button>
       <ul className="menu dropdown-content z-[50] w-full rounded-box bg-base-100 p-2 shadow">
         <li>

@@ -28,7 +28,8 @@ import { MultiSelectDropdown } from "@/components/forms/MultiSelectDropdown";
 import { AppFiltersBar } from "@/components/filters/AppFiltersBar";
 import { CategoryPicker } from "@/components/pickers/CategoryPicker";
 import { MerchantPicker } from "@/components/pickers/MerchantPicker";
-import { formGrid, formGridFull, labelBase, selectBase, textareaBase } from "@/components/ui/formStyles";
+import { SelectField } from "@/components/ui/SelectField";
+import { formGrid, formGridFull, labelBase, textareaBase } from "@/components/ui/formStyles";
 import { delJSON, getJSON, postJSON, putJSON } from "@/src/lib/apiClient";
 import { resolveDateRange } from "@/src/utils/dateRange";
 import { t } from "@/src/i18n/t";
@@ -1218,8 +1219,7 @@ export function TransactionsClient({
               <span className={labelBase}>
                 {t(locale, "transactions_account")}
               </span>
-              <select
-                className={selectBase}
+              <SelectField
                 value={formState.accountId}
                 onChange={(event) =>
                   setFormState({
@@ -1238,7 +1238,7 @@ export function TransactionsClient({
                       {account.name}
                     </option>
                   ))}
-              </select>
+              </SelectField>
             </label>
             {formState.kind !== "transfer" ? (
               <label className="w-full">
@@ -1295,8 +1295,7 @@ export function TransactionsClient({
                     : t(locale, "category_kind_expense")}
                 </div>
               ) : (
-                <select
-                  className={selectBase}
+                <SelectField
                   value={formState.kind}
                   onChange={(event) => {
                     setFormState({
@@ -1314,7 +1313,7 @@ export function TransactionsClient({
                   <option value="transfer">
                     {t(locale, "transactions_kind_transfer")}
                   </option>
-                </select>
+                </SelectField>
               )}
             </label>
             {formState.kind === "transfer" ? (
@@ -1322,8 +1321,7 @@ export function TransactionsClient({
                 <span className={labelBase}>
                   {t(locale, "transactions_transfer_to")}
                 </span>
-                <select
-                  className={selectBase}
+                <SelectField
                   value={formState.transferToAccountId}
                   onChange={(event) =>
                     setFormState({
@@ -1342,7 +1340,7 @@ export function TransactionsClient({
                         {account.name}
                       </option>
                     ))}
-                </select>
+                </SelectField>
               </label>
             ) : null}
             <label className={`w-full ${formGridFull}`}>
