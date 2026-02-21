@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { clientPromise } from "@/src/db/mongodbClient";
 import { requireAuthContext } from "@/src/server/api";
 import { AccountModel } from "@/src/models/Account";
@@ -12,6 +13,15 @@ import { TransactionModel } from "@/src/models/Transaction";
 import { WorkspaceModel } from "@/src/models/Workspace";
 import { UserModel } from "@/src/models/User";
 
+const profileUpdateSchema = z.object({
+  firstName: z.string().trim().max(80).optional(),
+  lastName: z.string().trim().max(80).optional(),
+  dateOfBirth: z.union([z.literal(""), z.string().date()]).optional(),
+  sex: z.enum(["", "female", "male", "nonbinary", "prefer_not_to_say"]).optional(),
+  locale: z.enum(["en", "es"]).optional(),
+  themePreference: z.enum(["system", "light", "dark"]).optional(),
+});
+
 export async function GET() {
   const auth = await requireAuthContext();
   if ("response" in auth) return auth.response;
@@ -19,10 +29,52 @@ export async function GET() {
   return NextResponse.json({
     data: {
       email: auth.user.email,
-      firstName: "",
-      lastName: "",
-      dob: "",
-      sex: "",
+      firstName: auth.user.firstName ?? "",
+      lastName: auth.user.lastName ?? "",
+      dateOfBirth: auth.user.dateOfBirth ?? "",
+      sex: auth.user.sex ?? "",
+      locale: auth.user.locale ?? "en",
+      themePreference: auth.user.themePreference ?? "system",
+    },
+  });
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireAuthContext();
+  if ("response" in auth) return auth.response;
+
+  const body = await request.json().catch(() => null);
+  const parsed = profileUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: { message: parsed.error.message } }, { status: 400 });
+  }
+
+  const {
+    firstName,
+    lastName,
+    dateOfBirth,
+    sex,
+    locale,
+    themePreference,
+  } = parsed.data;
+
+  if (firstName !== undefined) auth.user.firstName = firstName;
+  if (lastName !== undefined) auth.user.lastName = lastName;
+  if (dateOfBirth !== undefined) auth.user.dateOfBirth = dateOfBirth;
+  if (sex !== undefined) auth.user.sex = sex;
+  if (locale !== undefined) auth.user.locale = locale;
+  if (themePreference !== undefined) auth.user.themePreference = themePreference;
+  await auth.user.save();
+
+  return NextResponse.json({
+    data: {
+      email: auth.user.email,
+      firstName: auth.user.firstName ?? "",
+      lastName: auth.user.lastName ?? "",
+      dateOfBirth: auth.user.dateOfBirth ?? "",
+      sex: auth.user.sex ?? "",
+      locale: auth.user.locale ?? "en",
+      themePreference: auth.user.themePreference ?? "system",
     },
   });
 }

@@ -47,6 +47,19 @@ export async function putJSON<T>(url: string, body: unknown): Promise<T> {
   return parseJsonResponse<T>(response);
 }
 
+
+export async function patchJSON<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return parseJsonResponse<T>(response);
+}
+
 export async function delJSON<T>(url: string): Promise<T> {
   const response = await fetch(url, {
     method: "DELETE",
