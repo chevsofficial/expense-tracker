@@ -7,7 +7,7 @@ import { UserModel, type UserDoc } from "@/src/models/User";
 import { WorkspaceModel, type WorkspaceDoc } from "@/src/models/Workspace";
 
 type AuthContext = {
-  user: UserDoc;
+  user: UserDoc & { _id: mongoose.Types.ObjectId; save: () => Promise<unknown> };
   workspace: WorkspaceDoc;
 };
 
@@ -19,13 +19,16 @@ export async function requireAuthContext(): Promise<AuthContext | { response: Ne
   await dbConnect();
 
   const session = await getServerSession(authOptions);
-  const email = session?.user?.email;
+  const sessionUserId = (session?.user as { id?: string } | undefined)?.id ?? null;
+  const tokenUserId = typeof (session as { sub?: string } | null)?.sub === "string" ? (session as { sub?: string }).sub : null;
+  const email = session?.user?.email?.trim().toLowerCase();
 
-  if (!email) {
+  if (!email && !sessionUserId && !tokenUserId) {
     return { response: errorResponse("Unauthorized", 401) };
   }
 
-  const user = await UserModel.findOne({ email });
+  const userId = sessionUserId ?? tokenUserId;
+  const user = userId ? await UserModel.findById(userId) : await UserModel.findOne({ email });
   if (!user) {
     return { response: errorResponse("Unauthorized", 401) };
   }
