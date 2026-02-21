@@ -1005,6 +1005,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
 
       <Modal
         open={editCategoryOpen}
+        zIndexBase={900}
         title={t(locale, "categories_edit_category_title")}
         onClose={() => {
           setEditCategoryOpen(false);
