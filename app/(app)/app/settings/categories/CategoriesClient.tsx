@@ -11,6 +11,7 @@ import { TextField } from "@/components/forms/TextField";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { formGrid, labelBase, selectBase } from "@/components/ui/formStyles";
 import { EmojiPickerPopover } from "@/components/ui/EmojiPickerPopover";
+import { EmojiPickerModal } from "@/components/ui/EmojiPickerModal";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
 import {
   tableBaseClass,
@@ -1020,12 +1021,14 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           />
           <label className="w-full">
             <span className={labelBase}>{t(locale, "categories_emoji_label")}</span>
-            <EmojiPickerPopover
-              value={editCategoryEmoji}
-              onChange={setEditCategoryEmoji}
-              open={editCategoryEmojiPickerOpen}
-              onOpenChange={setEditCategoryEmojiPickerOpen}
-            />
+            <button
+              type="button"
+              className="btn btn-outline w-full justify-between"
+              onClick={() => setEditCategoryEmojiPickerOpen(true)}
+            >
+              <span>{editCategoryEmoji || t(locale, "categories_emoji_placeholder")}</span>
+              <span className="opacity-60">{t(locale, "categories_emoji_label")}</span>
+            </button>
           </label>
           <label className="w-full">
             <span className={labelBase}>
@@ -1075,6 +1078,12 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           </div>
         </form>
       </Modal>
+
+      <EmojiPickerModal
+        isOpen={editCategoryEmojiPickerOpen}
+        onClose={() => setEditCategoryEmojiPickerOpen(false)}
+        onSelect={(emoji) => setEditCategoryEmoji(emoji)}
+      />
 
       <Modal
         open={archiveCategoryOpen}
