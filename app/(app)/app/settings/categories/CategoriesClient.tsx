@@ -85,6 +85,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   const [newCategoryEmoji, setNewCategoryEmoji] = useState("");
   const [newCategoryKind, setNewCategoryKind] = useState<CategoryFormKind>("expense");
   const [newCategoryGroupId, setNewCategoryGroupId] = useState<string>("");
+  const [newCategoryEmojiPickerOpen, setNewCategoryEmojiPickerOpen] = useState(false);
 
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
@@ -92,6 +93,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
   const [editCategoryEmoji, setEditCategoryEmoji] = useState("");
   const [editCategoryKind, setEditCategoryKind] = useState<CategoryFormKind>("expense");
   const [editCategoryGroupId, setEditCategoryGroupId] = useState<string>("");
+  const [editCategoryEmojiPickerOpen, setEditCategoryEmojiPickerOpen] = useState(false);
 
   const [archiveCategoryOpen, setArchiveCategoryOpen] = useState(false);
   const [categoryToArchive, setCategoryToArchive] = useState<Category | null>(null);
@@ -184,6 +186,18 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       }
     }
   }, [activeGroups, groups, selectedGroupId, showArchived]);
+
+  useEffect(() => {
+    if (!addCategoryOpen) {
+      setNewCategoryEmojiPickerOpen(false);
+    }
+  }, [addCategoryOpen]);
+
+  useEffect(() => {
+    if (!editCategoryOpen) {
+      setEditCategoryEmojiPickerOpen(false);
+    }
+  }, [editCategoryOpen]);
 
   const handleError = (err: unknown) => {
     const message =
@@ -284,6 +298,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
         groupId: newCategoryGroupId,
       });
       setAddCategoryOpen(false);
+      setNewCategoryEmojiPickerOpen(false);
       setNewCategoryName("");
       setNewCategoryEmoji("");
       setNewCategoryKind("expense");
@@ -308,6 +323,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
         kind: editCategoryKind,
       });
       setEditCategoryOpen(false);
+      setEditCategoryEmojiPickerOpen(false);
       setCategoryToEdit(null);
       setEditCategoryName("");
       setEditCategoryEmoji("");
@@ -403,6 +419,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     setEditCategoryEmoji(category.emoji ?? "");
     setEditCategoryKind(normalizeKind(category.kind));
     setEditCategoryGroupId(category.groupId ?? "");
+    setEditCategoryEmojiPickerOpen(false);
     setEditCategoryOpen(true);
   };
 
@@ -497,6 +514,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
     if (!selectedActiveGroup) return;
     setNewCategoryGroupId(selectedActiveGroup);
     setNewCategoryEmoji("");
+    setNewCategoryEmojiPickerOpen(false);
     setAddCategoryOpen(true);
   };
 
@@ -910,7 +928,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       <Modal
         open={addCategoryOpen}
         title={t(locale, "categories_add_category_title")}
-        onClose={() => setAddCategoryOpen(false)}
+        onClose={() => {
+          setAddCategoryOpen(false);
+          setNewCategoryEmojiPickerOpen(false);
+        }}
       >
         <form className="space-y-4" onSubmit={handleCreateCategory}>
           <div className={formGrid}>
@@ -923,7 +944,12 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           />
           <label className="w-full">
             <span className={labelBase}>{t(locale, "categories_emoji_label")}</span>
-            <EmojiPickerPopover value={newCategoryEmoji} onChange={setNewCategoryEmoji} />
+            <EmojiPickerPopover
+              value={newCategoryEmoji}
+              onChange={setNewCategoryEmoji}
+              open={newCategoryEmojiPickerOpen}
+              onOpenChange={setNewCategoryEmojiPickerOpen}
+            />
           </label>
           <label className="w-full">
             <span className={labelBase}>
@@ -962,7 +988,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setAddCategoryOpen(false)}
+              onClick={() => {
+                setAddCategoryOpen(false);
+                setNewCategoryEmojiPickerOpen(false);
+              }}
             >
               {t(locale, "categories_cancel")}
             </button>
@@ -976,7 +1005,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
       <Modal
         open={editCategoryOpen}
         title={t(locale, "categories_edit_category_title")}
-        onClose={() => setEditCategoryOpen(false)}
+        onClose={() => {
+          setEditCategoryOpen(false);
+          setEditCategoryEmojiPickerOpen(false);
+        }}
       >
         <form className="space-y-4" onSubmit={handleEditCategory}>
           <div className={formGrid}>
@@ -988,7 +1020,12 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
           />
           <label className="w-full">
             <span className={labelBase}>{t(locale, "categories_emoji_label")}</span>
-            <EmojiPickerPopover value={editCategoryEmoji} onChange={setEditCategoryEmoji} />
+            <EmojiPickerPopover
+              value={editCategoryEmoji}
+              onChange={setEditCategoryEmoji}
+              open={editCategoryEmojiPickerOpen}
+              onOpenChange={setEditCategoryEmojiPickerOpen}
+            />
           </label>
           <label className="w-full">
             <span className={labelBase}>
@@ -1027,7 +1064,10 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => setEditCategoryOpen(false)}
+              onClick={() => {
+                setEditCategoryOpen(false);
+                setEditCategoryEmojiPickerOpen(false);
+              }}
             >
               {t(locale, "categories_cancel")}
             </button>

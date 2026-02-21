@@ -13,7 +13,7 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
       <div className="modal-box bg-base-100">
         <div className="flex items-start justify-between gap-4 border-b border-primary/20 pb-3">
           <h3 className="section-title text-lg">{title}</h3>
-          <button type="button" className="btn btn-ghost btn-sm text-error" onClick={onClose}>
+          <button type="button" className="btn btn-ghost btn-sm relative z-[70] text-error" onClick={onClose}>
             ✕
           </button>
         </div>
