@@ -1,50 +1,55 @@
 "use client";
 
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { Locale } from "@/src/i18n/messages";
-import { ThemeContext } from "@/src/theme/ThemeProvider";
-import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeContext, type ThemePreference } from "@/src/theme/ThemeProvider";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CHIP_CLASS_NO_PADDING } from "@/components/ui/uiClasses";
-import { delJSON, getJSON, putJSON } from "@/src/lib/apiClient";
+import { delJSON, getJSON, patchJSON, putJSON } from "@/src/lib/apiClient";
 import { SUPPORTED_CURRENCIES } from "@/src/constants/currencies";
 import { getWorkspaceCurrency } from "@/src/lib/currency";
 import { Modal } from "@/components/ui/Modal";
-import { INPUT_BASE_CLASS, SELECT_BASE_CLASS } from "@/components/ui/inputStyles";
+import { fieldBase, formGrid, labelBase } from "@/components/ui/formStyles";
+import { SelectField } from "@/components/ui/SelectField";
 
 type SettingsResponse = { data: { defaultCurrency: string } };
+type SexValue = "" | "female" | "male" | "nonbinary" | "prefer_not_to_say";
 type MeResponse = {
   data: {
     email: string;
     firstName: string;
     lastName: string;
-    dob: string;
-    sex: "" | "female" | "male" | "other" | "prefer_not_to_say";
+    dateOfBirth: string;
+    sex: SexValue;
+    locale: Locale;
+    themePreference: ThemePreference;
   };
 };
 
-export function SettingsGeneralClient({
-  locale,
-  defaultCurrency,
-}: {
-  locale: Locale;
-  defaultCurrency: string;
-}) {
+export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: string }) {
   const router = useRouter();
   const theme = useContext(ThemeContext);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [sex, setSex] = useState<"" | "female" | "male" | "other" | "prefer_not_to_say">("");
-  const [dob, setDob] = useState("");
+  const [sex, setSex] = useState<SexValue>("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [initialProfileState, setInitialProfileState] = useState({
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    sex: "" as SexValue,
+  });
   const [email, setEmail] = useState("—");
   const [newEmail, setNewEmail] = useState("");
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Locale>("en");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("system");
 
   const [currency, setCurrency] = useState(() => getWorkspaceCurrency({ defaultCurrency }));
   const [savingCurrency, setSavingCurrency] = useState(false);
@@ -65,8 +70,17 @@ export function SettingsGeneralClient({
           setNewEmail(profileResponse.data.email);
           setFirstName(profileResponse.data.firstName ?? "");
           setLastName(profileResponse.data.lastName ?? "");
-          setDob(profileResponse.data.dob ?? "");
+          setDateOfBirth(profileResponse.data.dateOfBirth ?? "");
           setSex(profileResponse.data.sex ?? "");
+          setInitialProfileState({
+            firstName: profileResponse.data.firstName ?? "",
+            lastName: profileResponse.data.lastName ?? "",
+            dateOfBirth: profileResponse.data.dateOfBirth ?? "",
+            sex: profileResponse.data.sex ?? "",
+          });
+          setLanguage(profileResponse.data.locale ?? "en");
+          setThemePreference(profileResponse.data.themePreference ?? "system");
+          theme?.setPreference(profileResponse.data.themePreference ?? "system");
         }
       } catch (err) {
         if (isMounted) {
@@ -81,7 +95,41 @@ export function SettingsGeneralClient({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [theme]);
+
+  const isProfileDirty = useMemo(
+    () =>
+      firstName !== initialProfileState.firstName ||
+      lastName !== initialProfileState.lastName ||
+      dateOfBirth !== initialProfileState.dateOfBirth ||
+      sex !== initialProfileState.sex,
+    [dateOfBirth, firstName, initialProfileState, lastName, sex]
+  );
+
+  const handleProfileUpdate = async () => {
+    setProfileSaving(true);
+    setProfileError(null);
+    try {
+      const response = await patchJSON<MeResponse>("/api/me", {
+        firstName,
+        lastName,
+        dateOfBirth,
+        sex,
+      });
+      setInitialProfileState({
+        firstName: response.data.firstName,
+        lastName: response.data.lastName,
+        dateOfBirth: response.data.dateOfBirth,
+        sex: response.data.sex,
+      });
+      setToast("General information updated");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update profile.";
+      setProfileError(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleCurrencyChange = async (nextCurrency: string) => {
     setCurrency(nextCurrency);
@@ -95,6 +143,33 @@ export function SettingsGeneralClient({
       setCurrencyError(message);
     } finally {
       setSavingCurrency(false);
+    }
+  };
+
+  const handleLanguageChange = async (nextLocale: Locale) => {
+    setProfileError(null);
+    setLanguage(nextLocale);
+    try {
+      await patchJSON<MeResponse>("/api/me", { locale: nextLocale });
+      document.cookie = `locale=${nextLocale}; path=/; max-age=31536000`;
+      router.refresh();
+      setToast("Language updated");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update language.";
+      setProfileError(message);
+    }
+  };
+
+  const handleThemeChange = async (nextThemePreference: ThemePreference) => {
+    setProfileError(null);
+    setThemePreference(nextThemePreference);
+    theme?.setPreference(nextThemePreference);
+    try {
+      await patchJSON<MeResponse>("/api/me", { themePreference: nextThemePreference });
+      setToast("Theme updated");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update theme.";
+      setProfileError(message);
     }
   };
 
@@ -150,51 +225,50 @@ export function SettingsGeneralClient({
         <div className="card-body space-y-4">
           <h2 className="font-semibold">Account Settings</h2>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="w-full">
-              <span className="mb-1 block text-sm font-medium text-neutral-700">First name</span>
-              <input
-                className={INPUT_BASE_CLASS}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </label>
+          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-4">
+            <p className="text-sm font-semibold">General Information</p>
+            <div className={formGrid}>
+              <label className="w-full">
+                <span className={labelBase}>First name</span>
+                <input className={fieldBase} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </label>
 
-            <label className="w-full">
-              <span className="mb-1 block text-sm font-medium text-neutral-700">Last name</span>
-              <input
-                className={INPUT_BASE_CLASS}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </label>
+              <label className="w-full">
+                <span className={labelBase}>Last name</span>
+                <input className={fieldBase} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </label>
 
-            <label className="w-full">
-              <span className="mb-1 block text-sm font-medium text-neutral-700">Date of birth</span>
-              <input
-                className={INPUT_BASE_CLASS}
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-              />
-            </label>
+              <label className="w-full">
+                <span className={labelBase}>Date of birth</span>
+                <input
+                  className={fieldBase}
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+              </label>
 
-            <label className="w-full">
-              <span className="mb-1 block text-sm font-medium text-neutral-700">Sex</span>
-              <select
-                className={SELECT_BASE_CLASS}
-                value={sex}
-                onChange={(e) =>
-                  setSex(e.target.value as "" | "female" | "male" | "other" | "prefer_not_to_say")
-                }
+              <label className="w-full">
+                <span className={labelBase}>Sex</span>
+                <SelectField value={sex} onChange={(e) => setSex(e.target.value as SexValue)}>
+                  <option value="">Select</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="nonbinary">Non-binary</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </SelectField>
+              </label>
+            </div>
+            <div className="flex justify-end">
+              <button
+                className="btn btn-primary btn-sm"
+                type="button"
+                onClick={() => void handleProfileUpdate()}
+                disabled={profileSaving || !isProfileDirty}
               >
-                <option value="">Select</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-            </label>
+                Update
+              </button>
+            </div>
           </div>
 
           <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300">
@@ -205,11 +279,46 @@ export function SettingsGeneralClient({
             </button>
           </div>
 
+          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+            <p className="text-sm font-semibold">Language</p>
+            <SelectField value={language} onChange={(e) => void handleLanguageChange(e.target.value as Locale)}>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </SelectField>
+          </div>
+
+          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+            <p className="text-sm font-semibold">Currency</p>
+            <SelectField
+              value={currency}
+              onChange={(event) => void handleCurrencyChange(event.target.value)}
+              disabled={savingCurrency}
+            >
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </SelectField>
+            {currencyError ? <p className="text-sm text-error">{currencyError}</p> : null}
+            {savingCurrency ? <p className="text-sm opacity-70">Saving…</p> : null}
+          </div>
+
+          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+            <p className="text-sm font-semibold">Theme</p>
+            <SelectField
+              value={themePreference}
+              onChange={(event) => void handleThemeChange(event.target.value as ThemePreference)}
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </SelectField>
+          </div>
+
           <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300">
             <p className="text-sm font-semibold text-error">Danger Zone</p>
-            <p className="mt-1 text-sm opacity-70">
-              Deleting your account removes your data permanently.
-            </p>
+            <p className="mt-1 text-sm opacity-70">Deleting your account removes your data permanently.</p>
             <button
               className="btn btn-outline btn-sm text-error mt-3"
               type="button"
@@ -222,61 +331,12 @@ export function SettingsGeneralClient({
         </div>
       </div>
 
-      <div className={CHIP_CLASS_NO_PADDING}>
-        <div className="card-body">
-          <h2 className="font-semibold">Language</h2>
-          <p className="opacity-70 text-sm">Choose your preferred language.</p>
-
-          <LanguageToggle locale={locale} />
-        </div>
-      </div>
-
-      <div className={CHIP_CLASS_NO_PADDING}>
-        <div className="card-body space-y-4">
-          <h2 className="font-semibold">Currency</h2>
-          <p className="text-sm opacity-70">Select the currency used to display amounts.</p>
-          <label className="form-control w-full max-w-xs">
-            <span className="label-text">Default currency</span>
-            <select
-              className="select select-bordered"
-              value={currency}
-              onChange={(event) => void handleCurrencyChange(event.target.value)}
-              disabled={savingCurrency}
-            >
-              {SUPPORTED_CURRENCIES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-          </label>
-          {currencyError ? <p className="text-sm text-error">{currencyError}</p> : null}
-          {savingCurrency ? <p className="text-sm opacity-70">Saving…</p> : null}
-        </div>
-      </div>
-
-      <div className={CHIP_CLASS_NO_PADDING}>
-        <div className="card-body">
-          <h2 className="font-semibold">Theme</h2>
-          <div className="flex items-center justify-between">
-            <span className="opacity-70 text-sm">Light / Dark</span>
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => theme?.toggleTheme()}
-              type="button"
-            >
-              Toggle theme
-            </button>
-          </div>
-        </div>
-      </div>
-
       <Modal open={emailModalOpen} title="Update Email" onClose={() => setEmailModalOpen(false)}>
         <div className="space-y-4">
           <label className="w-full">
-            <span className="mb-1 block text-sm font-medium text-neutral-700">New email</span>
+            <span className={labelBase}>New email</span>
             <input
-              className={INPUT_BASE_CLASS}
+              className={fieldBase}
               type="email"
               value={newEmail}
               onChange={(event) => setNewEmail(event.target.value)}
