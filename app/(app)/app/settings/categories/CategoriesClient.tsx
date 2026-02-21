@@ -569,8 +569,24 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                       </tr>
                     </thead>
                     <tbody className={tableBodyClass}>
-                      {visibleGroups.map((group) => (
-                        <tr key={group._id}>
+                      {visibleGroups.map((group) => {
+                        const isSelected = selectedGroupId === group._id;
+
+                        return (
+                        <tr
+                          key={group._id}
+                          className={`cursor-pointer hover:bg-neutral-50 ${
+                            isSelected ? "border-l-4 border-[#6DBE45] bg-[#6DBE45]/15" : ""
+                          }`}
+                          onClick={() => setSelectedGroupId(group._id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedGroupId(group._id);
+                            }
+                          }}
+                          tabIndex={0}
+                        >
                           <td className=" w-10">
                             <SelectionToggle
                               checked={selectedGroupIds.has(group._id)}
@@ -583,10 +599,11 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                           </td>
                           <td>
                             <button
-                              className={`text-left ${
-                                selectedGroupId === group._id ? "font-semibold" : ""
-                              }`}
-                              onClick={() => setSelectedGroupId(group._id)}
+                              className={`text-left ${isSelected ? "font-semibold" : ""}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setSelectedGroupId(group._id);
+                              }}
                             >
                               {getDisplayName(group)}
                             </button>
@@ -635,7 +652,8 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </DataTable>

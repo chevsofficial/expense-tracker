@@ -253,7 +253,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                     <tr>
                       <th><SelectionToggle checked={activeMerchants.length > 0 && activeMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(activeMerchants, next)} size="sm" ariaLabel="Select all active merchants" /></th>
                       <th>{t(locale, "merchants_name")}</th>
-                      <th>{t(locale, "merchants_aliases")}</th>
                       <th>{t(locale, "merchants_actions")}</th>
                     </tr>
                   </thead>
@@ -262,9 +261,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                       <tr key={merchant._id}>
                         <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                         <td>{merchant.name}</td>
-                        <td>
-                          {merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}
-                        </td>
                         <td>
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -315,7 +311,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                       <tr>
                         <th><SelectionToggle checked={archivedMerchants.length > 0 && archivedMerchants.every((merchant) => selectedIds.has(merchant._id))} onChange={(next) => toggleSelectAll(archivedMerchants, next)} size="sm" ariaLabel="Select all archived merchants" /></th>
                         <th>{t(locale, "merchants_name")}</th>
-                        <th>{t(locale, "merchants_aliases")}</th>
                         <th>{t(locale, "merchants_actions")}</th>
                       </tr>
                     </thead>
@@ -324,7 +319,6 @@ export function MerchantsClient({ locale }: { locale: Locale }) {
                         <tr key={merchant._id}>
                           <td><SelectionToggle checked={selectedIds.has(merchant._id)} onChange={(next) => toggleSelectOne(merchant._id, next)} size="sm" ariaLabel={`Select ${merchant.name}`} /></td>
                           <td>{merchant.name}</td>
-                          <td>{merchant.aliases?.length ? merchant.aliases.join(", ") : "—"}</td>
                           <td>
                             <div className="flex flex-wrap gap-2">
                               <button
