@@ -10,7 +10,7 @@ import { SocialProof } from "./SocialProof";
 
 export function LandingPage({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
-    <main className="bg-base-100 text-base-content">
+    <main data-theme="spendaryDark" className="bg-base-100 text-base-content">
       <LandingHeader isAuthenticated={isAuthenticated} />
       <Hero isAuthenticated={isAuthenticated} />
       <SocialProof />
