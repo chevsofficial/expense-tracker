@@ -18,7 +18,7 @@ export function LandingHeader({ isAuthenticated }: { isAuthenticated: boolean })
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Primary navigation">
           {navItems.map((item) => (
-            <a key={item.href} href={item.href} className="text-sm text-base-content/80 transition-colors hover:text-primary">
+            <a key={item.href} href={item.href} className="text-sm text-[var(--color-muted)] transition-colors hover:text-primary">
               {item.label}
             </a>
           ))}

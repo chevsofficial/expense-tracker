@@ -11,10 +11,10 @@ export function FAQ() {
       <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Frequently asked questions</h2>
       <div className="mt-8 space-y-3">
         {items.map(([question, answer]) => (
-          <div key={question} className="collapse-arrow collapse border border-base-300 bg-base-100">
+          <div key={question} className="collapse-arrow collapse border border-base-300 bg-base-200">
             <input type="checkbox" />
             <div className="collapse-title text-lg font-medium">{question}</div>
-            <div className="collapse-content text-base-content/70">{answer}</div>
+            <div className="collapse-content text-[var(--color-muted)]">{answer}</div>
           </div>
         ))}
       </div>

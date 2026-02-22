@@ -104,7 +104,7 @@ export function AppFiltersBar({
               <MultiSelectDropDown
                 mode="custom"
                 buttonLabel={dateRangeLabel(value.dateRange)}
-                triggerClassName="bg-white hover:bg-white"
+                triggerClassName="bg-base-200 hover:bg-base-300/20"
                 onClear={() =>
                   onChange({ ...value, dateRange: { preset: "thisMonth" } })
                 }
@@ -142,7 +142,7 @@ export function AppFiltersBar({
                       <div className="flex gap-2">
                         <input
                           type="date"
-                          className="input input-bordered bg-white input-sm w-full"
+                          className="input input-bordered bg-base-200 border-base-300 text-base-content placeholder:text-[var(--color-muted)] input-sm w-full"
                           value={
                             value.dateRange.preset === "custom"
                               ? (value.dateRange.start ?? "")
@@ -164,7 +164,7 @@ export function AppFiltersBar({
                         />
                         <input
                           type="date"
-                          className="input input-bordered bg-white input-sm w-full"
+                          className="input input-bordered bg-base-200 border-base-300 text-base-content placeholder:text-[var(--color-muted)] input-sm w-full"
                           value={
                             value.dateRange.preset === "custom"
                               ? (value.dateRange.end ?? "")
@@ -281,7 +281,7 @@ export function AppFiltersBar({
             <FilterField label="Search" className="w-full">
               <input
                 type="text"
-                className="input input-bordered bg-white border border-neutral-300 rounded-lg w-full"
+                className="input input-bordered bg-base-200 border border-base-300 rounded-lg w-full"
                 value={searchValue}
                 onChange={(event) => onSearchChange?.(event.target.value)}
                 placeholder={searchPlaceholder}

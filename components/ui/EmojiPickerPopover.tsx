@@ -231,7 +231,7 @@ export function EmojiPickerPopover({ value, onChange, open, onOpenChange }: Emoj
       <button
         ref={toggleRef}
         type="button"
-        className="btn btn-ghost btn-sm border border-neutral-300 bg-white"
+        className="btn btn-ghost btn-sm border border-base-300 bg-base-200"
         onClick={() => {
           if (open) {
             setQuery("");
@@ -246,7 +246,7 @@ export function EmojiPickerPopover({ value, onChange, open, onOpenChange }: Emoj
       {open ? (
         <div
           ref={popupRef}
-          className="absolute left-0 top-full z-[60] mt-2 w-[min(42rem,85vw)] rounded-xl border border-neutral-300 bg-white p-3 shadow-lg"
+          className="absolute left-0 top-full z-[60] mt-2 w-[min(42rem,85vw)] rounded-xl border border-base-300 bg-base-200 p-3 shadow-lg"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
             <input

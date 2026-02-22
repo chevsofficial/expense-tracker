@@ -113,7 +113,7 @@ export function MultiSelectDropDown({
       }}
     >
       <div
-        className={`${fieldBase} flex h-10 min-h-10 items-center justify-between bg-white text-left ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
+        className={`${fieldBase} flex h-10 min-h-10 items-center justify-between bg-base-200 text-base-content text-left ${FILTER_BORDER} ${UI_RING} ${triggerClassName}`}
         role="button"
         tabIndex={0}
         onClick={() => setOpen((value) => !value)}
@@ -164,14 +164,14 @@ export function MultiSelectDropDown({
         <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
       </div>
       <div
-        className={`dropdown-content z-[50] mt-2 rounded-xl bg-white p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden ${FILTER_BORDER}`}
+        className={`dropdown-content z-[50] mt-2 rounded-xl bg-base-200 p-2 shadow-lg w-full max-h-80 overflow-y-auto overflow-x-hidden text-base-content ${FILTER_BORDER}`}
       >
         {mode === "custom" ? (
           customPanel
         ) : (
           <>
             <input
-              className={`${fieldBase} mb-2`}
+              className={`${fieldBase} mb-2 placeholder:text-[var(--color-muted)]`}
               placeholder={`Search ${placeholder.toLowerCase()}...`}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
