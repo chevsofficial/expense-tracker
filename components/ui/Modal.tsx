@@ -11,8 +11,8 @@ type ModalProps = {
 export function Modal({ open, title, onClose, children, zIndexBase = 900 }: ModalProps) {
   return (
     <dialog className={`modal ${open ? "modal-open" : ""}`} style={{ zIndex: zIndexBase }}>
-      <div className="modal-box relative bg-base-100" style={{ zIndex: zIndexBase + 1 }}>
-        <div className="flex items-start justify-between gap-4 border-b border-primary/20 pb-3">
+      <div className="modal-box relative bg-base-200 border border-base-300" style={{ zIndex: zIndexBase + 1 }}>
+        <div className="flex items-start justify-between gap-4 border-b border-base-300 pb-3">
           <h3 className="section-title text-lg">{title}</h3>
           <button type="button" className="btn btn-ghost btn-sm relative z-[70] text-error" onClick={onClose}>
             ✕

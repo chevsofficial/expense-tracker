@@ -594,7 +594,7 @@ export function CategoriesClient({ locale }: { locale: Locale }) {
                         return (
                         <tr
                           key={group._id}
-                          className={`cursor-pointer hover:bg-neutral-50 ${
+                          className={`cursor-pointer hover:bg-base-300/20 ${
                             isSelected ? "border-l-4 border-[#6DBE45] bg-[#6DBE45]/15" : ""
                           }`}
                           onClick={() => setSelectedGroupId(group._id)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -10,6 +11,11 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import {
+  getFallbackChartThemeColors,
+  readChartThemeColors,
+  type ChartThemeColors,
+} from "@/src/theme/chartTheme";
 
 type BarDefinition = {
   key: string;
@@ -24,42 +30,19 @@ type BarChartWidgetProps = {
   valueFormatter?: (value: number) => string;
 };
 
-type ChartThemeColors = {
-  grid: string;
-  muted: string;
-  surface: string;
-  text: string;
-};
-
-const fallbackColors: ChartThemeColors = {
-  grid: "#1C3A2C",
-  muted: "#9BB7A8",
-  surface: "#0E2A1F",
-  text: "#E6F2EC",
-};
-
-function getThemeColors(): ChartThemeColors {
-  if (typeof window === "undefined") return fallbackColors;
-
-  const styles = getComputedStyle(document.documentElement);
-  const grid = styles.getPropertyValue("--color-base-300").trim();
-  const muted = styles.getPropertyValue("--color-muted").trim();
-  const surface = styles.getPropertyValue("--color-base-200").trim();
-  const text = styles.getPropertyValue("--color-base-content").trim();
-
-  return {
-    grid: grid || fallbackColors.grid,
-    muted: muted || fallbackColors.muted,
-    surface: surface || fallbackColors.surface,
-    text: text || fallbackColors.text,
-  };
-}
-
 export function BarChartWidget({ data, xKey, bars, valueFormatter }: BarChartWidgetProps) {
-  const colors = getThemeColors();
+  const [colors, setColors] = useState<ChartThemeColors>(getFallbackChartThemeColors());
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setColors(readChartThemeColors());
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   if (data.length === 0) {
-    return <p className="text-sm opacity-60">No data yet.</p>;
+    return <p className="text-sm text-[var(--color-muted)]">No data yet.</p>;
   }
 
   return (
@@ -75,6 +58,7 @@ export function BarChartWidget({ data, xKey, bars, valueFormatter }: BarChartWid
               borderColor: colors.grid,
               color: colors.text,
             }}
+            labelStyle={{ color: colors.muted }}
             formatter={(value) => {
               if (value == null) return "";
               if (typeof value === "number") {

@@ -1,5 +1,5 @@
 export const SELECT_BASE =
-  "w-full rounded-lg bg-white border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-neutral-400";
+  "w-full rounded-lg bg-base-200 border border-base-300 px-3 py-2 text-sm text-base-content placeholder:text-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary";
 
 export const SELECT_WITH_ICON = `${SELECT_BASE} appearance-none pr-9`;
 

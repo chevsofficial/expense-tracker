@@ -11,10 +11,10 @@ export function HowItWorks() {
       <div className="relative mt-10 grid gap-5 md:grid-cols-3">
         <div className="pointer-events-none absolute left-20 right-20 top-8 hidden border-t border-dashed border-primary/30 md:block" />
         {steps.map(([num, title, body]) => (
-          <article key={num} className="relative rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+          <article key={num} className="relative rounded-2xl border border-base-300 bg-base-200 p-5 shadow-sm">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-content">{num}</span>
             <h3 className="mt-4 text-xl font-semibold">{title}</h3>
-            <p className="mt-2 text-base-content/70">{body}</p>
+            <p className="mt-2 text-[var(--color-muted)]">{body}</p>
           </article>
         ))}
       </div>

@@ -225,7 +225,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
         <div className="card-body space-y-4">
           <h2 className="font-semibold">Account Settings</h2>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-4">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300 space-y-4">
             <p className="text-sm font-semibold">General Information</p>
             <div className={formGrid}>
               <label className="w-full">
@@ -271,7 +271,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300">
             <p className="text-sm font-semibold">Email</p>
             <p className="mt-1 text-sm opacity-80">{email}</p>
             <button className="btn btn-outline btn-sm mt-3" type="button" onClick={() => setEmailModalOpen(true)}>
@@ -279,7 +279,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
             </button>
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300 space-y-2">
             <p className="text-sm font-semibold">Language</p>
             <SelectField value={language} onChange={(e) => void handleLanguageChange(e.target.value as Locale)}>
               <option value="en">English</option>
@@ -287,7 +287,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
             </SelectField>
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300 space-y-2">
             <p className="text-sm font-semibold">Currency</p>
             <SelectField
               value={currency}
@@ -304,7 +304,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
             {savingCurrency ? <p className="text-sm opacity-70">Saving…</p> : null}
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300 space-y-2">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300 space-y-2">
             <p className="text-sm font-semibold">Theme</p>
             <SelectField
               value={themePreference}
@@ -316,7 +316,7 @@ export function SettingsGeneralClient({ defaultCurrency }: { defaultCurrency: st
             </SelectField>
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm border border-neutral-300">
+          <div className="rounded-xl bg-base-200 p-4 shadow-sm border border-base-300">
             <p className="text-sm font-semibold text-error">Danger Zone</p>
             <p className="mt-1 text-sm opacity-70">Deleting your account removes your data permanently.</p>
             <button

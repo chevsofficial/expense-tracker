@@ -929,7 +929,7 @@ export function TransactionsClient({
         </thead>
         <tbody className={tableBodyClass}>
           {rows.length === 0 ? (
-            <tr className="border-b border-neutral-200 last:border-b-0">
+            <tr className="border-b border-base-300 last:border-b-0">
               <td colSpan={10} className="py-6 text-center text-sm opacity-70">
                 {variant === "archived"
                   ? t(locale, "transactions_archived_empty")

@@ -21,7 +21,7 @@ export function LandingPage({ isAuthenticated }: { isAuthenticated: boolean }) {
       <FAQ />
 
       <footer className="border-t border-base-300 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 text-sm text-base-content/70 md:flex-row md:items-center">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 text-sm text-[var(--color-muted)] md:flex-row md:items-center">
           <p>© {new Date().getFullYear()} Spendary. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-primary">Privacy</Link>

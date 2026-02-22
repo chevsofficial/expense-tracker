@@ -28,13 +28,13 @@ export function AppTopNav({
     return [
       "px-3 py-2 text-lg font-light rounded-none",
       "transition-colors",
-      active ? "text-primary border-b-2 border-primary" : "text-[#7b93a4]",
+      active ? "text-primary border-b-2 border-primary" : "text-[var(--color-muted)]",
       "hover:text-primary hover:bg-transparent",
     ].join(" ");
   };
 
   return (
-    <div className="navbar bg-white text-base-content border-b border-base-300">
+    <div className="navbar bg-base-200 text-base-content border-b border-base-300">
       <div className="navbar-start">
         <div className="dropdown sm:hidden">
           <div tabIndex={0} role="button" className="btn btn-ghost">

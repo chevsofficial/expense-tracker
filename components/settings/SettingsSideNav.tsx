@@ -21,7 +21,7 @@ export function SettingsSideNav() {
     const active = isActive(href);
     return [
       "relative block px-3 py-2 text-sm font-light transition-colors",
-      active ? "text-primary" : "text-[#7b93a4]",
+      active ? "text-primary" : "text-[var(--color-muted)]",
       "hover:text-primary",
     ].join(" ");
   };

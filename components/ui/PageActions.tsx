@@ -22,7 +22,7 @@ export function PageActions({
       <button className={addButtonClass} onClick={onAdd} disabled={disabled}>
         {addLabel}
       </button>
-      <label className="flex items-center gap-2 text-sm text-neutral-600">
+      <label className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
         <span>{archivedLabel}</span>
         <input
           type="checkbox"

@@ -39,10 +39,10 @@ export function EmojiPickerModal({ isOpen, onClose, onSelect }: EmojiPickerModal
       role="presentation"
     >
       <div
-        className="relative z-[1001] w-full max-w-[380px] rounded-2xl border border-primary/20 bg-base-100 p-4 shadow-2xl"
+        className="relative z-[1001] w-full max-w-[380px] rounded-2xl border border-base-300 bg-base-200 p-4 shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="mb-3 flex items-start justify-between gap-4 border-b border-primary/20 pb-3">
+        <div className="mb-3 flex items-start justify-between gap-4 border-b border-base-300 pb-3">
           <h3 className="section-title text-lg">Pick emoji</h3>
           <button type="button" className="btn btn-ghost btn-sm text-error" onClick={onClose}>
             ✕
